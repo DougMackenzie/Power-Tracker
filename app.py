@@ -108,7 +108,7 @@ with tab2:
     st.header("Research Framework Modeling")
     st.markdown("Adjust assumptions based on the **Power Research Framework**.")
 
-    from research_data import BASE_CASE_DATA, SCENARIOS, COMPANY_SPLIT_2030
+    from research_data import BASE_CASE_DATA, SCENARIOS, COMPANY_SPLIT_2030, SUPPLY_PROJECTION
     
     # Sidebar for Research Controls
     st.sidebar.header("Research Assumptions")
@@ -118,7 +118,6 @@ with tab2:
     params = SCENARIOS[scenario]
     
     # Sliders (initialized with scenario defaults)
-    # We use session state to allow updates from selectbox but also manual override
     if 'last_scenario' not in st.session_state or st.session_state.last_scenario != scenario:
         st.session_state.chip_mult = params['Chips_M_Multiplier']
         st.session_state.tdp_mult = params['TDP_Multiplier']
@@ -135,17 +134,13 @@ with tab2:
         year = row['Year']
         
         # 1. Calculate Base Case Raw (to derive calibration factor)
-        # Note: We remove the 1.45 overhead from the formula as it seems to double-count or be incorrect based on PDF results
-        # Formula: Global GW = [Chips(M) * TDP(W) * Util * PUE] / 1e9
         base_raw_global = (row['Chips_M'] * 1e6 * row['TDP'] * row['Util'] * row['PUE']) / 1e9
         base_raw_us = base_raw_global * row['US_Share']
         
-        # Calibration Factor = PDF_Target / Calculated_Raw
-        # This accounts for "Effective" chips (retirement), system overhead differences, etc.
+        # Calibration Factor
         calibration_factor = row['US_GW_Base'] / base_raw_us if base_raw_us > 0 else 1.0
         
         # 2. Calculate User Scenario
-        # Interpolate PUE
         base_pue_2030 = 1.16
         pue_scale = pue_target / base_pue_2030
         
@@ -162,33 +157,42 @@ with tab2:
         # Apply Calibration
         final_us_gw = user_raw_us * calibration_factor
         
+        # Calculate Domestic Demand (70% of Stack, per Page 27)
+        # Note: Page 27 explicitly says "Domestic (70%)"
+        domestic_gw = final_us_gw * 0.70
+        
         research_rows.append({
             "Year": year,
-            "Projected US Demand (Research)": final_us_gw,
-            # "Global Demand": user_raw_global * calibration_factor # Optional
+            "Total Stack Demand": final_us_gw,
+            "Domestic Demand (70%)": domestic_gw
         })
         
     df_research = pd.DataFrame(research_rows)
     
-    # Merge with Live Supply for comparison
-    if df is not None:
-        df_supply = df[['Year', 'Live Supply']].copy()
-        # Ensure numeric
-        df_supply['Live Supply'] = pd.to_numeric(df_supply['Live Supply'], errors='coerce')
-        df_combined = pd.merge(df_research, df_supply, on='Year', how='left')
-    else:
-        df_combined = df_research
-
-    # Plot Research Chart
-    df_res_melted = df_combined.melt('Year', value_vars=['Projected US Demand (Research)', 'Live Supply'], 
-                                     var_name='Metric', value_name='Capacity (GW)')
+    # Merge with Research Supply (from PDF)
+    df_supply_res = pd.DataFrame(SUPPLY_PROJECTION)
+    df_combined = pd.merge(df_research, df_supply_res, on='Year', how='left')
     
-    chart_res = alt.Chart(df_res_melted).mark_line().encode(
+    # Also merge with Live Supply if available (optional, for comparison)
+    # But user wants to match Page 27, so let's focus on the Research Supply
+    
+    # Plot Research Chart
+    df_res_melted = df_combined.melt('Year', value_vars=['Total Stack Demand', 'Domestic Demand (70%)', 'Supply_GW'], 
+                                     var_name='Metric', value_name='Capacity ({GW})')
+    
+    # Rename Supply_GW for legend
+    df_res_melted['Metric'] = df_res_melted['Metric'].replace('Supply_GW', 'US Supply (Research)')
+    
+    # Colors: Orange (Stack), Green (Domestic), Blue (Supply)
+    domain = ['Total Stack Demand', 'Domestic Demand (70%)', 'US Supply (Research)']
+    range_ = ['orange', 'green', 'blue']
+    
+    chart_res = alt.Chart(df_res_melted).mark_line(interpolate='monotone').encode(
         x=alt.X('Year:O'),
-        y=alt.Y('Capacity (GW):Q'),
-        color=alt.Color('Metric:N', scale=alt.Scale(domain=['Projected US Demand (Research)', 'Live Supply'], range=['red', 'blue'])),
-        tooltip=['Year', 'Metric', 'Capacity (GW)']
-    ).properties(title="Research Projection vs Live Supply", height=400).interactive()
+        y=alt.Y('Capacity ({GW}):Q'),
+        color=alt.Color('Metric:N', scale=alt.Scale(domain=domain, range=range_)),
+        tooltip=['Year', 'Metric', 'Capacity ({GW})']
+    ).properties(title="Recalibrated U.S. Supply vs Demand (Page 27)", height=400).interactive()
     
     st.altair_chart(chart_res, use_container_width=True)
     

@@ -3,15 +3,29 @@
 # Appendix D: Year-by-Year Demand Projections (Base Case Midpoints)
 # Global GW = [Chips(M) * TDP(W) * Util * 1.45 * PUE] / 1e9
 # US Share ~70-85% depending on year
+# Updated targets to match Page 27 "Recalibrated" chart
 BASE_CASE_DATA = [
-    {"Year": 2024, "Chips_M": 23.5, "TDP": 680, "Util": 0.65, "PUE": 1.30, "US_Share": 0.85, "US_GW_Base": 11.0},
-    {"Year": 2025, "Chips_M": 43.5, "TDP": 720, "Util": 0.68, "PUE": 1.28, "US_Share": 0.84, "US_GW_Base": 20.5},
-    {"Year": 2026, "Chips_M": 69.0, "TDP": 780, "Util": 0.70, "PUE": 1.25, "US_Share": 0.82, "US_GW_Base": 36.0},
-    {"Year": 2027, "Chips_M": 98.5, "TDP": 850, "Util": 0.72, "PUE": 1.22, "US_Share": 0.80, "US_GW_Base": 53.0},
-    {"Year": 2028, "Chips_M": 127.5, "TDP": 920, "Util": 0.73, "PUE": 1.20, "US_Share": 0.78, "US_GW_Base": 70.0},
-    {"Year": 2030, "Chips_M": 205.0, "TDP": 1050, "Util": 0.75, "PUE": 1.16, "US_Share": 0.75, "US_GW_Base": 107.5},
-    {"Year": 2032, "Chips_M": 285.0, "TDP": 1150, "Util": 0.76, "PUE": 1.14, "US_Share": 0.73, "US_GW_Base": 150.0},
-    {"Year": 2035, "Chips_M": 450.0, "TDP": 1300, "Util": 0.78, "PUE": 1.12, "US_Share": 0.72, "US_GW_Base": 205.0},
+    {"Year": 2024, "Chips_M": 23.5, "TDP": 680, "Util": 0.65, "PUE": 1.30, "US_Share": 0.85, "US_GW_Base": 12.0},
+    {"Year": 2025, "Chips_M": 43.5, "TDP": 720, "Util": 0.68, "PUE": 1.28, "US_Share": 0.84, "US_GW_Base": 22.0},
+    {"Year": 2026, "Chips_M": 69.0, "TDP": 780, "Util": 0.70, "PUE": 1.25, "US_Share": 0.82, "US_GW_Base": 39.0},
+    {"Year": 2027, "Chips_M": 98.5, "TDP": 850, "Util": 0.72, "PUE": 1.22, "US_Share": 0.80, "US_GW_Base": 57.0},
+    {"Year": 2028, "Chips_M": 127.5, "TDP": 920, "Util": 0.73, "PUE": 1.20, "US_Share": 0.78, "US_GW_Base": 75.0},
+    {"Year": 2030, "Chips_M": 205.0, "TDP": 1050, "Util": 0.75, "PUE": 1.16, "US_Share": 0.75, "US_GW_Base": 115.0}, # Page 27
+    {"Year": 2032, "Chips_M": 285.0, "TDP": 1150, "Util": 0.76, "PUE": 1.14, "US_Share": 0.73, "US_GW_Base": 160.0},
+    {"Year": 2035, "Chips_M": 450.0, "TDP": 1300, "Util": 0.78, "PUE": 1.12, "US_Share": 0.72, "US_GW_Base": 230.0}, # Page 27
+]
+
+# Supply Projection from Page 27 (Low Trend)
+# 2030: 50 GW, 2035: 140 GW. Interpolated others.
+SUPPLY_PROJECTION = [
+    {"Year": 2024, "Supply_GW": 35.0},
+    {"Year": 2025, "Supply_GW": 36.5},
+    {"Year": 2026, "Supply_GW": 38.0},
+    {"Year": 2027, "Supply_GW": 40.0},
+    {"Year": 2028, "Supply_GW": 42.5},
+    {"Year": 2030, "Supply_GW": 50.0}, # Page 27
+    {"Year": 2032, "Supply_GW": 80.0},
+    {"Year": 2035, "Supply_GW": 140.0}, # Page 27
 ]
 
 # Appendix E: Scenario Parameters (2030)
