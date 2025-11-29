@@ -13,7 +13,7 @@ st.set_page_config(
 st.title("US Power Supply vs. Demand Gap")
 
 # Function to connect to Google Sheets
-# @st.cache_resource
+@st.cache_resource
 def get_data():
     # Define the scope
     scope = [
@@ -23,10 +23,6 @@ def get_data():
 
     # Authenticate using secrets
     try:
-        if "gcp_service_account" not in st.secrets:
-            st.error("Secret 'gcp_service_account' not found in secrets. Available keys: " + str(list(st.secrets.keys())))
-            return None
-
         credentials_dict = st.secrets["gcp_service_account"]
         credentials = Credentials.from_service_account_info(
             credentials_dict,
@@ -34,17 +30,6 @@ def get_data():
         )
         client = gspread.authorize(credentials)
 
-        # Open the spreadsheet (assuming the first one or by name if provided in secrets, 
-        # but user asked to connect to a sheet named 'LiveProjection'. 
-        # Usually this means a tab within a spreadsheet, or the spreadsheet name itself.
-        # I'll assume 'LiveProjection' is the worksheet name, and we need a spreadsheet name or ID.
-        # Since the prompt says "pull data from a sheet named 'LiveProjection'", I'll assume it's a worksheet.
-        # I will try to open a spreadsheet defined in secrets or just a default one if not specified.
-        # Wait, the prompt implies "Connect to a Google Sheet... pull data from a sheet named 'LiveProjection'".
-        # I'll assume the spreadsheet URL or name is also in secrets or I'll just use a placeholder 
-        # that the user can update. 
-        # Actually, often 'sheet' refers to the spreadsheet. Let's assume the spreadsheet is named 'LiveProjection' 
-        # OR there is a specific spreadsheet and we need the tab 'LiveProjection'.
         # Let's try to find a spreadsheet named 'LiveProjection' first.
         
         # However, to be safe and standard, I will assume the user puts the Spreadsheet Name or Key in secrets 
