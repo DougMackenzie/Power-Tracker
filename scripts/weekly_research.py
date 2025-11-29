@@ -74,15 +74,23 @@ def perform_research():
             response = model.generate_content(prompt)
             text = response.text
             
-            # Simple parsing
+            # Robust parsing
             summary = "No summary generated."
             impact = "Neutral"
             
-            for line in text.split('\n'):
-                if line.startswith("Summary:"):
-                    summary = line.replace("Summary:", "").strip()
-                elif line.startswith("Impact:"):
-                    impact = line.replace("Impact:", "").strip()
+            lines = text.split('\n')
+            for line in lines:
+                # Remove markdown bolding and whitespace
+                clean_line = line.replace("*", "").strip()
+                
+                if clean_line.startswith("Summary:"):
+                    summary = clean_line.replace("Summary:", "").strip()
+                elif clean_line.startswith("Impact:"):
+                    impact = clean_line.replace("Impact:", "").strip()
+            
+            # Fallback: if no "Summary:" prefix found, use the whole text if it's short
+            if summary == "No summary generated." and len(text) < 500:
+                summary = text.replace("*", "").strip()
             
             # Collect sources
             sources = ", ".join([r['href'] for r in search_results])
