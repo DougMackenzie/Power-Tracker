@@ -202,7 +202,7 @@ with tab2:
     # Get 2030 total from our calculation
     row_2030 = df_research[df_research['Year'] == 2030]
     if not row_2030.empty:
-        total_2030 = row_2030.iloc[0]['Projected US Demand (Research)']
+        total_2030 = row_2030.iloc[0]['Total Stack Demand']
         
         breakdown_data = []
         for company, share in COMPANY_SPLIT_2030.items():
