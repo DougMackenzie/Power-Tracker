@@ -32,18 +32,9 @@ def perform_research():
         
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
     
-    # Dynamically find a supported model
-    model_name = 'gemini-pro' # Default fallback
-    try:
-        print("Listing available Gemini models...")
-        for m in genai.list_models():
-            print(f"Found model: {m.name}")
-            if 'generateContent' in m.supported_generation_methods:
-                model_name = m.name
-                print(f"Selected model: {model_name}")
-                break
-    except Exception as e:
-        print(f"Error listing models: {e}")
+    # Use user-specified model
+    model_name = 'models/gemini-2.0-flash-exp'
+    print(f"Selected model: {model_name}")
         
     model = genai.GenerativeModel(model_name)
     ddgs = DDGS()
