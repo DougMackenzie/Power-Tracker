@@ -13,7 +13,7 @@ st.set_page_config(
 st.title("US Power Supply vs. Demand Gap")
 
 # Function to connect to Google Sheets
-@st.cache_resource
+# @st.cache_resource
 def get_data():
     # Define the scope
     scope = [
@@ -23,6 +23,10 @@ def get_data():
 
     # Authenticate using secrets
     try:
+        if "gcp_service_account" not in st.secrets:
+            st.error("Secret 'gcp_service_account' not found in secrets. Available keys: " + str(list(st.secrets.keys())))
+            return None
+
         credentials_dict = st.secrets["gcp_service_account"]
         credentials = Credentials.from_service_account_info(
             credentials_dict,
@@ -50,6 +54,7 @@ def get_data():
         # Let's check secrets for 'spreadsheet_name'. If not, default to 'LiveProjection'.
         
         spreadsheet_name = st.secrets.get("spreadsheet_name", "LiveProjection")
+        st.write(f"Attempting to open spreadsheet: '{spreadsheet_name}'...")
         sh = client.open(spreadsheet_name)
         
         # Select the worksheet
