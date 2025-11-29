@@ -1,0 +1,32 @@
+name: Weekly Power Research
+
+on:
+  schedule:
+    # Runs at 13:00 UTC (8:00 AM EST) every Monday
+    - cron: '0 13 * * 1'
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install gspread google-auth openai tavily-python
+        
+    - name: Run Research Script
+      env:
+        GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+      run: python scripts/weekly_research.py
