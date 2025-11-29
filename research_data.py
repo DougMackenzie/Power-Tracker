@@ -15,18 +15,42 @@ BASE_CASE_DATA = [
     {"Year": 2035, "Chips_M": 450.0, "TDP": 1300, "Util": 0.78, "PUE": 1.12, "US_Share": 0.72, "US_GW_Base": 230.0}, # Page 27
 ]
 
-# Supply Projection from Page 27 (Low Trend)
-# 2030: 50 GW, 2035: 140 GW. Interpolated others.
-SUPPLY_PROJECTION = [
-    {"Year": 2024, "Supply_GW": 35.0},
-    {"Year": 2025, "Supply_GW": 36.5},
-    {"Year": 2026, "Supply_GW": 38.0},
-    {"Year": 2027, "Supply_GW": 40.0},
-    {"Year": 2028, "Supply_GW": 42.5},
-    {"Year": 2030, "Supply_GW": 50.0}, # Page 27
-    {"Year": 2032, "Supply_GW": 80.0},
-    {"Year": 2035, "Supply_GW": 140.0}, # Page 27
-]
+# Supply Scenarios
+# Conservative: Matches PDF "Low Trend" (Page 27)
+# Base: ~50% improvement over Conservative
+# Aggressive: ~100% improvement (closing the gap)
+SUPPLY_SCENARIOS = {
+    "Conservative": [
+        {"Year": 2024, "Supply_GW": 35.0},
+        {"Year": 2025, "Supply_GW": 36.5},
+        {"Year": 2026, "Supply_GW": 38.0},
+        {"Year": 2027, "Supply_GW": 40.0},
+        {"Year": 2028, "Supply_GW": 42.5},
+        {"Year": 2030, "Supply_GW": 50.0},
+        {"Year": 2032, "Supply_GW": 80.0},
+        {"Year": 2035, "Supply_GW": 140.0},
+    ],
+    "Base": [
+        {"Year": 2024, "Supply_GW": 35.0},
+        {"Year": 2025, "Supply_GW": 38.0},
+        {"Year": 2026, "Supply_GW": 42.0},
+        {"Year": 2027, "Supply_GW": 48.0},
+        {"Year": 2028, "Supply_GW": 55.0},
+        {"Year": 2030, "Supply_GW": 75.0},
+        {"Year": 2032, "Supply_GW": 110.0},
+        {"Year": 2035, "Supply_GW": 180.0},
+    ],
+    "Aggressive": [
+        {"Year": 2024, "Supply_GW": 35.0},
+        {"Year": 2025, "Supply_GW": 40.0},
+        {"Year": 2026, "Supply_GW": 46.0},
+        {"Year": 2027, "Supply_GW": 55.0},
+        {"Year": 2028, "Supply_GW": 68.0},
+        {"Year": 2030, "Supply_GW": 100.0},
+        {"Year": 2032, "Supply_GW": 150.0},
+        {"Year": 2035, "Supply_GW": 230.0},
+    ]
+}
 
 # Appendix E: Scenario Parameters (2030)
 SCENARIOS = {

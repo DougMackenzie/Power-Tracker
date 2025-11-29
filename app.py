@@ -108,21 +108,26 @@ with tab2:
     st.header("Research Framework Modeling")
     st.markdown("Adjust assumptions based on the **Power Research Framework**.")
 
-    from research_data import BASE_CASE_DATA, SCENARIOS, COMPANY_SPLIT_2030, SUPPLY_PROJECTION
+    from research_data import BASE_CASE_DATA, SCENARIOS, COMPANY_SPLIT_2030, SUPPLY_SCENARIOS
     
     # Sidebar for Research Controls
     st.sidebar.header("Research Assumptions")
     
-    # Scenario Selector
-    scenario = st.sidebar.selectbox("Select Scenario", ["Base", "Conservative", "Aggressive"], index=0)
-    params = SCENARIOS[scenario]
+    # Scenario Selectors
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        demand_scenario = st.selectbox("Demand Scenario", ["Base", "Conservative", "Aggressive"], index=0)
+    with col2:
+        supply_scenario = st.selectbox("Supply Scenario", ["Conservative", "Base", "Aggressive"], index=0) # Default to Conservative (Low Trend)
+        
+    params = SCENARIOS[demand_scenario]
     
     # Sliders (initialized with scenario defaults)
-    if 'last_scenario' not in st.session_state or st.session_state.last_scenario != scenario:
+    if 'last_demand_scenario' not in st.session_state or st.session_state.last_demand_scenario != demand_scenario:
         st.session_state.chip_mult = params['Chips_M_Multiplier']
         st.session_state.tdp_mult = params['TDP_Multiplier']
         st.session_state.pue_target = params['PUE_Target']
-        st.session_state.last_scenario = scenario
+        st.session_state.last_demand_scenario = demand_scenario
 
     chip_mult = st.sidebar.slider("Chip Volume Multiplier", 0.5, 2.0, st.session_state.chip_mult, 0.1)
     tdp_mult = st.sidebar.slider("TDP Multiplier", 0.8, 1.5, st.session_state.tdp_mult, 0.05)
@@ -158,7 +163,6 @@ with tab2:
         final_us_gw = user_raw_us * calibration_factor
         
         # Calculate Domestic Demand (70% of Stack, per Page 27)
-        # Note: Page 27 explicitly says "Domestic (70%)"
         domestic_gw = final_us_gw * 0.70
         
         research_rows.append({
@@ -169,22 +173,19 @@ with tab2:
         
     df_research = pd.DataFrame(research_rows)
     
-    # Merge with Research Supply (from PDF)
-    df_supply_res = pd.DataFrame(SUPPLY_PROJECTION)
+    # Merge with Selected Supply Scenario
+    df_supply_res = pd.DataFrame(SUPPLY_SCENARIOS[supply_scenario])
     df_combined = pd.merge(df_research, df_supply_res, on='Year', how='left')
-    
-    # Also merge with Live Supply if available (optional, for comparison)
-    # But user wants to match Page 27, so let's focus on the Research Supply
     
     # Plot Research Chart
     df_res_melted = df_combined.melt('Year', value_vars=['Total Stack Demand', 'Domestic Demand (70%)', 'Supply_GW'], 
                                      var_name='Metric', value_name='Capacity ({GW})')
     
     # Rename Supply_GW for legend
-    df_res_melted['Metric'] = df_res_melted['Metric'].replace('Supply_GW', 'US Supply (Research)')
+    df_res_melted['Metric'] = df_res_melted['Metric'].replace('Supply_GW', f'US Supply ({supply_scenario})')
     
     # Colors: Orange (Stack), Green (Domestic), Blue (Supply)
-    domain = ['Total Stack Demand', 'Domestic Demand (70%)', 'US Supply (Research)']
+    domain = ['Total Stack Demand', 'Domestic Demand (70%)', f'US Supply ({supply_scenario})']
     range_ = ['orange', 'green', 'blue']
     
     chart_res = alt.Chart(df_res_melted).mark_line(interpolate='monotone').encode(
@@ -192,7 +193,7 @@ with tab2:
         y=alt.Y('Capacity ({GW}):Q'),
         color=alt.Color('Metric:N', scale=alt.Scale(domain=domain, range=range_)),
         tooltip=['Year', 'Metric', 'Capacity ({GW})']
-    ).properties(title="Recalibrated U.S. Supply vs Demand (Page 27)", height=400).interactive()
+    ).properties(title=f"Supply vs Demand ({demand_scenario} Demand / {supply_scenario} Supply)", height=400).interactive()
     
     st.altair_chart(chart_res, use_container_width=True)
     
