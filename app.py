@@ -116,9 +116,9 @@ with tab2:
     # Scenario Selectors
     col1, col2 = st.sidebar.columns(2)
     with col1:
-        demand_scenario = st.selectbox("Demand Scenario", ["Base", "Conservative", "Aggressive"], index=0)
+        demand_scenario = st.selectbox("Demand Scenario", ["Low", "Mid", "High"], index=1)
     with col2:
-        supply_scenario = st.selectbox("Supply Scenario", ["Conservative", "Base", "Aggressive"], index=0) # Default to Conservative (Low Trend)
+        supply_scenario = st.selectbox("Supply Scenario", ["Low", "Mid", "High"], index=0) # Default to Low (Conservative)
         
     params = SCENARIOS[demand_scenario]
     

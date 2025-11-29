@@ -16,36 +16,36 @@ BASE_CASE_DATA = [
 ]
 
 # Supply Scenarios
-# Conservative: Matches PDF "Low Trend" (Page 27)
-# Base: ~50% improvement over Conservative
-# Aggressive: ~100% improvement (closing the gap)
+# Low: Matches PDF "Low Trend" (Page 27) - Starts ~12GW, ends 140GW
+# Mid: ~50% improvement over Low
+# High: ~100% improvement (closing the gap)
 SUPPLY_SCENARIOS = {
-    "Conservative": [
-        {"Year": 2024, "Supply_GW": 35.0},
-        {"Year": 2025, "Supply_GW": 36.5},
-        {"Year": 2026, "Supply_GW": 38.0},
-        {"Year": 2027, "Supply_GW": 40.0},
-        {"Year": 2028, "Supply_GW": 42.5},
+    "Low": [
+        {"Year": 2024, "Supply_GW": 12.0},
+        {"Year": 2025, "Supply_GW": 15.0},
+        {"Year": 2026, "Supply_GW": 20.0},
+        {"Year": 2027, "Supply_GW": 28.0},
+        {"Year": 2028, "Supply_GW": 35.0},
         {"Year": 2030, "Supply_GW": 50.0},
         {"Year": 2032, "Supply_GW": 80.0},
         {"Year": 2035, "Supply_GW": 140.0},
     ],
-    "Base": [
-        {"Year": 2024, "Supply_GW": 35.0},
-        {"Year": 2025, "Supply_GW": 38.0},
-        {"Year": 2026, "Supply_GW": 42.0},
-        {"Year": 2027, "Supply_GW": 48.0},
-        {"Year": 2028, "Supply_GW": 55.0},
+    "Mid": [
+        {"Year": 2024, "Supply_GW": 12.0},
+        {"Year": 2025, "Supply_GW": 18.0},
+        {"Year": 2026, "Supply_GW": 25.0},
+        {"Year": 2027, "Supply_GW": 35.0},
+        {"Year": 2028, "Supply_GW": 48.0},
         {"Year": 2030, "Supply_GW": 75.0},
         {"Year": 2032, "Supply_GW": 110.0},
         {"Year": 2035, "Supply_GW": 180.0},
     ],
-    "Aggressive": [
-        {"Year": 2024, "Supply_GW": 35.0},
-        {"Year": 2025, "Supply_GW": 40.0},
-        {"Year": 2026, "Supply_GW": 46.0},
-        {"Year": 2027, "Supply_GW": 55.0},
-        {"Year": 2028, "Supply_GW": 68.0},
+    "High": [
+        {"Year": 2024, "Supply_GW": 12.0},
+        {"Year": 2025, "Supply_GW": 20.0},
+        {"Year": 2026, "Supply_GW": 30.0},
+        {"Year": 2027, "Supply_GW": 42.0},
+        {"Year": 2028, "Supply_GW": 60.0},
         {"Year": 2030, "Supply_GW": 100.0},
         {"Year": 2032, "Supply_GW": 150.0},
         {"Year": 2035, "Supply_GW": 230.0},
@@ -54,19 +54,19 @@ SUPPLY_SCENARIOS = {
 
 # Appendix E: Scenario Parameters (2030)
 SCENARIOS = {
-    "Conservative": {
+    "Low": {
         "Chips_M_Multiplier": 0.8, # Approx from 160-250 range vs 205 base
         "TDP_Multiplier": 1.0,
         "PUE_Target": 1.40,
         "Util_Target": 0.60
     },
-    "Base": {
+    "Mid": {
         "Chips_M_Multiplier": 1.0,
         "TDP_Multiplier": 1.0,
         "PUE_Target": 1.25, # Note: PDF says 1.16 for 2030 base in App D, but 1.25 in App E. Using App E for scenario logic.
         "Util_Target": 0.72
     },
-    "Aggressive": {
+    "High": {
         "Chips_M_Multiplier": 1.2,
         "TDP_Multiplier": 1.1, # Assuming higher TDP for aggressive perf
         "PUE_Target": 1.12,
