@@ -134,26 +134,38 @@ with tab2:
     for row in BASE_CASE_DATA:
         year = row['Year']
         
-        # Interpolate PUE (Linear decay to target by 2030, then flat or continued trend)
-        # Simple approach: Scale the base PUE by the ratio of (Target / Base_2030)
-        # But only for years >= 2024.
-        base_pue_2030 = 1.16 # From App D
+        # 1. Calculate Base Case Raw (to derive calibration factor)
+        # Note: We remove the 1.45 overhead from the formula as it seems to double-count or be incorrect based on PDF results
+        # Formula: Global GW = [Chips(M) * TDP(W) * Util * PUE] / 1e9
+        base_raw_global = (row['Chips_M'] * 1e6 * row['TDP'] * row['Util'] * row['PUE']) / 1e9
+        base_raw_us = base_raw_global * row['US_Share']
+        
+        # Calibration Factor = PDF_Target / Calculated_Raw
+        # This accounts for "Effective" chips (retirement), system overhead differences, etc.
+        calibration_factor = row['US_GW_Base'] / base_raw_us if base_raw_us > 0 else 1.0
+        
+        # 2. Calculate User Scenario
+        # Interpolate PUE
+        base_pue_2030 = 1.16
         pue_scale = pue_target / base_pue_2030
         
         # Apply multipliers
         chips = row['Chips_M'] * chip_mult
         tdp = row['TDP'] * tdp_mult
-        util = row['Util'] # Keep util as base for now, or add slider
+        util = row['Util']
         pue = row['PUE'] * pue_scale
         
-        # Formula: Global GW = [Chips(M) * TDP(W) * Util * 1.45 * PUE] / 1e9
-        global_gw = (chips * 1e6 * tdp * util * 1.45 * pue) / 1e9
-        us_gw = global_gw * row['US_Share']
+        # Calculate User Raw
+        user_raw_global = (chips * 1e6 * tdp * util * pue) / 1e9
+        user_raw_us = user_raw_global * row['US_Share']
+        
+        # Apply Calibration
+        final_us_gw = user_raw_us * calibration_factor
         
         research_rows.append({
             "Year": year,
-            "Projected US Demand (Research)": us_gw,
-            "Global Demand": global_gw
+            "Projected US Demand (Research)": final_us_gw,
+            # "Global Demand": user_raw_global * calibration_factor # Optional
         })
         
     df_research = pd.DataFrame(research_rows)
