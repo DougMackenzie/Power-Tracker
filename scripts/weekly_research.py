@@ -4,12 +4,11 @@ import time
 import gspread
 from google.oauth2.service_account import Credentials
 import google.generativeai as genai
-from tavily import TavilyClient
+from duckduckgo_search import DDGS
 
 # Configuration
 # Secrets must be set in GitHub Actions environment
 # GEMINI_API_KEY
-# TAVILY_API_KEY
 # GCP_SERVICE_ACCOUNT (JSON string)
 
 def get_gspread_client():
@@ -20,24 +19,20 @@ def get_gspread_client():
         creds_dict = json.loads(os.environ["GCP_SERVICE_ACCOUNT"])
         credentials = Credentials.from_service_account_info(creds_dict, scopes=scope)
     else:
-        # Fallback for local testing if secrets.toml exists and is parsed (simplified here)
-        # In production/GitHub Actions, GCP_SERVICE_ACCOUNT env var is required.
         raise ValueError("GCP_SERVICE_ACCOUNT environment variable not set.")
         
     return gspread.authorize(credentials)
 
 def perform_research():
-    print("Starting Weekly Research with Gemini & Tavily...")
+    print("Starting Weekly Research with Gemini & DuckDuckGo...")
     
     # Configure APIs
     if "GEMINI_API_KEY" not in os.environ:
         raise ValueError("GEMINI_API_KEY not set.")
-    if "TAVILY_API_KEY" not in os.environ:
-        raise ValueError("TAVILY_API_KEY not set.")
         
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
     model = genai.GenerativeModel('gemini-1.5-flash')
+    ddgs = DDGS()
     
     topics = [
         "FERC policy announcements power grid last week",
@@ -53,9 +48,9 @@ def perform_research():
     for topic in topics:
         print(f"Researching: {topic}...")
         try:
-            # 1. Search
-            search_response = tavily.search(query=topic, search_depth="basic", max_results=3)
-            context = "\n".join([f"- {r['content']} (Source: {r['url']})" for r in search_response['results']])
+            # 1. Search with DuckDuckGo
+            search_results = ddgs.text(topic, max_results=3)
+            context = "\n".join([f"- {r['body']} (Source: {r['href']})" for r in search_results])
             
             # 2. Summarize with Gemini
             prompt = f"""
@@ -74,7 +69,7 @@ def perform_research():
             response = model.generate_content(prompt)
             text = response.text
             
-            # Simple parsing (robustness could be improved)
+            # Simple parsing
             summary = "No summary generated."
             impact = "Neutral"
             
@@ -85,7 +80,7 @@ def perform_research():
                     impact = line.replace("Impact:", "").strip()
             
             # Collect sources
-            sources = ", ".join([r['url'] for r in search_response['results']])
+            sources = ", ".join([r['href'] for r in search_results])
             
             results.append({
                 "Date": datetime.date.today().isoformat(),
