@@ -582,7 +582,7 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     
     for r in risks:
         pdf.set_text_color(200, 0, 0) if "[HIGH]" in r else pdf.set_text_color(0, 0, 0)
-        pdf.cell(0, 6, f"• {r}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, f"- {r}", new_x="LMARGIN", new_y="NEXT")
     
     pdf.ln(5)
     pdf.set_text_color(0, 0, 0)
@@ -600,7 +600,7 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
         f"Land Control: {site.get('land_control', 'None').title()}"
     ]
     for item in items:
-        pdf.cell(0, 6, f"• {item}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, f"- {item}", new_x="LMARGIN", new_y="NEXT")
         
     return bytes(pdf.output())
 
