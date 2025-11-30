@@ -467,105 +467,141 @@ def show_site_details(site_id: str):
             st.rerun()
 
 def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context: Dict) -> bytes:
-    """Generate a PDF report for a site."""
+    """Generate a PDF report matching the Site Diagnostic Report template."""
     class PDF(FPDF):
         def header(self):
-            self.set_font('Helvetica', 'B', 15)
-            self.cell(0, 10, 'Site Investment Memo', new_x="LMARGIN", new_y="NEXT", align='C')
+            self.set_font('Helvetica', 'B', 10)
+            self.set_text_color(100, 100, 100)
+            self.cell(0, 10, 'Site Diagnostic Report | Critical Path to Power', new_x="LMARGIN", new_y="NEXT", align='L')
+            self.ln(2)
+            self.line(10, 20, 200, 20)
             self.ln(5)
 
         def footer(self):
             self.set_y(-15)
             self.set_font('Helvetica', 'I', 8)
-            self.cell(0, 10, f'Page {self.page_no()}/{{nb}}', align='C')
+            self.set_text_color(128, 128, 128)
+            self.cell(0, 10, f'Confidential | Page {self.page_no()}/{{nb}}', align='R')
 
     pdf = PDF()
+    pdf.alias_nb_pages()
     pdf.add_page()
-    pdf.set_font("Helvetica", size=12)
     
-    # Title Section
+    # --- Title Block ---
+    pdf.set_font("Helvetica", 'B', 24)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 15, f"{site.get('name', 'Unnamed Site')}", new_x="LMARGIN", new_y="NEXT")
+    
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(0, 8, f"{site.get('target_mw', 0)} MW Target Capacity | {site.get('acreage', 0)} Acres", new_x="LMARGIN", new_y="NEXT")
+    
+    pdf.set_font("Helvetica", size=10)
+    pdf.cell(0, 6, f"Utility: {site.get('utility', 'N/A')} | State: {site.get('state', 'N/A')} | Assessment Date: {datetime.now().strftime('%b %Y')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+    
+    # --- Executive Summary ---
     pdf.set_font("Helvetica", 'B', 14)
-    pdf.cell(0, 10, f"{site.get('name', 'Unnamed Site')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(0, 10, "Executive Summary", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
+    
     pdf.set_font("Helvetica", size=10)
-    pdf.cell(0, 5, f"Date: {datetime.now().strftime('%Y-%m-%d')}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 5, f"Stage: {stage}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 5, f"Overall Score: {scores['overall_score']}/100", new_x="LMARGIN", new_y="NEXT")
+    summary_text = (
+        f"This diagnostic analyzes the critical path to power for {site.get('name')}, a {site.get('target_mw')} MW development "
+        f"in {site.get('state')} served by {site.get('utility')}. The project is currently in the '{stage}' stage with an "
+        f"overall score of {scores['overall_score']}/100. Key strengths include {', '.join(state_context['swot']['strengths'][:2])}."
+    )
+    pdf.multi_cell(0, 5, summary_text)
     pdf.ln(5)
+
+    # --- Power Phasing Summary (Mocked based on single phase) ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "Power Phasing Summary", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
     
-    # Executive Summary
-    pdf.set_font("Helvetica", 'B', 12)
-    pdf.cell(0, 10, "Executive Summary", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", 'B', 9)
+    pdf.set_fill_color(220, 220, 220)
+    headers = ["Phase", "Interconnect", "Generation", "Target Date", "Study Status"]
+    col_widths = [20, 40, 40, 40, 50]
+    
+    for i, h in enumerate(headers):
+        pdf.cell(col_widths[i], 8, h, border=1, fill=True)
+    pdf.ln()
+    
+    pdf.set_font("Helvetica", size=9)
+    # Phase 1 (Inferred)
+    target_date = (datetime.now() + pd.DateOffset(months=site.get('power_timeline_months', 48))).strftime('%b %Y')
+    row = ["1", f"{site.get('target_mw')} MW", "0 MW", target_date, site.get('study_status', 'N/A').replace('_', ' ').title()]
+    
+    for i, r in enumerate(row):
+        pdf.cell(col_widths[i], 8, str(r), border=1)
+    pdf.ln(10)
+
+    # --- Capacity Trajectory (Linear Ramp) ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "Capacity Trajectory (Estimated)", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
+    
+    pdf.set_font("Helvetica", 'B', 9)
+    pdf.set_fill_color(220, 220, 220)
+    headers = ["Year", "Interconnect", "Available Power", "Limiting Factor"]
+    col_widths = [30, 50, 50, 60]
+    
+    for i, h in enumerate(headers):
+        pdf.cell(col_widths[i], 8, h, border=1, fill=True)
+    pdf.ln()
+    
+    pdf.set_font("Helvetica", size=9)
+    start_year = datetime.now().year + 2
+    total_mw = site.get('target_mw', 0)
+    
+    for i in range(5):
+        year = start_year + i
+        # Simple ramp: 20%, 40%, 60%, 80%, 100%
+        mw = int(total_mw * ((i + 1) * 0.2))
+        row = [str(year), f"{mw} MW", f"{mw} MW", "Interconnection"]
+        for j, r in enumerate(row):
+            pdf.cell(col_widths[j], 8, str(r), border=1)
+        pdf.ln()
+    pdf.ln(10)
+
+    # --- Critical Path & Risks ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "Risk Assessment & Bottlenecks", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
+    
     pdf.set_font("Helvetica", size=10)
-    pdf.cell(0, 5, f"State: {site.get('state', 'N/A')} ({state_context['summary']['tier_label']})", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 5, f"Utility: {site.get('utility', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 5, f"Target Capacity: {site.get('target_mw', 0)} MW", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 5, f"Acreage: {site.get('acreage', 0)} acres", new_x="LMARGIN", new_y="NEXT")
+    
+    # Derived Risks
+    risks = []
+    if scores['state_score'] < 60: risks.append(f"[HIGH] State: {site.get('state')} has a low tier rating ({state_context['summary']['tier_label']}).")
+    if site.get('power_timeline_months', 0) > 48: risks.append(f"[MEDIUM] Timeline: Long lead time to power ({site.get('power_timeline_months')} months).")
+    if site.get('community_support') == 'opposition': risks.append("[HIGH] Community: Active opposition reported.")
+    if site.get('land_control') == 'none': risks.append("[HIGH] Land: No land control secured.")
+    if not risks: risks.append("No critical risks identified based on current data.")
+    
+    for r in risks:
+        pdf.set_text_color(200, 0, 0) if "[HIGH]" in r else pdf.set_text_color(0, 0, 0)
+        pdf.cell(0, 6, f"• {r}", new_x="LMARGIN", new_y="NEXT")
+    
     pdf.ln(5)
+    pdf.set_text_color(0, 0, 0)
     
-    # Score Breakdown
-    pdf.set_font("Helvetica", 'B', 12)
-    pdf.cell(0, 10, "Score Breakdown", new_x="LMARGIN", new_y="NEXT")
+    # --- Non-Power Items ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "Non-Power Items", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
+    
     pdf.set_font("Helvetica", size=10)
-    
-    # Table Header
-    pdf.set_fill_color(200, 220, 255)
-    pdf.cell(60, 7, "Component", border=1, fill=True)
-    pdf.cell(30, 7, "Score", border=1, fill=True)
-    pdf.cell(30, 7, "Weight", border=1, fill=True, new_x="LMARGIN", new_y="NEXT")
-    
-    # Table Rows
-    components = [
-        ("State", scores['state_score'], scores['weights']['state']),
-        ("Power Pathway", scores['power_score'], scores['weights']['power']),
-        ("Relationship", scores['relationship_score'], scores['weights']['relationship']),
-        ("Execution", scores['execution_score'], scores['weights']['execution']),
-        ("Fundamentals", scores['fundamentals_score'], scores['weights']['fundamentals']),
-        ("Financial", scores['financial_score'], scores['weights']['financial']),
+    items = [
+        f"Zoning Approved: {'Yes' if site.get('zoning_approved') else 'No'}",
+        f"Water Status: {site.get('water_status', 'Unknown').title()}",
+        f"Fiber Status: {site.get('fiber_status', 'Unknown').title()}",
+        f"Land Control: {site.get('land_control', 'None').title()}"
     ]
-    
-    for name, score, weight in components:
-        pdf.cell(60, 7, name, border=1)
-        pdf.cell(30, 7, str(score), border=1)
-        pdf.cell(30, 7, f"{weight*100:.0f}%", border=1, new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(5)
-    
-    # State Context
-    pdf.set_font("Helvetica", 'B', 12)
-    pdf.cell(0, 10, f"State Context: {site.get('state', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", size=10)
-    pdf.multi_cell(0, 5, f"ISO: {state_context['summary']['primary_iso']}\nRegulatory: {state_context['summary']['regulatory_structure']}")
-    
-    pdf.set_font("Helvetica", 'B', 10)
-    pdf.cell(0, 8, "Strengths:", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", size=10)
-    for s in state_context['swot']['strengths']:
-        pdf.cell(5) # Indent
-        pdf.cell(0, 5, f"- {s}", new_x="LMARGIN", new_y="NEXT")
+    for item in items:
+        pdf.cell(0, 6, f"• {item}", new_x="LMARGIN", new_y="NEXT")
         
-    pdf.set_font("Helvetica", 'B', 10)
-    pdf.cell(0, 8, "Risks:", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", size=10)
-    for w in state_context['swot']['weaknesses']:
-        pdf.cell(5) # Indent
-        pdf.cell(0, 5, f"- {w}", new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(5)
-    
-    # Critical Path
-    pdf.set_font("Helvetica", 'B', 12)
-    pdf.cell(0, 10, "Critical Path Analysis", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", 'B', 10)
-    pdf.cell(0, 8, "Power Pathway", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", size=10)
-    pdf.cell(0, 5, f"Study Status: {site.get('study_status', 'N/A').replace('_', ' ').title()}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 5, f"Utility Commitment: {site.get('utility_commitment', 'N/A').replace('_', ' ').title()}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 5, f"Timeline: {site.get('power_timeline_months', 'N/A')} months", new_x="LMARGIN", new_y="NEXT")
-    
-    pdf.ln(5)
-    pdf.set_font("Helvetica", 'B', 12)
-    pdf.cell(0, 10, "Notes", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", size=10)
-    pdf.multi_cell(0, 5, site.get('notes', 'No notes added.'))
-    
     return bytes(pdf.output())
 
 
