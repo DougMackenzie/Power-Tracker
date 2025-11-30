@@ -452,9 +452,6 @@ def show_site_details(site_id: str):
         if st.button("✏️ Edit Site"):
             st.session_state.edit_site_id = site_id
             st.rerun()
-from fpdf import FPDF
-
-# ... (inside show_site_details)
     with col2:
         pdf_bytes = generate_site_report_pdf(site, scores, stage, state_context)
         st.download_button(
@@ -463,6 +460,11 @@ from fpdf import FPDF
             file_name=f"{site.get('name', 'site').replace(' ', '_')}_Report.pdf",
             mime="application/pdf"
         )
+    with col3:
+        if st.button("🗑️ Delete Site", type="secondary"):
+            delete_site(st.session_state.db, site_id)
+            st.success("Site deleted")
+            st.rerun()
 
 def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context: Dict) -> bytes:
     """Generate a PDF report for a site."""
@@ -565,11 +567,6 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.multi_cell(0, 5, site.get('notes', 'No notes added.'))
     
     return bytes(pdf.output())
-    with col3:
-        if st.button("🗑️ Delete Site", type="secondary"):
-            delete_site(st.session_state.db, site_id)
-            st.success("Site deleted")
-            st.rerun()
 
 
 def show_add_edit_site():
