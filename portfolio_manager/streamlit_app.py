@@ -1220,6 +1220,8 @@ def show_add_edit_site():
     if editing:
         st.info(f"Editing: {site.get('name', st.session_state.edit_site_id)}")
         if st.button("Cancel Edit"):
+            if 'processing_save' in st.session_state:
+                del st.session_state.processing_save
             del st.session_state.edit_site_id
             st.rerun()
     
@@ -1443,6 +1445,14 @@ def show_add_edit_site():
         submitted = st.form_submit_button("💾 Save Site Diagnostic")
         
         if submitted:
+            # Check if we're already processing a submission
+            if st.session_state.get('processing_save', False):
+                st.warning("Save in progress, please wait...")
+                return
+            
+            # Set processing flag
+            st.session_state.processing_save = True
+            
             if not name or not state:
                 st.error("Name and State are required.")
             else:
@@ -1494,6 +1504,9 @@ def show_add_edit_site():
                 # Clear edit state if editing
                 if editing:
                     del st.session_state.edit_site_id
+                
+                # Clear processing flag
+                st.session_state.processing_save = False
                 
                 st.success(f"✅ Site diagnostic  {'updated' if editing else 'added'} successfully!")
                 st.rerun()
