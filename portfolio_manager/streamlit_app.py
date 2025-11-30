@@ -113,11 +113,11 @@ def calculate_power_pathway_score(site: Dict) -> float:
     max_phase_score = 0
     for p in phases:
         p_score = 0
-        if p.get('ia_status') == 'Executed': p_score = 100
-        elif p.get('fa_status') == 'Executed': p_score = 80
-        elif p.get('fs_status') == 'Complete': p_score = 60
-        elif p.get('sis_status') == 'Complete': p_score = 40
-        elif p.get('sis_status') == 'In Progress': p_score = 20
+        if p.get('energy_contract_status') == 'Executed': p_score = 100
+        elif p.get('loa_status') == 'Executed': p_score = 75
+        elif p.get('contract_study_status') == 'Complete': p_score = 50
+        elif p.get('screening_status') == 'Complete': p_score = 25
+        elif p.get('screening_status') == 'Initiated': p_score = 10
         max_phase_score = max(max_phase_score, p_score)
     
     score += max_phase_score * 0.7  # 70% weight on study status
@@ -617,7 +617,7 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
             pdf.set_font("Helvetica", 'B', 10)
             pdf.cell(0, 6, f"Phase {i+1}: {p.get('mw')} MW @ {p.get('voltage')}", new_x="LMARGIN", new_y="NEXT")
             pdf.set_font("Helvetica", size=10)
-            pdf.multi_cell(0, 5, f"  - Interconnection: {p.get('ia_status')} (SIS: {p.get('sis_status')})\n  - Target Online: {p.get('target_date')}\n  - Infrastructure: {p.get('substation_status')} ({p.get('trans_dist')} miles)")
+            pdf.multi_cell(0, 5, f"  - Screening: {p.get('screening_status', 'N/A')} | Contract Study: {p.get('contract_study_status', 'N/A')}\n  - LOA: {p.get('loa_status', 'N/A')} | Energy Contract: {p.get('energy_contract_status', 'N/A')}\n  - Target Online: {p.get('target_date')}")
             pdf.ln(2)
     else:
         pdf.cell(0, 6, "No phasing data available.", new_x="LMARGIN", new_y="NEXT")
@@ -856,10 +856,10 @@ def show_site_details(site_id: str):
                 with cols[i]:
                     st.markdown(f"**Phase {i+1}**")
                     st.caption(f"{p.get('mw', 0)} MW @ {p.get('voltage', 'N/A')}")
-                    st.write(f"**SIS:** {p.get('sis_status', 'N/A')}")
-                    st.write(f"**FS:** {p.get('fs_status', 'N/A')}")
-                    st.write(f"**FA:** {p.get('fa_status', 'N/A')}")
-                    st.write(f"**IA:** {p.get('ia_status', 'N/A')}")
+                    st.write(f"**Screening:** {p.get('screening_status', 'N/A')}")
+                    st.write(f"**Contract Study:** {p.get('contract_study_status', 'N/A')}")
+                    st.write(f"**LOA:** {p.get('loa_status', 'N/A')}")
+                    st.write(f"**Energy Contract:** {p.get('energy_contract_status', 'N/A')}")
         else:
             st.info("No phasing data available.")
             
@@ -1186,56 +1186,13 @@ def show_add_edit_site():
                                          index=['None', 'Option', 'Leased', 'Owned'].index(site.get('land_status', 'None')))
                 date_str = st.date_input("Assessment Date", value=datetime.now())
 
-            st.markdown("---")
-            st.subheader("Scoring Factors")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.markdown("**Relationship**")
-                
-                # Safe mapping for Community Support
-                c_val = site.get('community_support', 'Neutral')
-                if c_val == 'champion': c_val = 'Strong Support'
-                elif c_val == 'opposition': c_val = 'Opposition'
-                if c_val not in ['Strong Support', 'Neutral', 'Opposition']: c_val = 'Neutral'
-                
-                comm_supp = st.selectbox("Community Support", options=['Strong Support', 'Neutral', 'Opposition'],
-                                       index=['Strong Support', 'Neutral', 'Opposition'].index(c_val))
-                
-                # Safe mapping for Political Support
-                p_val = site.get('political_support', 'Neutral')
-                if p_val == 'strong': p_val = 'High'
-                elif p_val == 'opposition': p_val = 'Low'
-                if p_val not in ['High', 'Neutral', 'Low']: p_val = 'Neutral'
-                
-                pol_supp = st.selectbox("Political Support", options=['High', 'Neutral', 'Low'],
-                                      index=['High', 'Neutral', 'Low'].index(p_val))
-            with col2:
-                st.markdown("**Execution**")
-                
-                d_val = site.get('dev_experience', 'Medium')
-                if d_val not in ['High', 'Medium', 'Low']: d_val = 'Medium'
-                dev_exp = st.selectbox("Developer Experience", options=['High', 'Medium', 'Low'],
-                                     index=['High', 'Medium', 'Low'].index(d_val))
-                
-                cap_val = site.get('capital_status', 'None')
-                if cap_val not in ['Secured', 'Partial', 'None']: cap_val = 'None'
-                cap_stat = st.selectbox("Capital Status", options=['Secured', 'Partial', 'None'],
-                                      index=['Secured', 'Partial', 'None'].index(cap_val))
-            with col3:
-                st.markdown("**Financial**")
-                
-                f_val = site.get('financial_status', 'Moderate')
-                if f_val not in ['Strong', 'Moderate', 'Weak']: f_val = 'Moderate'
-                fin_stat = st.selectbox("Financial Strength", options=['Strong', 'Moderate', 'Weak'],
-                                      index=['Strong', 'Moderate', 'Weak'].index(f_val))
-
         # --- Tab 2: Phasing & Studies ---
         with tab2:
             st.subheader("Power System Studies")
             
             # Dynamic Phase Count
             current_phases = site.get('phases', [])
-            num_phases = st.number_input("Number of Phases", min_value=1, max_value=10, value=len(current_phases) if current_phases else 4)
+            num_phases = st.number_input("Number of Phases", min_value=1, max_value=10, value=len(current_phases) if current_phases else 2)
             
             phases = []
             cols = st.columns(num_phases)
@@ -1244,19 +1201,25 @@ def show_add_edit_site():
                 with cols[i]:
                     st.markdown(f"**Phase {i+1}**")
                     mw = st.number_input(f"MW", key=f"p{i}_mw", value=p_data.get('mw', 0))
-                    sis = st.selectbox(f"SIS Status", options=['Not Started', 'Requested', 'In Progress', 'Complete'], key=f"p{i}_sis",
-                                     index=['Not Started', 'Requested', 'In Progress', 'Complete'].index(p_data.get('sis_status', 'Not Started')))
-                    fs = st.selectbox(f"FS Status", options=['Not Started', 'In Progress', 'Complete'], key=f"p{i}_fs",
-                                    index=['Not Started', 'In Progress', 'Complete'].index(p_data.get('fs_status', 'Not Started')))
-                    fa = st.selectbox(f"FA Status", options=['Not Started', 'Draft', 'Executed'], key=f"p{i}_fa",
-                                    index=['Not Started', 'Draft', 'Executed'].index(p_data.get('fa_status', 'Not Started')))
-                    ia = st.selectbox(f"IA Status", options=['Not Started', 'Draft', 'Executed'], key=f"p{i}_ia",
-                                    index=['Not Started', 'Draft', 'Executed'].index(p_data.get('ia_status', 'Not Started')))
+                    
+                    scr = st.selectbox(f"Screening Study", options=['Not Started', 'Initiated', 'Complete'], key=f"p{i}_scr",
+                                     index=['Not Started', 'Initiated', 'Complete'].index(p_data.get('screening_status', 'Not Started')))
+                    
+                    con = st.selectbox(f"Contract Study", options=['Not Started', 'Initiated', 'Complete'], key=f"p{i}_con",
+                                     index=['Not Started', 'Initiated', 'Complete'].index(p_data.get('contract_study_status', 'Not Started')))
+                    
+                    loa = st.selectbox(f"Letter of Agreement", options=['Not Started', 'Drafted', 'Executed'], key=f"p{i}_loa",
+                                     index=['Not Started', 'Drafted', 'Executed'].index(p_data.get('loa_status', 'Not Started')))
+                    
+                    enc = st.selectbox(f"Energy Contract", options=['Not Started', 'Drafted', 'Executed'], key=f"p{i}_enc",
+                                     index=['Not Started', 'Drafted', 'Executed'].index(p_data.get('energy_contract_status', 'Not Started')))
+                    
                     target_date = st.date_input(f"Target Online", key=f"p{i}_date", 
                                               value=datetime.strptime(p_data.get('target_date'), '%Y-%m-%d') if p_data.get('target_date') else datetime.today())
                     
                     phases.append({
-                        'mw': mw, 'sis_status': sis, 'fs_status': fs, 'fa_status': fa, 'ia_status': ia,
+                        'mw': mw, 'screening_status': scr, 'contract_study_status': con, 
+                        'loa_status': loa, 'energy_contract_status': enc,
                         'target_date': target_date.strftime('%Y-%m-%d')
                     })
 
@@ -1364,6 +1327,49 @@ def show_add_edit_site():
 
         # --- Tab 7: Analysis & Scoring ---
         with tab7:
+            st.subheader("Scoring Factors")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown("**Relationship**")
+                
+                # Safe mapping for Community Support
+                c_val = site.get('community_support', 'Neutral')
+                if c_val == 'champion': c_val = 'Strong Support'
+                elif c_val == 'opposition': c_val = 'Opposition'
+                if c_val not in ['Strong Support', 'Neutral', 'Opposition']: c_val = 'Neutral'
+                
+                comm_supp = st.selectbox("Community Support", options=['Strong Support', 'Neutral', 'Opposition'],
+                                       index=['Strong Support', 'Neutral', 'Opposition'].index(c_val))
+                
+                # Safe mapping for Political Support
+                p_val = site.get('political_support', 'Neutral')
+                if p_val == 'strong': p_val = 'High'
+                elif p_val == 'opposition': p_val = 'Low'
+                if p_val not in ['High', 'Neutral', 'Low']: p_val = 'Neutral'
+                
+                pol_supp = st.selectbox("Political Support", options=['High', 'Neutral', 'Low'],
+                                      index=['High', 'Neutral', 'Low'].index(p_val))
+            with col2:
+                st.markdown("**Execution**")
+                
+                d_val = site.get('dev_experience', 'Medium')
+                if d_val not in ['High', 'Medium', 'Low']: d_val = 'Medium'
+                dev_exp = st.selectbox("Developer Experience", options=['High', 'Medium', 'Low'],
+                                     index=['High', 'Medium', 'Low'].index(d_val))
+                
+                cap_val = site.get('capital_status', 'None')
+                if cap_val not in ['Secured', 'Partial', 'None']: cap_val = 'None'
+                cap_stat = st.selectbox("Capital Status", options=['Secured', 'Partial', 'None'],
+                                      index=['Secured', 'Partial', 'None'].index(cap_val))
+            with col3:
+                st.markdown("**Financial**")
+                
+                f_val = site.get('financial_status', 'Moderate')
+                if f_val not in ['Strong', 'Moderate', 'Weak']: f_val = 'Moderate'
+                fin_stat = st.selectbox("Financial Strength", options=['Strong', 'Moderate', 'Weak'],
+                                      index=['Strong', 'Moderate', 'Weak'].index(f_val))
+            
+            st.markdown("---")
             st.subheader("Strategic Analysis")
             risks_txt = st.text_area("Key Risks (one per line)", value='\n'.join(site.get('risks', [])))
             opps_txt = st.text_area("Acceleration Opportunities", value='\n'.join(site.get('opps', [])))
