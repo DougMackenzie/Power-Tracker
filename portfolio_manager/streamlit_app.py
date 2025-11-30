@@ -433,19 +433,6 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     # Center graph on page
     pdf.draw_spider_graph(105, graph_y + 40, 30, values, labels)
     pdf.ln(85) # Space for graph
-
-
-
-def show_dashboard():
-    """Main dashboard with portfolio overview."""
-    st.title("📊 Portfolio Dashboard")
-    
-    db = st.session_state.db
-    sites = db.get('sites', {})
-    
-    if not sites:
-        st.info("No sites in database. Add sites to see portfolio overview.")
-        return
     
     col1, col2, col3, col4, col5 = st.columns(5)
     
