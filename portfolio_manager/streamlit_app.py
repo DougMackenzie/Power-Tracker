@@ -1016,6 +1016,7 @@ def show_site_database():
         filtered_sites.append({
             'id': site_id, 'Site Name': site.get('name', site_id), 'State': site.get('state', ''),
             'Utility': site.get('utility', ''), 'Target MW': site.get('target_mw', 0),
+            'Acreage': site.get('acreage', 0),
             'Stage': stage, 'Score': scores['overall_score'], 'State Score': scores['state_score'],
             'Power Score': scores['power_score'], 'Relationship': scores['relationship_score'],
             'Last Updated': site.get('last_updated', '')[:10] if site.get('last_updated') else ''
@@ -1028,7 +1029,8 @@ def show_site_database():
             'State Score': st.column_config.ProgressColumn(min_value=0, max_value=100, format="%.1f"),
             'Power Score': st.column_config.ProgressColumn(min_value=0, max_value=100, format="%.1f"),
             'Relationship': st.column_config.ProgressColumn(min_value=0, max_value=100, format="%.1f"),
-            'Target MW': st.column_config.NumberColumn(format="%d")
+            'Target MW': st.column_config.NumberColumn(format="%d"),
+            'Acreage': st.column_config.NumberColumn(format="%d")
         }, hide_index=True, use_container_width=True)
         
         st.markdown("---")
@@ -1479,6 +1481,9 @@ def show_add_edit_site():
                 
                 st.session_state.db['sites'][site_id] = new_site
                 save_database(st.session_state.db)
+                
+                # Reload database from Google Sheets to ensure fresh data
+                st.session_state.db = load_database()
                 
                 # Clear edit state if editing
                 if editing:
