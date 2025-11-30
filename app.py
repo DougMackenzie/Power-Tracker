@@ -38,15 +38,20 @@ with tab1:
         data = ws.get_all_records()
         df = pd.DataFrame(data)
         
-        # Chart
-        chart = alt.Chart(df).mark_line(point=True).encode(
-            x='Year:O',
-            y='Capacity (GW):Q',
-            color='Type:N',
-            tooltip=['Year', 'Type', 'Capacity (GW)']
-        ).properties(title="US Power Supply vs Demand Gap")
-        
-        st.altair_chart(chart, use_container_width=True)
+        if df.empty:
+            st.warning("The 'LiveProjection' sheet is empty. Please add data (Year, Capacity (GW), Type) to visualize it.")
+        elif not {'Year', 'Capacity (GW)', 'Type'}.issubset(df.columns):
+            st.warning(f"The 'LiveProjection' sheet is missing required columns. Found: {df.columns.tolist()}. Expected: ['Year', 'Capacity (GW)', 'Type']")
+        else:
+            # Chart
+            chart = alt.Chart(df).mark_line(point=True).encode(
+                x='Year:O',
+                y='Capacity (GW):Q',
+                color='Type:N',
+                tooltip=['Year', 'Type', 'Capacity (GW)']
+            ).properties(title="US Power Supply vs Demand Gap")
+            
+            st.altair_chart(chart, use_container_width=True)
         
         # Data Table
         st.dataframe(df)
