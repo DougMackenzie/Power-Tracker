@@ -132,34 +132,45 @@ def calculate_power_pathway_score(site: Dict) -> float:
 
 def calculate_relationship_score(site: Dict) -> float:
     """Calculate relationship capital score (0-100)."""
-    # Default to 50 (Neutral) if not specified, as these fields are less emphasized in new form
-    score = 50
-    if site.get('community_support') == 'champion': score += 25
-    elif site.get('community_support') == 'opposition': score -= 25
+    score = 50 # Base score
     
-    if site.get('political_support') == 'strong': score += 25
-    elif site.get('political_support') == 'opposition': score -= 25
+    # Community Support (40 pts range)
+    comm = site.get('community_support', 'Neutral')
+    if comm == 'Strong Support': score += 20
+    elif comm == 'Opposition': score -= 20
+    
+    # Political Support (40 pts range)
+    pol = site.get('political_support', 'Neutral')
+    if pol == 'High': score += 20
+    elif pol == 'Low': score -= 20
+    
+    # Landowner Relations (20 pts range)
+    land = site.get('land_status', 'None')
+    if land in ['Owned', 'Leased']: score += 10
+    elif land == 'Option': score += 5
     
     return min(max(score, 0), 100)
 
 def calculate_execution_score(site: Dict) -> float:
     """Calculate execution capability score (0-100)."""
     score = 0
-    np = site.get('non_power', {})
     
-    # Zoning (40 pts)
+    # Developer Experience (30 pts)
+    exp = site.get('dev_experience', 'Medium')
+    if exp == 'High': score += 30
+    elif exp == 'Medium': score += 15
+    
+    # Capital Secured (30 pts)
+    cap = site.get('capital_status', 'None')
+    if cap == 'Secured': score += 30
+    elif cap == 'Partial': score += 15
+    
+    # Permitting/Zoning (40 pts)
+    np = site.get('non_power', {})
     zoning = np.get('zoning_status', 'Not Started')
     if zoning == 'Approved': score += 40
     elif zoning == 'Submitted': score += 20
     elif zoning == 'Pre-App': score += 10
-    
-    # Onsite Gen Status (30 pts)
-    gen = site.get('onsite_gen', {})
-    if gen.get('gas_status') or gen.get('solar_mw', 0) > 0:
-        score += 30
-    
-    # Developer Track Record (30 pts) - Legacy field, default to mid
-    score += 30 
     
     return min(score, 100)
 
@@ -169,14 +180,19 @@ def calculate_fundamentals_score(site: Dict) -> float:
     np = site.get('non_power', {})
     phases = site.get('phases', [])
     
-    # Water (30 pts)
-    if np.get('water_cap'): score += 30
-    elif np.get('water_source'): score += 15
+    # Land Control (20 pts)
+    land = site.get('land_status', 'None')
+    if land in ['Owned', 'Leased']: score += 20
+    elif land == 'Option': score += 10
     
-    # Fiber (20 pts)
+    # Water (20 pts)
+    if np.get('water_cap'): score += 20
+    elif np.get('water_source'): score += 10
+    
+    # Fiber (10 pts)
     fiber = np.get('fiber_status', 'Unknown')
-    if fiber == 'Lit Building': score += 20
-    elif fiber == 'Nearby': score += 10
+    if fiber == 'Lit Building' or fiber == 'At Site': score += 10
+    elif fiber == 'Nearby': score += 5
     
     # Transmission Distance (30 pts)
     min_dist = 999
@@ -196,7 +212,162 @@ def calculate_fundamentals_score(site: Dict) -> float:
 
 def calculate_financial_score(site: Dict) -> float:
     """Calculate financial capability score (0-100)."""
-    return 70 # Default placeholder as financial inputs are removed
+    status = site.get('financial_status', 'Moderate')
+    if status == 'Strong': return 90
+    elif status == 'Moderate': return 60
+    elif status == 'Weak': return 30
+    return 50
+
+# ... (skipping unchanged functions) ...
+
+def show_rankings():
+    """Show site rankings with custom weighting."""
+    st.title("🏆 Site Rankings")
+    
+    db = st.session_state.db
+    sites = db.get('sites', {})
+    
+    if not sites:
+        st.info("No sites in database to rank.")
+        return
+    
+    st.sidebar.subheader("Adjust Weights")
+    weights = {
+        'state': st.sidebar.slider("State Market", 0.0, 1.0, 0.20),
+        'power': st.sidebar.slider("Power Pathway", 0.0, 1.0, 0.25),
+        'relationship': st.sidebar.slider("Relationship", 0.0, 1.0, 0.20),
+        'execution': st.sidebar.slider("Execution", 0.0, 1.0, 0.15),
+        'fundamentals': st.sidebar.slider("Fundamentals", 0.0, 1.0, 0.10),
+        'financial': st.sidebar.slider("Financial", 0.0, 1.0, 0.10)
+    }
+    
+    # Normalize weights
+    total_weight = sum(weights.values())
+    if total_weight > 0:
+        weights = {k: v/total_weight for k, v in weights.items()}
+    
+    site_data = []
+    for site_id, site in sites.items():
+        scores = calculate_site_score(site, weights)
+        stage = determine_stage(site)
+        state_context = generate_state_context_section(site.get('state', ''))
+        
+        site_data.append({
+            'id': site_id,
+            'State Tier': state_context['summary']['tier'],
+            'MW': site.get('target_mw', 0),
+            'Stage': stage,
+            'Overall': scores['overall_score'],
+            'State Score': scores['state_score'],
+            'Power': scores['power_score'],
+            'Relationship': scores['relationship_score'],
+            'Execution': scores['execution_score'],
+            'Fundamentals': scores['fundamentals_score'],
+            'Financial': scores['financial_score']
+        })
+    
+    df = pd.DataFrame(site_data).sort_values('Overall', ascending=False)
+    
+    st.dataframe(df.drop(columns=['id']), column_config={
+        'Overall': st.column_config.ProgressColumn(min_value=0, max_value=100, format="%.1f"),
+        'State Score': st.column_config.ProgressColumn(min_value=0, max_value=100, format="%d"),
+        'Power': st.column_config.ProgressColumn(min_value=0, max_value=100, format="%d"),
+        'Relationship': st.column_config.ProgressColumn(min_value=0, max_value=100, format="%d"),
+        'Execution': st.column_config.ProgressColumn(min_value=0, max_value=100, format="%d"),
+        'Fundamentals': st.column_config.ProgressColumn(min_value=0, max_value=100, format="%d"),
+        'Financial': st.column_config.ProgressColumn(min_value=0, max_value=100, format="%d"),
+        'MW': st.column_config.NumberColumn(format="%d MW")
+    }, hide_index=True, use_container_width=True)
+
+
+# ... (skipping unchanged functions) ...
+
+def show_add_edit_site():
+    # ... (start of function remains same) ...
+    # ... (inside form) ...
+        # --- Tab 1: Basic Info ---
+        with tab1:
+            st.subheader("Site Overview")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                name = st.text_input("Site Name*", value=site.get('name', ''))
+                state = st.selectbox("State*", options=[''] + list(STATE_PROFILES.keys()), 
+                                   index=list(STATE_PROFILES.keys()).index(site.get('state')) + 1 if site.get('state') in STATE_PROFILES else 0)
+                utility = st.text_input("Utility*", value=site.get('utility', ''))
+            with col2:
+                target_mw = st.number_input("Target Capacity (MW)*", value=site.get('target_mw', 0))
+                acreage = st.number_input("Acreage*", value=site.get('acreage', 0))
+                iso = st.selectbox("ISO/RTO", options=['SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC', 'NYISO', 'ISO-NE'],
+                                 index=['SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC', 'NYISO', 'ISO-NE'].index(site.get('iso')) if site.get('iso') in ['SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC', 'NYISO', 'ISO-NE'] else 0)
+            with col3:
+                county = st.text_input("County", value=site.get('county', ''))
+                developer = st.text_input("Developer", value=site.get('developer', ''))
+                land_status = st.selectbox("Land Status", options=['None', 'Option', 'Leased', 'Owned'],
+                                         index=['None', 'Option', 'Leased', 'Owned'].index(site.get('land_status', 'None')))
+                date_str = st.date_input("Assessment Date", value=datetime.now())
+
+    # ... (Tabs 2-6 remain same) ...
+
+        # --- Tab 7: Analysis & Scoring ---
+        with tab7:
+            st.subheader("Scoring Factors")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown("**Relationship**")
+                comm_supp = st.selectbox("Community Support", options=['Strong Support', 'Neutral', 'Opposition'],
+                                       index=['Strong Support', 'Neutral', 'Opposition'].index(site.get('community_support', 'Neutral')))
+                pol_supp = st.selectbox("Political Support", options=['High', 'Neutral', 'Low'],
+                                      index=['High', 'Neutral', 'Low'].index(site.get('political_support', 'Neutral')))
+            with col2:
+                st.markdown("**Execution**")
+                dev_exp = st.selectbox("Developer Experience", options=['High', 'Medium', 'Low'],
+                                     index=['High', 'Medium', 'Low'].index(site.get('dev_experience', 'Medium')))
+                cap_stat = st.selectbox("Capital Status", options=['Secured', 'Partial', 'None'],
+                                      index=['Secured', 'Partial', 'None'].index(site.get('capital_status', 'None')))
+            with col3:
+                st.markdown("**Financial**")
+                fin_stat = st.selectbox("Financial Strength", options=['Strong', 'Moderate', 'Weak'],
+                                      index=['Strong', 'Moderate', 'Weak'].index(site.get('financial_status', 'Moderate')))
+            
+            st.markdown("---")
+            st.subheader("Strategic Analysis")
+            risks_txt = st.text_area("Key Risks (one per line)", value='\n'.join(site.get('risks', [])))
+            opps_txt = st.text_area("Acceleration Opportunities", value='\n'.join(site.get('opps', [])))
+            questions_txt = st.text_area("Open Questions", value='\n'.join(site.get('questions', [])))
+        
+        submitted = st.form_submit_button("💾 Save Site Diagnostic")
+        
+        if submitted:
+            if not name or not state:
+                st.error("Name and State are required.")
+            else:
+                new_site = {
+                    'name': name, 'state': state, 'utility': utility, 'target_mw': target_mw,
+                    'acreage': acreage, 'iso': iso, 'county': county, 'developer': developer,
+                    'land_status': land_status,
+                    'community_support': comm_supp, 'political_support': pol_supp,
+                    'dev_experience': dev_exp, 'capital_status': cap_stat,
+                    'financial_status': fin_stat,
+                    'last_updated': datetime.now().isoformat(),
+                    'phases': phases,
+                    'onsite_gen': onsite_gen,
+                    'schedule': sched_data,
+                    'non_power': non_power,
+                    'risks': [r.strip() for r in risks_txt.split('\n') if r.strip()],
+                    'opps': [o.strip() for o in opps_txt.split('\n') if o.strip()],
+                    'questions': [q.strip() for q in questions_txt.split('\n') if q.strip()],
+                    # Legacy fields for backward compatibility
+                    'study_status': phases[0]['sis_status'] if phases else 'Not Started',
+                    'utility_commitment': 'Committed' if phases and phases[0]['ia_status'] == 'Executed' else 'None',
+                    'power_timeline_months': 36 # Placeholder
+                }
+                
+                site_id = st.session_state.edit_site_id if editing else f"site_{len(st.session_state.db['sites'])+1}"
+                st.session_state.db['sites'][site_id] = new_site
+                save_database(st.session_state.db)
+                st.success("Site saved successfully!")
+                if editing: del st.session_state.edit_site_id
+                st.rerun()
 
 def determine_stage(site: Dict) -> str:
     """Determine development stage based on site attributes."""
