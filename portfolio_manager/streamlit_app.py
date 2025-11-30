@@ -1476,12 +1476,15 @@ def show_add_edit_site():
                     while site_id in st.session_state.db['sites']:
                         site_id = f"{base_id}_{counter}"
                         counter += 1
+                
                 st.session_state.db['sites'][site_id] = new_site
                 save_database(st.session_state.db)
-                st.success("Site saved successfully!")
-                if editing: del st.session_state.edit_site_id
-                st.rerun()
-                st.success(f"Site diagnostic {'updated' if editing else 'added'} successfully!")
+                
+                # Clear edit state if editing
+                if editing:
+                    del st.session_state.edit_site_id
+                
+                st.success(f"✅ Site diagnostic  {'updated' if editing else 'added'} successfully!")
                 st.rerun()
 
 
