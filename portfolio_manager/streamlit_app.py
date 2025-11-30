@@ -1310,8 +1310,8 @@ def show_add_edit_site():
                     'opps': [o.strip() for o in opps_txt.split('\n') if o.strip()],
                     'questions': [q.strip() for q in questions_txt.split('\n') if q.strip()],
                     # Legacy fields for backward compatibility
-                    'study_status': phases[0]['sis_status'] if phases else 'Not Started',
-                    'utility_commitment': 'Committed' if phases and phases[0]['ia_status'] == 'Executed' else 'None',
+                    'study_status': phases[0].get('screening_status', 'Not Started') if phases else 'Not Started',
+                    'utility_commitment': 'Committed' if phases and phases[0].get('energy_contract_status') == 'Executed' else 'None',
                     'power_timeline_months': 36 # Placeholder
                 }
                 
