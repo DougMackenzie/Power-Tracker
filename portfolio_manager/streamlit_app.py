@@ -703,9 +703,15 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.ln(2)
     
     pdf.set_font("Helvetica", 'B', 11)
-    pdf.cell(0, 7, f"Market Tier: {state_context['summary']['tier']}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 7, f"Market Tier: {state_context.get('summary', {}).get('tier_label', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", size=9)
-    pdf.multi_cell(0, 5, state_context['summary']['description'])
+    
+    # Create a description from available data
+    description = f"{state_context.get('summary', {}).get('state', site.get('state', 'This state'))} is classified as a {state_context.get('summary', {}).get('tier_label', 'moderate market')} for data center development. "
+    description += f"Primary ISO: {state_context.get('summary', {}).get('primary_iso', 'N/A')}. "
+    description += f"Regulatory Structure: {state_context.get('summary', {}).get('regulatory_structure', 'N/A')}."
+    
+    pdf.multi_cell(0, 5, description)
     pdf.ln(3)
     
     # SWOT Analysis
