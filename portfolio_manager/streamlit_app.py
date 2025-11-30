@@ -732,9 +732,9 @@ def show_dashboard():
     df = pd.DataFrame(site_data).sort_values('Score', ascending=False)
     
     st.dataframe(df, column_config={
-        'Score': st.column_config.ProgressColumn(min_value=0, max_value=100),
-        'Power': st.column_config.ProgressColumn(min_value=0, max_value=100),
-        'Relationship': st.column_config.ProgressColumn(min_value=0, max_value=100),
+        'Score': st.column_config.ProgressColumn(min_value=0, max_value=100, format="%.1f"),
+        'Power': st.column_config.ProgressColumn(min_value=0, max_value=100, format="%d"),
+        'Relationship': st.column_config.ProgressColumn(min_value=0, max_value=100, format="%d"),
         'MW': st.column_config.NumberColumn(format="%d MW")
     }, hide_index=True, use_container_width=True)
 
@@ -1182,6 +1182,8 @@ def show_add_edit_site():
             with col3:
                 county = st.text_input("County", value=site.get('county', ''))
                 developer = st.text_input("Developer", value=site.get('developer', ''))
+                land_status = st.selectbox("Land Status", options=['None', 'Option', 'Leased', 'Owned'],
+                                         index=['None', 'Option', 'Leased', 'Owned'].index(site.get('land_status', 'None')))
                 date_str = st.date_input("Assessment Date", value=datetime.now())
 
         # --- Tab 2: Phasing & Studies ---
@@ -1317,8 +1319,28 @@ def show_add_edit_site():
                 'fiber_status': fiber_stat, 'fiber_provider': fiber_prov, 'env_issues': env_issues
             }
 
-        # --- Tab 7: Analysis ---
+        # --- Tab 7: Analysis & Scoring ---
         with tab7:
+            st.subheader("Scoring Factors")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown("**Relationship**")
+                comm_supp = st.selectbox("Community Support", options=['Strong Support', 'Neutral', 'Opposition'],
+                                       index=['Strong Support', 'Neutral', 'Opposition'].index(site.get('community_support', 'Neutral')))
+                pol_supp = st.selectbox("Political Support", options=['High', 'Neutral', 'Low'],
+                                      index=['High', 'Neutral', 'Low'].index(site.get('political_support', 'Neutral')))
+            with col2:
+                st.markdown("**Execution**")
+                dev_exp = st.selectbox("Developer Experience", options=['High', 'Medium', 'Low'],
+                                     index=['High', 'Medium', 'Low'].index(site.get('dev_experience', 'Medium')))
+                cap_stat = st.selectbox("Capital Status", options=['Secured', 'Partial', 'None'],
+                                      index=['Secured', 'Partial', 'None'].index(site.get('capital_status', 'None')))
+            with col3:
+                st.markdown("**Financial**")
+                fin_stat = st.selectbox("Financial Strength", options=['Strong', 'Moderate', 'Weak'],
+                                      index=['Strong', 'Moderate', 'Weak'].index(site.get('financial_status', 'Moderate')))
+            
+            st.markdown("---")
             st.subheader("Strategic Analysis")
             risks_txt = st.text_area("Key Risks (one per line)", value='\n'.join(site.get('risks', [])))
             opps_txt = st.text_area("Acceleration Opportunities", value='\n'.join(site.get('opps', [])))
@@ -1333,6 +1355,10 @@ def show_add_edit_site():
                 new_site = {
                     'name': name, 'state': state, 'utility': utility, 'target_mw': target_mw,
                     'acreage': acreage, 'iso': iso, 'county': county, 'developer': developer,
+                    'land_status': land_status,
+                    'community_support': comm_supp, 'political_support': pol_supp,
+                    'dev_experience': dev_exp, 'capital_status': cap_stat,
+                    'financial_status': fin_stat,
                     'last_updated': datetime.now().isoformat(),
                     'phases': phases,
                     'onsite_gen': onsite_gen,
