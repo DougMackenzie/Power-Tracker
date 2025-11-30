@@ -714,48 +714,11 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.multi_cell(0, 5, description)
     pdf.ln(3)
     
-    # SWOT Analysis - with robust error handling
-    swot = state_context.get('swot', {})
+    # SWOT Analysis - Temporarily disabled due to rendering issues
+    # Will be re-enabled with simpler text rendering
+    # swot = state_context.get('swot', {})
     
-    def safe_add_text(pdf_obj, text_items, max_items=5):
-        """Safely add text items to PDF with error handling."""
-        for item in text_items[:max_items]:
-            if not item or not isinstance(item, str):
-                continue
-            # Clean and truncate text
-            clean_text = str(item).strip()[:150]
-            if not clean_text:
-                continue
-            try:
-                pdf_obj.multi_cell(0, 5, f"- {clean_text}")
-            except Exception:
-                # Skip items that cause rendering issues
-                continue
-    
-    if swot.get('strengths'):
-        pdf.set_font("Helvetica", 'B', 10)
-        pdf.set_fill_color(220, 255, 220)
-        pdf.cell(0, 6, "Strengths", new_x="LMARGIN", new_y="NEXT", fill=True)
-        pdf.set_font("Helvetica", size=9)
-        safe_add_text(pdf, swot['strengths'], 5)
-        pdf.ln(2)
-    
-    if swot.get('opportunities'):
-        pdf.set_font("Helvetica", 'B', 10)
-        pdf.set_fill_color(255, 255, 220)
-        pdf.cell(0, 6, "Opportunities", new_x="LMARGIN", new_y="NEXT", fill=True)
-        pdf.set_font("Helvetica", size=9)
-        safe_add_text(pdf, swot['opportunities'], 5)
-        pdf.ln(2)
-    
-    if swot.get('weaknesses') or swot.get('threats'):
-        pdf.set_font("Helvetica", 'B', 10)
-        pdf.set_fill_color(255, 220, 220)
-        pdf.cell(0, 6, "Risks & Challenges", new_x="LMARGIN", new_y="NEXT", fill=True)
-        pdf.set_font("Helvetica", size=9)
-        safe_add_text(pdf, swot.get('weaknesses', []), 3)
-        safe_add_text(pdf, swot.get('threats', []), 3)
-        pdf.ln(5)
+    pdf.ln(5)
     
     # --- Risk & Opportunity Analysis ---
     pdf.set_font("Helvetica", 'B', 14)
