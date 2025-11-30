@@ -384,32 +384,50 @@ def show_site_details(site_id: str):
     """Show detailed view of a single site."""
     site = st.session_state.db['sites'].get(site_id, {})
     scores = calculate_site_score(site, st.session_state.weights)
+    state_context = get_state_profile(site.get('state', ''))
     stage = determine_stage(site)
-    state_context = generate_state_context_section(site.get('state', ''))
+    
+    # Header
+    st.title(f"📍 {site.get('name', 'Unnamed Site')}")
+    st.markdown(f"**State:** {site.get('state', 'N/A')} | **Utility:** {site.get('utility', 'N/A')}")
+    st.markdown(f"**Target Capacity:** {site.get('target_mw', 0)} MW | **Acreage:** {site.get('acreage', 0)} acres")
+    st.markdown(f"**Stage:** {stage}")
     
     col1, col2 = st.columns([2, 1])
-    
     with col1:
-        st.subheader(f"📍 {site.get('name', site_id)}")
-        st.write(f"**State:** {site.get('state', 'N/A')} | **Utility:** {site.get('utility', 'N/A')}")
-        st.write(f"**Target Capacity:** {site.get('target_mw', 0):,} MW | **Acreage:** {site.get('acreage', 0):,} acres")
-        st.write(f"**Stage:** {stage}")
-    
+        st.subheader("Score Analysis")
+        
+        # Spider Graph
+        categories = ['State', 'Power', 'Relationship', 'Execution', 'Fundamentals', 'Financial']
+        values = [
+            scores['state_score'], scores['power_score'], scores['relationship_score'],
+            scores['execution_score'], scores['fundamentals_score'], scores['financial_score']
+        ]
+        
+        fig = go.Figure(data=go.Scatterpolar(
+            r=values,
+            theta=categories,
+            fill='toself',
+            name=site.get('name', 'Site')
+        ))
+        fig.update_layout(
+            polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+            showlegend=False,
+            margin=dict(l=40, r=40, t=20, b=20)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
     with col2:
-        st.metric("Overall Score", f"{scores['overall_score']:.1f}/100")
-    
-    st.markdown("#### Score Breakdown")
-    score_df = pd.DataFrame({
-        'Component': ['State', 'Power Pathway', 'Relationship', 'Execution', 'Fundamentals', 'Financial'],
-        'Score': [scores['state_score'], scores['power_score'], scores['relationship_score'],
-                 scores['execution_score'], scores['fundamentals_score'], scores['financial_score']],
-        'Weight': [20, 25, 20, 15, 10, 10]
-    })
-    
-    fig = px.bar(score_df, x='Component', y='Score', color='Score', color_continuous_scale='RdYlGn', range_color=[0, 100])
-    fig.update_layout(height=300)
-    st.plotly_chart(fig, use_container_width=True)
-    
+        st.metric("Overall Score", f"{scores['overall_score']}/100")
+        st.markdown("### Key Strengths")
+        if scores['state_score'] > 70: st.success(f"Strong State Market ({scores['state_score']})")
+        if scores['power_score'] > 70: st.success(f"Advanced Power Path ({scores['power_score']})")
+        if scores['fundamentals_score'] > 70: st.success(f"Solid Fundamentals ({scores['fundamentals_score']})")
+        
+        st.markdown("### Key Risks")
+        for r in site.get('risks', [])[:3]:
+            st.error(r)
+
     if 'error' not in state_context:
         with st.expander("🗺️ State Context", expanded=False):
             col1, col2, col3 = st.columns(3)
@@ -424,14 +442,16 @@ def show_site_details(site_id: str):
             for w in state_context['swot']['weaknesses'][:3]: st.write(f"  ⚠️ {w}")
     
     with st.expander("⚡ Power Pathway Details", expanded=True):
+        st.markdown(f"**Study Status:** {site.get('study_status', 'N/A').replace('_', ' ').title()}")
+        st.markdown(f"**Utility Commitment:** {site.get('utility_commitment', 'N/A').title()}")
+        st.markdown(f"**Timeline to Power:** {site.get('power_timeline_months', 'N/A')} months")
+        
         col1, col2 = st.columns(2)
         with col1:
-            st.write(f"**Study Status:** {site.get('study_status', 'N/A').replace('_', ' ').title()}")
-            st.write(f"**Utility Commitment:** {site.get('utility_commitment', 'N/A').replace('_', ' ').title()}")
-            st.write(f"**Timeline to Power:** {site.get('power_timeline_months', 'N/A')} months")
+            st.markdown(f"**Queue Position:** {'Yes' if site.get('queue_position') else 'No'}")
+            st.markdown(f"**Utility Commitment:** {site.get('utility_commitment', 'N/A').title()}")
         with col2:
-            st.write(f"**Queue Position:** {'Yes' if site.get('queue_position') else 'No'}")
-            st.write(f"**BTM Viable:** {'Yes' if site.get('btm_viable') else 'No'}")
+            st.markdown(f"**BTM Viable:** {'Yes' if site.get('btm_viable') else 'No'}")
     
     col1, col2, col3 = st.columns(3)
     with col1:
