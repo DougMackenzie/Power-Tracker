@@ -583,7 +583,7 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     
     for strength in strengths[:3]:
         pdf.set_xy(110, pdf.get_y())
-        pdf.multi_cell(85, 5, f"• {strength}")
+        pdf.multi_cell(85, 5, f"- {strength}")
     
     pdf.ln(5)
     
@@ -598,7 +598,7 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     risks = site.get('risks', [])
     for risk in risks[:3]:
         pdf.set_xy(110, pdf.get_y())
-        pdf.multi_cell(85, 5, f"• {risk}")
+        pdf.multi_cell(85, 5, f"- {risk}")
     
     pdf.ln(80)  # Move past the spider graph
     
@@ -714,7 +714,7 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.cell(0, 6, "Strengths", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.set_font("Helvetica", size=9)
     for s in state_context['swot']['strengths']:
-        pdf.multi_cell(0, 5, f"• {s}")
+        pdf.multi_cell(0, 5, f"- {s}")
     pdf.ln(2)
     
     pdf.set_font("Helvetica", 'B', 10)
@@ -722,7 +722,7 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.cell(0, 6, "Opportunities", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.set_font("Helvetica", size=9)
     for o in state_context['swot']['opportunities']:
-        pdf.multi_cell(0, 5, f"• {o}")
+        pdf.multi_cell(0, 5, f"- {o}")
     pdf.ln(2)
     
     pdf.set_font("Helvetica", 'B', 10)
@@ -730,9 +730,9 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.cell(0, 6, "Risks & Challenges", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.set_font("Helvetica", size=9)
     for w in state_context['swot']['weaknesses']:
-        pdf.multi_cell(0, 5, f"• {w}")
+        pdf.multi_cell(0, 5, f"- {w}")
     for t in state_context['swot']['threats']:
-        pdf.multi_cell(0, 5, f"• {t}")
+        pdf.multi_cell(0, 5, f"- {t}")
     pdf.ln(5)
     
     # --- Risk & Opportunity Analysis ---
@@ -744,21 +744,21 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.cell(0, 7, "Key Risks", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", size=9)
     for r in site.get('risks', []):
-        pdf.multi_cell(0, 5, f"• {r}")
+        pdf.multi_cell(0, 5, f"- {r}")
     pdf.ln(3)
     
     pdf.set_font("Helvetica", 'B', 11)
     pdf.cell(0, 7, "Acceleration Opportunities", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", size=9)
     for o in site.get('opps', []):
-        pdf.multi_cell(0, 5, f"• {o}")
+        pdf.multi_cell(0, 5, f"- {o}")
     pdf.ln(3)
     
     pdf.set_font("Helvetica", 'B', 11)
     pdf.cell(0, 7, "Open Questions", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", size=9)
     for q in site.get('questions', []):
-        pdf.multi_cell(0, 5, f"• {q}")
+        pdf.multi_cell(0, 5, f"- {q}")
     
     return bytes(pdf.output())
 
