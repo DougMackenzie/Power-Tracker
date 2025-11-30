@@ -4,7 +4,14 @@ import altair as alt
 import gspread
 from google.oauth2.service_account import Credentials
 import json
+import os
+import sys
+
+# Add current directory to path so we can import modules
+sys.path.append(os.path.dirname(__file__))
+
 from forecast_tracker import ForecastTracker, DemandScenario, SupplyScenario
+import portfolio_manager.streamlit_app as pm
 
 # Page Config
 st.set_page_config(page_title="Antigravity Power Tracker", layout="wide")
@@ -28,10 +35,12 @@ def get_data():
 
 sh = get_data()
 
-# Tabs
-tab1, tab2 = st.tabs(["Live Tracker", "Forecast Framework"])
+# Navigation
+st.sidebar.title("Antigravity")
+app_mode = st.sidebar.radio("Select Module", ["Live Tracker", "Forecast Framework", "Portfolio Manager"])
+st.sidebar.markdown("---")
 
-with tab1:
+if app_mode == "Live Tracker":
     st.title("Live Power Supply vs Demand Tracker")
     try:
         ws = sh.worksheet("LiveProjection")
@@ -66,7 +75,7 @@ with tab1:
     except Exception as e:
         st.error(f"Error loading live data: {e}")
 
-with tab2:
+elif app_mode == "Forecast Framework":
     st.title("AI Data Center Forecast Framework (v2.0)")
     st.markdown("Physics-based model driven by CoWoS constraints and Supply Chain bottlenecks.")
     
@@ -144,3 +153,6 @@ with tab2:
         st.dataframe(pd.DataFrame(log_data))
     else:
         st.write("No signals logged yet.")
+
+elif app_mode == "Portfolio Manager":
+    pm.run()

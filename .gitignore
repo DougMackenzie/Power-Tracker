@@ -2,3 +2,5 @@
 __pycache__/
 *.pyc
 .DS_Store
+service_account.json
+export_secrets.py
