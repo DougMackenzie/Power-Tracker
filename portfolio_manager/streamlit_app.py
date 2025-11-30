@@ -1471,13 +1471,19 @@ def show_add_edit_site():
                 if editing:
                     site_id = st.session_state.edit_site_id
                 else:
+                    # Reload database to get latest data from Google Sheets before checking duplicates
+                    fresh_db = load_database()
+                    
                     site_id = name.lower().replace(' ', '_').replace('-', '_')
-                    # Ensure unique ID
+                    # Ensure unique ID by checking against fresh data from Sheets
                     base_id = site_id
                     counter = 1
-                    while site_id in st.session_state.db['sites']:
+                    while site_id in fresh_db['sites']:
                         site_id = f"{base_id}_{counter}"
                         counter += 1
+                    
+                    # Update session state with fresh data
+                    st.session_state.db = fresh_db
                 
                 st.session_state.db['sites'][site_id] = new_site
                 save_database(st.session_state.db)
