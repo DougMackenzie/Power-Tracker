@@ -55,113 +55,80 @@ with tab1:
         st.error(f"Error loading live data: {e}")
 
 with tab2:
+    st.title("AI Data Center Forecast Framework (v2.0)")
+    st.markdown("Physics-based model driven by CoWoS constraints and Supply Chain bottlenecks.")
     
-    # Scenario Selectors
-    col1, col2 = st.sidebar.columns(2)
+    # Initialize Tracker
+    tracker = ForecastTracker()
+    
+    # Load Signals from Sheet
+    try:
+        ws_research = sh.worksheet("WeeklyResearch")
+        signals_data = ws_research.get_all_records()
+        
+        st.info(f"Loaded {len(signals_data)} signals from Weekly Research.")
+        
+        # Replay Signals
+        for s in signals_data:
+            try:
+                data = json.loads(s['Data_JSON'])
+                if s['Type'] == 'cowos_capacity':
+                    tracker.process_cowos_signal(data['year'], data['capacity'], s['Source'])
+                elif s['Type'] == 'hyperscaler_capex':
+                    tracker.process_capex_signal(data['quarterly_capex_bn'], s['Source'])
+                elif s['Type'] == 'queue_update':
+                    tracker.process_queue_signal(data['iso'], data['active_gw'], None, s['Source'])
+            except Exception as e:
+                pass # Skip malformed signals
+                
+    except Exception as e:
+        st.warning("No research signals found yet. Using baseline.")
+
+    # Sidebar Controls
+    st.sidebar.header("Scenario Overrides")
+    
+    # Display Current State
+    state = tracker.get_state_summary()
+    
+    col1, col2, col3 = st.columns(3)
     with col1:
-        demand_scenario = st.selectbox("Demand Scenario", ["Low", "Mid", "High"], index=1)
+        st.metric("Demand Scenario (Acceleration)", f"{state['demand_probabilities']['scenario_a']*100:.0f}%")
     with col2:
-        supply_scenario = st.selectbox("Supply Scenario", ["Low", "Mid", "High"], index=0) # Default to Low (Conservative)
+        st.metric("Supply Scenario", state['supply_scenario'].upper())
+    with col3:
+        gap_2027 = state['forecast_2027']['gap_gw']
+        st.metric("2027 Gap Forecast", f"{gap_2027:+.1f} GW", delta_color="normal" if gap_2027 >=0 else "inverse")
+
+    # Generate Forecast Data for Chart
+    forecast_data = []
+    for year in range(2024, 2031):
+        f = tracker.get_gap_forecast(year)
+        forecast_data.append({"Year": year, "GW": f['demand_gw'], "Type": "Demand (Live)"})
+        forecast_data.append({"Year": year, "GW": f['supply_gw'], "Type": "Supply (Live)"})
         
-    params = SCENARIOS[demand_scenario]
+    df_forecast = pd.DataFrame(forecast_data)
     
-    # Sliders (initialized with scenario defaults)
-    if 'last_demand_scenario' not in st.session_state or st.session_state.last_demand_scenario != demand_scenario:
-        st.session_state.chip_mult = params['Chips_M_Multiplier']
-        st.session_state.tdp_mult = params['TDP_Multiplier']
-        st.session_state.pue_target = params['PUE_Target']
-        st.session_state.last_demand_scenario = demand_scenario
-
-    chip_mult = st.sidebar.slider("Chip Volume Multiplier", 0.5, 2.0, st.session_state.chip_mult, 0.1)
-    tdp_mult = st.sidebar.slider("TDP Multiplier", 0.8, 1.5, st.session_state.tdp_mult, 0.05)
-    pue_target = st.sidebar.slider("2030 PUE Target", 1.0, 1.5, st.session_state.pue_target, 0.01)
-
-    # Calculate Projections
-    research_rows = []
-    for row in BASE_CASE_DATA:
-        year = row['Year']
-        
-        # 1. Calculate Base Case Raw (to derive calibration factor)
-        base_raw_global = (row['Chips_M'] * 1e6 * row['TDP'] * row['Util'] * row['PUE']) / 1e9
-        base_raw_us = base_raw_global * row['US_Share']
-        
-        # Calibration Factor
-        calibration_factor = row['US_GW_Base'] / base_raw_us if base_raw_us > 0 else 1.0
-        
-        # 2. Calculate User Scenario
-        base_pue_2030 = 1.16
-        pue_scale = pue_target / base_pue_2030
-        
-        # Apply multipliers
-        chips = row['Chips_M'] * chip_mult
-        tdp = row['TDP'] * tdp_mult
-        util = row['Util']
-        pue = row['PUE'] * pue_scale
-        
-        # Calculate User Raw
-        user_raw_global = (chips * 1e6 * tdp * util * pue) / 1e9
-        user_raw_us = user_raw_global * row['US_Share']
-        
-        # Apply Calibration
-        final_us_gw = user_raw_us * calibration_factor
-        
-        # Calculate Domestic Demand (70% of Stack, per Page 27)
-        domestic_gw = final_us_gw * 0.70
-        
-        research_rows.append({
-            "Year": year,
-            "Total Stack Demand": final_us_gw,
-            "Domestic Demand (70%)": domestic_gw
+    # Chart
+    chart_forecast = alt.Chart(df_forecast).mark_line(point=True).encode(
+        x='Year:O',
+        y='GW:Q',
+        color=alt.Color('Type:N', scale=alt.Scale(domain=['Demand (Live)', 'Supply (Live)'], range=['#FF4B4B', '#0068C9'])),
+        tooltip=['Year', 'Type', 'GW']
+    ).properties(title="Live Trajectory: Supply vs Demand")
+    
+    st.altair_chart(chart_forecast, use_container_width=True)
+    
+    # Signal Log
+    st.subheader("Signal Log (Factors driving this forecast)")
+    log_data = []
+    for s in tracker.export_signal_log():
+        log_data.append({
+            "Date": s['timestamp'][:10],
+            "Type": s['type'],
+            "Signal": s['data'],
+            "Analysis": s['analysis'].get('recommendation', '') if s['analysis'] else ''
         })
-        
-    df_research = pd.DataFrame(research_rows)
-    
-    # Merge with Selected Supply Scenario
-    df_supply_res = pd.DataFrame(SUPPLY_SCENARIOS[supply_scenario])
-    df_combined = pd.merge(df_research, df_supply_res, on='Year', how='left')
-    
-    # Plot Research Chart
-    df_res_melted = df_combined.melt('Year', value_vars=['Total Stack Demand', 'Domestic Demand (70%)', 'Supply_GW'], 
-                                     var_name='Metric', value_name='Capacity ({GW})')
-    
-    # Rename Supply_GW for legend
-    df_res_melted['Metric'] = df_res_melted['Metric'].replace('Supply_GW', f'US Supply ({supply_scenario})')
-    
-    # Colors: Orange (Stack), Green (Domestic), Blue (Supply)
-    domain = ['Total Stack Demand', 'Domestic Demand (70%)', f'US Supply ({supply_scenario})']
-    range_ = ['orange', 'green', 'blue']
-    
-    chart_res = alt.Chart(df_res_melted).mark_line(interpolate='monotone').encode(
-        x=alt.X('Year:O'),
-        y=alt.Y('Capacity ({GW}):Q'),
-        color=alt.Color('Metric:N', scale=alt.Scale(domain=domain, range=range_)),
-        tooltip=['Year', 'Metric', 'Capacity ({GW})']
-    ).properties(title=f"Supply vs Demand ({demand_scenario} Demand / {supply_scenario} Supply)", height=400).interactive()
-    
-    st.altair_chart(chart_res, use_container_width=True)
-    
-    # Company Breakdown (2030 Snapshot)
-    st.subheader("2030 US Stack Breakdown (Estimated)")
-    
-    # Get 2030 total from our calculation
-    row_2030 = df_research[df_research['Year'] == 2030]
-    if not row_2030.empty:
-        total_2030 = row_2030.iloc[0]['Total Stack Demand']
-        
-        breakdown_data = []
-        for company, share in COMPANY_SPLIT_2030.items():
-            breakdown_data.append({
-                "Company": company,
-                "Capacity (GW)": total_2030 * share
-            })
-        
-        df_breakdown = pd.DataFrame(breakdown_data)
-        
-        chart_breakdown = alt.Chart(df_breakdown).mark_bar().encode(
-            x=alt.X('Capacity (GW):Q'),
-            y=alt.Y('Company:N', sort='-x'),
-            color=alt.Color('Company:N', legend=None),
-            tooltip=['Company', 'Capacity (GW)']
-        ).properties(height=300)
-        
-        st.altair_chart(chart_breakdown, use_container_width=True)
+    if log_data:
+        st.dataframe(pd.DataFrame(log_data))
+    else:
+        st.write("No signals logged yet.")
