@@ -528,7 +528,7 @@ def show_site_details(site_id: str):
     st.markdown("---")
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("✏️ Edit Site"):
+        if st.button("✏️ Edit Site", key=f"edit_{site_id}"):
             st.session_state.edit_site_id = site_id
             st.rerun()
     with col2:
@@ -537,10 +537,11 @@ def show_site_details(site_id: str):
             label="📄 Download PDF Report",
             data=pdf_bytes,
             file_name=f"{site.get('name', 'site').replace(' ', '_')}_Report.pdf",
-            mime="application/pdf"
+            mime="application/pdf",
+            key=f"download_{site_id}"
         )
     with col3:
-        if st.button("🗑️ Delete Site", type="secondary"):
+        if st.button("🗑️ Delete Site", type="secondary", key=f"delete_{site_id}"):
             delete_site(st.session_state.db, site_id)
             st.rerun()
     
