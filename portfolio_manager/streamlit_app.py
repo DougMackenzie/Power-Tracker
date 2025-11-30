@@ -913,8 +913,8 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     
     pdf.set_font("Helvetica", 'B', 9)
     pdf.set_fill_color(220, 220, 220)
-    headers = ["Year", "Interconnect", "Generation", "Limiting Factor"]
-    col_widths = [30, 50, 50, 60]
+    headers = ["Year", "Interconnect", "Generation", "Total Available", "Limiting Factor"]
+    col_widths = [20, 40, 40, 40, 50]
     
     for i, h in enumerate(headers):
         pdf.cell(col_widths[i], 8, h, border=1, fill=True)
@@ -928,8 +928,11 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
         gen = y_data.get('gen_mw', 0)
         if ic == 0 and gen == 0: continue
         
+        total = min(ic, gen)
         limit = "Interconnection" if ic < gen else "Generation"
-        row = [str(year), f"{ic} MW", f"{gen} MW", limit]
+        if ic == gen: limit = "Balanced"
+        
+        row = [str(year), f"{ic} MW", f"{gen} MW", f"{total} MW", limit]
         for j, r in enumerate(row):
             pdf.cell(col_widths[j], 8, str(r), border=1)
         pdf.ln()
@@ -997,164 +1000,188 @@ def show_add_edit_site():
             col1, col2, col3 = st.columns(3)
             with col1:
                 name = st.text_input("Site Name*", value=site.get('name', ''))
-                state = st.selectbox("State*", options=[''] + list(STATE_PROFILES.keys()),
-                    index=([''] + list(STATE_PROFILES.keys())).index(site.get('state', '')) if site.get('state', '') in STATE_PROFILES else 0)
-                utility = st.text_input("Utility Name*", value=site.get('utility', ''))
+                state = st.selectbox("State*", options=[''] + list(STATE_PROFILES.keys()), 
+                                   index=list(STATE_PROFILES.keys()).index(site.get('state')) + 1 if site.get('state') in STATE_PROFILES else 0)
+                utility = st.text_input("Utility*", value=site.get('utility', ''))
             with col2:
-                target_mw = st.number_input("Target Capacity (MW)*", min_value=0, value=site.get('target_mw', 0))
-                acreage = st.number_input("Acreage", min_value=0, value=site.get('acreage', 0))
-                iso = st.selectbox("ISO/RTO", options=['', 'SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC'],
-                    index=['', 'SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC'].index(site.get('iso', '')) if site.get('iso', '') else 0)
+                target_mw = st.number_input("Target Capacity (MW)*", value=site.get('target_mw', 0))
+                acreage = st.number_input("Acreage*", value=site.get('acreage', 0))
+                iso = st.selectbox("ISO/RTO", options=['SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC', 'NYISO', 'ISO-NE'],
+                                 index=['SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC', 'NYISO', 'ISO-NE'].index(site.get('iso')) if site.get('iso') in ['SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC', 'NYISO', 'ISO-NE'] else 0)
             with col3:
                 county = st.text_input("County", value=site.get('county', ''))
                 developer = st.text_input("Developer", value=site.get('developer', ''))
-                assessment_date = st.date_input("Assessment Date", value=datetime.now())
+                date_str = st.date_input("Assessment Date", value=datetime.now())
 
         # --- Tab 2: Phasing & Studies ---
         with tab2:
-            st.subheader("Power System Studies & Approvals")
-            phases = site.get('phases', [{}, {}, {}, {}]) # Ensure 4 phases exist
-            updated_phases = []
+            st.subheader("Power System Studies")
             
-            for i in range(4):
-                with st.expander(f"Phase {i+1}", expanded=(i==0)):
-                    p = phases[i] if i < len(phases) else {}
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        sis_status = st.selectbox(f"P{i+1} SIS Status", options=['Not Started', 'In Progress', 'Complete'], key=f"p{i}_sis", index=['Not Started', 'In Progress', 'Complete'].index(p.get('sis_status', 'Not Started')))
-                        sis_date = st.text_input(f"P{i+1} SIS Date", value=p.get('sis_date', ''), key=f"p{i}_sis_d")
-                    with col2:
-                        fs_status = st.selectbox(f"P{i+1} FS Status", options=['Not Started', 'In Progress', 'Complete'], key=f"p{i}_fs", index=['Not Started', 'In Progress', 'Complete'].index(p.get('fs_status', 'Not Started')))
-                        fs_date = st.text_input(f"P{i+1} FS Date", value=p.get('fs_date', ''), key=f"p{i}_fs_d")
-                    with col3:
-                        fa_status = st.selectbox(f"P{i+1} FA Status", options=['Not Started', 'Draft', 'Executed'], key=f"p{i}_fa", index=['Not Started', 'Draft', 'Executed'].index(p.get('fa_status', 'Not Started')))
-                        fa_date = st.text_input(f"P{i+1} FA Date", value=p.get('fa_date', ''), key=f"p{i}_fa_d")
-                    with col4:
-                        ia_status = st.selectbox(f"P{i+1} IA Status", options=['Not Started', 'Draft', 'Executed'], key=f"p{i}_ia", index=['Not Started', 'Draft', 'Executed'].index(p.get('ia_status', 'Not Started')))
-                        ia_date = st.text_input(f"P{i+1} IA Date", value=p.get('ia_date', ''), key=f"p{i}_ia_d")
+            # Dynamic Phase Count
+            current_phases = site.get('phases', [])
+            num_phases = st.number_input("Number of Phases", min_value=1, max_value=10, value=len(current_phases) if current_phases else 4)
+            
+            phases = []
+            cols = st.columns(num_phases)
+            for i in range(num_phases):
+                p_data = current_phases[i] if i < len(current_phases) else {}
+                with cols[i]:
+                    st.markdown(f"**Phase {i+1}**")
+                    mw = st.number_input(f"MW", key=f"p{i}_mw", value=p_data.get('mw', 0))
+                    sis = st.selectbox(f"SIS Status", options=['Not Started', 'Requested', 'In Progress', 'Complete'], key=f"p{i}_sis",
+                                     index=['Not Started', 'Requested', 'In Progress', 'Complete'].index(p_data.get('sis_status', 'Not Started')))
+                    fs = st.selectbox(f"FS Status", options=['Not Started', 'In Progress', 'Complete'], key=f"p{i}_fs",
+                                    index=['Not Started', 'In Progress', 'Complete'].index(p_data.get('fs_status', 'Not Started')))
+                    fa = st.selectbox(f"FA Status", options=['Not Started', 'Draft', 'Executed'], key=f"p{i}_fa",
+                                    index=['Not Started', 'Draft', 'Executed'].index(p_data.get('fa_status', 'Not Started')))
+                    ia = st.selectbox(f"IA Status", options=['Not Started', 'Draft', 'Executed'], key=f"p{i}_ia",
+                                    index=['Not Started', 'Draft', 'Executed'].index(p_data.get('ia_status', 'Not Started')))
+                    target_date = st.date_input(f"Target Online", key=f"p{i}_date", 
+                                              value=datetime.strptime(p_data.get('target_date'), '%Y-%m-%d') if p_data.get('target_date') else datetime.today())
                     
-                    updated_phases.append({
-                        'sis_status': sis_status, 'sis_date': sis_date,
-                        'fs_status': fs_status, 'fs_date': fs_date,
-                        'fa_status': fa_status, 'fa_date': fa_date,
-                        'ia_status': ia_status, 'ia_date': ia_date
+                    phases.append({
+                        'mw': mw, 'sis_status': sis, 'fs_status': fs, 'fa_status': fa, 'ia_status': ia,
+                        'target_date': target_date.strftime('%Y-%m-%d')
                     })
 
         # --- Tab 3: Infrastructure ---
         with tab3:
             st.subheader("Interconnection Details")
-            # We reuse the updated_phases list to add infrastructure details
-            for i in range(4):
-                with st.expander(f"Phase {i+1} Infrastructure", expanded=(i==0)):
-                    p = phases[i] if i < len(phases) else {}
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        updated_phases[i]['mw'] = st.number_input(f"P{i+1} Capacity (MW)", value=p.get('mw', 0), key=f"p{i}_mw")
-                        updated_phases[i]['voltage'] = st.selectbox(f"P{i+1} Voltage", options=['12.5kV', '69kV', '115kV', '138kV', '230kV', '345kV', '500kV'], key=f"p{i}_v", index=['12.5kV', '69kV', '115kV', '138kV', '230kV', '345kV', '500kV'].index(p.get('voltage', '138kV')))
-                    with col2:
-                        updated_phases[i]['service_type'] = st.selectbox(f"P{i+1} Service", options=['Radial', 'Loop', 'Switching Station', 'Network'], key=f"p{i}_svc", index=['Radial', 'Loop', 'Switching Station', 'Network'].index(p.get('service_type', 'Radial')))
-                        updated_phases[i]['substation_status'] = st.selectbox(f"P{i+1} Substation", options=['Existing', 'Upgrade Required', 'New Build'], key=f"p{i}_sub", index=['Existing', 'Upgrade Required', 'New Build'].index(p.get('substation_status', 'Existing')))
-                    with col3:
-                        updated_phases[i]['trans_dist'] = st.number_input(f"P{i+1} Trans. Dist (mi)", value=p.get('trans_dist', 0.0), key=f"p{i}_dist")
-                        updated_phases[i]['target_date'] = st.text_input(f"P{i+1} Target Date", value=p.get('target_date', ''), key=f"p{i}_tgt")
+            # We'll just use the same number of phases for infrastructure details
+            infra_phases = []
+            cols = st.columns(num_phases)
+            for i in range(num_phases):
+                p_data = current_phases[i] if i < len(current_phases) else {}
+                # Merge with existing phase data if available
+                p_base = phases[i]
+                with cols[i]:
+                    st.markdown(f"**Phase {i+1} Infra**")
+                    ic_cap = st.number_input(f"IC Capacity (MW)", key=f"p{i}_ic", value=p_data.get('ic_capacity', 0))
+                    voltage = st.selectbox(f"Voltage (kV)", options=['13.8', '34.5', '69', '115', '138', '230', '345', '500'], key=f"p{i}_v",
+                                         index=['13.8', '34.5', '69', '115', '138', '230', '345', '500'].index(p_data.get('voltage', '138')) if p_data.get('voltage') in ['13.8', '34.5', '69', '115', '138', '230', '345', '500'] else 4)
+                    service = st.selectbox(f"Service Type", options=['Transmission', 'Distribution'], key=f"p{i}_svc",
+                                         index=['Transmission', 'Distribution'].index(p_data.get('service_type', 'Transmission')))
+                    sub_status = st.selectbox(f"Substation", options=['Existing', 'Upgrade Needed', 'New Build'], key=f"p{i}_sub",
+                                            index=['Existing', 'Upgrade Needed', 'New Build'].index(p_data.get('substation_status', 'New Build')))
+                    dist = st.number_input(f"Dist. to Trans (mi)", key=f"p{i}_dist", value=p_data.get('trans_dist', 0.0))
+                    
+                    p_base.update({
+                        'ic_capacity': ic_cap, 'voltage': voltage, 'service_type': service,
+                        'substation_status': sub_status, 'trans_dist': dist
+                    })
+                    infra_phases.append(p_base)
+            
+            # Update the main phases list with infra data
+            phases = infra_phases
 
-        # --- Tab 4: Onsite Generation ---
+        # --- Tab 4: Onsite Gen ---
         with tab4:
-            st.subheader("Onsite / BTM Generation")
+            st.subheader("Onsite Generation")
             gen = site.get('onsite_gen', {})
-            
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
-                st.markdown("**Natural Gas**")
+                st.markdown("🔥 **Natural Gas**")
                 gas_mw = st.number_input("Gas Capacity (MW)", value=gen.get('gas_mw', 0))
-                gas_pipe_dist = st.number_input("Pipeline Distance (mi)", value=gen.get('gas_pipe_dist', 0.0))
-                gas_status = st.text_input("Gas Status", value=gen.get('gas_status', ''))
-            
+                gas_dist = st.number_input("Dist. to Pipeline (mi)", value=gen.get('gas_dist', 0.0))
+                gas_status = st.selectbox("Gas Status", options=['None', 'Study', 'Permitting', 'Construction', 'Operational'],
+                                        index=['None', 'Study', 'Permitting', 'Construction', 'Operational'].index(gen.get('gas_status', 'None')))
             with col2:
-                st.markdown("**Solar / Battery**")
+                st.markdown("☀️ **Solar**")
                 solar_mw = st.number_input("Solar Capacity (MW)", value=gen.get('solar_mw', 0))
-                batt_mw = st.number_input("Battery Capacity (MW)", value=gen.get('batt_mw', 0))
-                batt_mwh = st.number_input("Battery Energy (MWh)", value=gen.get('batt_mwh', 0))
+                solar_acres = st.number_input("Solar Acres", value=gen.get('solar_acres', 0))
+            with col3:
+                st.markdown("🔋 **Battery Storage**")
+                batt_mw = st.number_input("BESS Power (MW)", value=gen.get('batt_mw', 0))
+                batt_mwh = st.number_input("BESS Energy (MWh)", value=gen.get('batt_mwh', 0))
+            
+            onsite_gen = {
+                'gas_mw': gas_mw, 'gas_dist': gas_dist, 'gas_status': gas_status,
+                'solar_mw': solar_mw, 'solar_acres': solar_acres,
+                'batt_mw': batt_mw, 'batt_mwh': batt_mwh
+            }
 
         # --- Tab 5: Schedule ---
         with tab5:
-            st.subheader("Year-by-Year Capacity Trajectory")
-            st.caption("Enter available MW for each year (Interconnection vs Generation)")
-            
+            st.subheader("Capacity Trajectory (2025-2035)")
             schedule = site.get('schedule', {})
-            updated_schedule = {}
+            sched_data = {}
             
-            col1, col2 = st.columns(2)
-            years = range(2025, 2036)
-            mid_point = len(years) // 2
+            # Table header
+            cols = st.columns([1, 2, 2, 2])
+            cols[0].markdown("**Year**")
+            cols[1].markdown("**Interconnection (MW)**")
+            cols[2].markdown("**Generation (MW)**")
+            cols[3].markdown("**Total Available (MW)**")
             
-            for i, year in enumerate(years):
-                with (col1 if i < mid_point else col2):
-                    st.markdown(f"**{year}**")
-                    c1, c2 = st.columns(2)
-                    y_data = schedule.get(str(year), {})
-                    ic_mw = c1.number_input(f"Interconnect MW", value=y_data.get('ic_mw', 0), key=f"y{year}_ic")
-                    gen_mw = c2.number_input(f"Generation MW", value=y_data.get('gen_mw', 0), key=f"y{year}_gen")
-                    updated_schedule[str(year)] = {'ic_mw': ic_mw, 'gen_mw': gen_mw}
+            for y in range(2025, 2036):
+                yd = schedule.get(str(y), {})
+                c1, c2, c3, c4 = st.columns([1, 2, 2, 2])
+                c1.write(str(y))
+                ic = c2.number_input(f"IC {y}", key=f"ic_{y}", value=yd.get('ic_mw', 0), label_visibility="collapsed")
+                gen_val = c3.number_input(f"Gen {y}", key=f"gen_{y}", value=yd.get('gen_mw', 0), label_visibility="collapsed")
+                
+                total = min(ic, gen_val)
+                c4.write(f"{total} MW")
+                
+                sched_data[str(y)] = {'ic_mw': ic, 'gen_mw': gen_val}
 
         # --- Tab 6: Non-Power ---
         with tab6:
-            st.subheader("Non-Power Infrastructure")
+            st.subheader("Site Fundamentals")
             np = site.get('non_power', {})
-            
             col1, col2 = st.columns(2)
             with col1:
-                zoning_status = st.selectbox("Zoning Status", options=['Not Started', 'Pre-App', 'Submitted', 'Approved'], index=['Not Started', 'Pre-App', 'Submitted', 'Approved'].index(np.get('zoning_status', 'Not Started')))
-                water_source = st.text_input("Water Source", value=np.get('water_source', ''))
-                water_cap = st.text_input("Water Capacity (GPD)", value=np.get('water_cap', ''))
+                zoning = st.selectbox("Zoning Status", options=['Not Started', 'Pre-App', 'Submitted', 'Approved'],
+                                    index=['Not Started', 'Pre-App', 'Submitted', 'Approved'].index(np.get('zoning_status', 'Not Started')))
+                water_src = st.text_input("Water Source", value=np.get('water_source', ''))
+                water_cap = st.number_input("Water Capacity (GPD)", value=np.get('water_cap', 0))
             with col2:
-                fiber_status = st.selectbox("Fiber Status", options=['Unknown', 'Nearby', 'Lit Building'], index=['Unknown', 'Nearby', 'Lit Building'].index(np.get('fiber_status', 'Unknown')))
-                fiber_provider = st.text_input("Fiber Provider", value=np.get('fiber_provider', ''))
+                fiber_stat = st.selectbox("Fiber Status", options=['Unknown', 'Nearby', 'At Site', 'Lit Building'],
+                                        index=['Unknown', 'Nearby', 'At Site', 'Lit Building'].index(np.get('fiber_status', 'Unknown')))
+                fiber_prov = st.text_input("Fiber Provider", value=np.get('fiber_provider', ''))
                 env_issues = st.text_area("Environmental Issues", value=np.get('env_issues', ''))
+            
+            non_power = {
+                'zoning_status': zoning, 'water_source': water_src, 'water_cap': water_cap,
+                'fiber_status': fiber_stat, 'fiber_provider': fiber_prov, 'env_issues': env_issues
+            }
 
         # --- Tab 7: Analysis ---
         with tab7:
-            st.subheader("Diagnostic Analysis")
-            risks = st.text_area("Key Risks (One per line)", value="\n".join(site.get('risks', [])), height=150)
-            opps = st.text_area("Acceleration Opportunities", value="\n".join(site.get('opps', [])), height=150)
-            questions = st.text_area("Open Questions", value="\n".join(site.get('questions', [])), height=150)
-
-        st.markdown("---")
-        submitted = st.form_submit_button("💾 Save Site Diagnostic", type="primary")
+            st.subheader("Strategic Analysis")
+            risks_txt = st.text_area("Key Risks (one per line)", value='\n'.join(site.get('risks', [])))
+            opps_txt = st.text_area("Acceleration Opportunities", value='\n'.join(site.get('opps', [])))
+            questions_txt = st.text_area("Open Questions", value='\n'.join(site.get('questions', [])))
+        
+        submitted = st.form_submit_button("💾 Save Site Diagnostic")
         
         if submitted:
-            if not name or not state or not utility:
-                st.error("Please fill in required fields (Site Name, State, Utility)")
+            if not name or not state:
+                st.error("Name and State are required.")
             else:
-                # Construct the complex site object
-                site_data = {
-                    'name': name, 'state': state, 'utility': utility, 'target_mw': target_mw, 
+                new_site = {
+                    'name': name, 'state': state, 'utility': utility, 'target_mw': target_mw,
                     'acreage': acreage, 'iso': iso, 'county': county, 'developer': developer,
-                    'phases': updated_phases,
-                    'onsite_gen': {
-                        'gas_mw': gas_mw, 'gas_pipe_dist': gas_pipe_dist, 'gas_status': gas_status,
-                        'solar_mw': solar_mw, 'batt_mw': batt_mw, 'batt_mwh': batt_mwh
-                    },
-                    'schedule': updated_schedule,
-                    'non_power': {
-                        'zoning_status': zoning_status, 'water_source': water_source, 
-                        'water_cap': water_cap, 'fiber_status': fiber_status, 
-                        'fiber_provider': fiber_provider, 'env_issues': env_issues
-                    },
-                    'risks': risks.split('\n') if risks else [],
-                    'opps': opps.split('\n') if opps else [],
-                    'questions': questions.split('\n') if questions else [],
-                    # Maintain legacy fields for compatibility
-                    'study_status': updated_phases[0]['sis_status'],
-                    'utility_commitment': 'committed' if updated_phases[0]['ia_status'] == 'Executed' else 'none',
-                    'power_timeline_months': 48, # Default, should calculate from dates
+                    'last_updated': datetime.now().isoformat(),
+                    'phases': phases,
+                    'onsite_gen': onsite_gen,
+                    'schedule': sched_data,
+                    'non_power': non_power,
+                    'risks': [r.strip() for r in risks_txt.split('\n') if r.strip()],
+                    'opps': [o.strip() for o in opps_txt.split('\n') if o.strip()],
+                    'questions': [q.strip() for q in questions_txt.split('\n') if q.strip()],
+                    # Legacy fields for backward compatibility
+                    'study_status': phases[0]['sis_status'] if phases else 'Not Started',
+                    'utility_commitment': 'Committed' if phases and phases[0]['ia_status'] == 'Executed' else 'None',
+                    'power_timeline_months': 36 # Placeholder
                 }
                 
-                site_id = st.session_state.edit_site_id if editing else name.lower().replace(' ', '_')
-                add_site(st.session_state.db, site_id, site_data)
-                
+                site_id = st.session_state.edit_site_id if editing else f"site_{len(st.session_state.db['sites'])+1}"
+                st.session_state.db['sites'][site_id] = new_site
+                save_database(st.session_state.db)
+                st.success("Site saved successfully!")
                 if editing: del st.session_state.edit_site_id
-                
+                st.rerun()
                 st.success(f"Site diagnostic {'updated' if editing else 'added'} successfully!")
                 st.rerun()
 
