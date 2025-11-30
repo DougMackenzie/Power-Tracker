@@ -514,37 +514,38 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.multi_cell(0, 5, summary_text)
     pdf.ln(5)
 
-    # --- Power Phasing Summary (Mocked based on single phase) ---
+    # --- Power Phasing Summary ---
     pdf.set_font("Helvetica", 'B', 14)
     pdf.cell(0, 10, "Power Phasing Summary", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(2)
     
     pdf.set_font("Helvetica", 'B', 9)
     pdf.set_fill_color(220, 220, 220)
-    headers = ["Phase", "Interconnect", "Generation", "Target Date", "Study Status"]
-    col_widths = [20, 40, 40, 40, 50]
+    headers = ["Phase", "Interconnect", "Voltage", "Target Date", "Study Status"]
+    col_widths = [20, 40, 30, 40, 60]
     
     for i, h in enumerate(headers):
         pdf.cell(col_widths[i], 8, h, border=1, fill=True)
     pdf.ln()
     
     pdf.set_font("Helvetica", size=9)
-    # Phase 1 (Inferred)
-    target_date = (datetime.now() + pd.DateOffset(months=site.get('power_timeline_months', 48))).strftime('%b %Y')
-    row = ["1", f"{site.get('target_mw')} MW", "0 MW", target_date, site.get('study_status', 'N/A').replace('_', ' ').title()]
-    
-    for i, r in enumerate(row):
-        pdf.cell(col_widths[i], 8, str(r), border=1)
+    phases = site.get('phases', [])
+    for i, p in enumerate(phases):
+        if not p.get('mw'): continue # Skip empty phases
+        row = [str(i+1), f"{p.get('mw')} MW", p.get('voltage', 'N/A'), p.get('target_date', 'N/A'), p.get('sis_status', 'N/A')]
+        for j, r in enumerate(row):
+            pdf.cell(col_widths[j], 8, str(r), border=1)
+        pdf.ln()
     pdf.ln(10)
 
-    # --- Capacity Trajectory (Linear Ramp) ---
+    # --- Capacity Trajectory ---
     pdf.set_font("Helvetica", 'B', 14)
-    pdf.cell(0, 10, "Capacity Trajectory (Estimated)", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.cell(0, 10, "Capacity Trajectory", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(2)
     
     pdf.set_font("Helvetica", 'B', 9)
     pdf.set_fill_color(220, 220, 220)
-    headers = ["Year", "Interconnect", "Available Power", "Limiting Factor"]
+    headers = ["Year", "Interconnect", "Generation", "Limiting Factor"]
     col_widths = [30, 50, 50, 60]
     
     for i, h in enumerate(headers):
@@ -552,14 +553,15 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.ln()
     
     pdf.set_font("Helvetica", size=9)
-    start_year = datetime.now().year + 2
-    total_mw = site.get('target_mw', 0)
-    
-    for i in range(5):
-        year = start_year + i
-        # Simple ramp: 20%, 40%, 60%, 80%, 100%
-        mw = int(total_mw * ((i + 1) * 0.2))
-        row = [str(year), f"{mw} MW", f"{mw} MW", "Interconnection"]
+    schedule = site.get('schedule', {})
+    for year in range(2025, 2036):
+        y_data = schedule.get(str(year), {})
+        ic = y_data.get('ic_mw', 0)
+        gen = y_data.get('gen_mw', 0)
+        if ic == 0 and gen == 0: continue
+        
+        limit = "Interconnection" if ic < gen else "Generation"
+        row = [str(year), f"{ic} MW", f"{gen} MW", limit]
         for j, r in enumerate(row):
             pdf.cell(col_widths[j], 8, str(r), border=1)
         pdf.ln()
@@ -572,13 +574,8 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     
     pdf.set_font("Helvetica", size=10)
     
-    # Derived Risks
-    risks = []
-    if scores['state_score'] < 60: risks.append(f"[HIGH] State: {site.get('state')} has a low tier rating ({state_context['summary']['tier_label']}).")
-    if site.get('power_timeline_months', 0) > 48: risks.append(f"[MEDIUM] Timeline: Long lead time to power ({site.get('power_timeline_months')} months).")
-    if site.get('community_support') == 'opposition': risks.append("[HIGH] Community: Active opposition reported.")
-    if site.get('land_control') == 'none': risks.append("[HIGH] Land: No land control secured.")
-    if not risks: risks.append("No critical risks identified based on current data.")
+    risks = site.get('risks', [])
+    if not risks: risks.append("No critical risks identified.")
     
     for r in risks:
         pdf.set_text_color(200, 0, 0) if "[HIGH]" in r else pdf.set_text_color(0, 0, 0)
@@ -593,11 +590,12 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.ln(2)
     
     pdf.set_font("Helvetica", size=10)
+    np = site.get('non_power', {})
     items = [
-        f"Zoning Approved: {'Yes' if site.get('zoning_approved') else 'No'}",
-        f"Water Status: {site.get('water_status', 'Unknown').title()}",
-        f"Fiber Status: {site.get('fiber_status', 'Unknown').title()}",
-        f"Land Control: {site.get('land_control', 'None').title()}"
+        f"Zoning Status: {np.get('zoning_status', 'N/A')}",
+        f"Water Source: {np.get('water_source', 'N/A')} ({np.get('water_cap', 'N/A')} GPD)",
+        f"Fiber Status: {np.get('fiber_status', 'N/A')} ({np.get('fiber_provider', 'N/A')})",
+        f"Environmental: {np.get('env_issues', 'None Reported')}"
     ]
     for item in items:
         pdf.cell(0, 6, f"- {item}", new_x="LMARGIN", new_y="NEXT")
@@ -606,8 +604,8 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
 
 
 def show_add_edit_site():
-    """Form for adding or editing sites."""
-    st.title("➕ Add/Edit Site")
+    """Form for adding or editing sites with detailed diagnostic data."""
+    st.title("➕ Add/Edit Site Diagnostic")
     
     editing = hasattr(st.session_state, 'edit_site_id') and st.session_state.edit_site_id
     site = st.session_state.db['sites'].get(st.session_state.edit_site_id, {}) if editing else {}
@@ -619,113 +617,169 @@ def show_add_edit_site():
             st.rerun()
     
     with st.form("site_form"):
-        st.subheader("Basic Information")
-        col1, col2, col3 = st.columns(3)
+        # Tabs for organized data entry
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+            "Basic Info", "Phasing & Studies", "Infrastructure", 
+            "Onsite Gen", "Schedule", "Non-Power", "Analysis"
+        ])
         
-        with col1:
-            name = st.text_input("Site Name*", value=site.get('name', ''))
-            state = st.selectbox("State*", options=[''] + list(STATE_PROFILES.keys()),
-                index=([''] + list(STATE_PROFILES.keys())).index(site.get('state', '')) if site.get('state', '') in STATE_PROFILES else 0)
-            utility = st.text_input("Utility Name*", value=site.get('utility', ''))
-        with col2:
-            target_mw = st.number_input("Target MW*", min_value=0, value=site.get('target_mw', 0))
-            acreage = st.number_input("Acreage", min_value=0, value=site.get('acreage', 0))
-            iso = st.selectbox("ISO/RTO", options=['', 'SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC'],
-                index=['', 'SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC'].index(site.get('iso', '')) if site.get('iso', '') else 0)
-        with col3:
-            county = st.text_input("County", value=site.get('county', ''))
-            developer = st.text_input("Developer", value=site.get('developer', ''))
-        
+        # --- Tab 1: Basic Info ---
+        with tab1:
+            st.subheader("Site Overview")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                name = st.text_input("Site Name*", value=site.get('name', ''))
+                state = st.selectbox("State*", options=[''] + list(STATE_PROFILES.keys()),
+                    index=([''] + list(STATE_PROFILES.keys())).index(site.get('state', '')) if site.get('state', '') in STATE_PROFILES else 0)
+                utility = st.text_input("Utility Name*", value=site.get('utility', ''))
+            with col2:
+                target_mw = st.number_input("Target Capacity (MW)*", min_value=0, value=site.get('target_mw', 0))
+                acreage = st.number_input("Acreage", min_value=0, value=site.get('acreage', 0))
+                iso = st.selectbox("ISO/RTO", options=['', 'SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC'],
+                    index=['', 'SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC'].index(site.get('iso', '')) if site.get('iso', '') else 0)
+            with col3:
+                county = st.text_input("County", value=site.get('county', ''))
+                developer = st.text_input("Developer", value=site.get('developer', ''))
+                assessment_date = st.date_input("Assessment Date", value=datetime.now())
+
+        # --- Tab 2: Phasing & Studies ---
+        with tab2:
+            st.subheader("Power System Studies & Approvals")
+            phases = site.get('phases', [{}, {}, {}, {}]) # Ensure 4 phases exist
+            updated_phases = []
+            
+            for i in range(4):
+                with st.expander(f"Phase {i+1}", expanded=(i==0)):
+                    p = phases[i] if i < len(phases) else {}
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        sis_status = st.selectbox(f"P{i+1} SIS Status", options=['Not Started', 'In Progress', 'Complete'], key=f"p{i}_sis", index=['Not Started', 'In Progress', 'Complete'].index(p.get('sis_status', 'Not Started')))
+                        sis_date = st.text_input(f"P{i+1} SIS Date", value=p.get('sis_date', ''), key=f"p{i}_sis_d")
+                    with col2:
+                        fs_status = st.selectbox(f"P{i+1} FS Status", options=['Not Started', 'In Progress', 'Complete'], key=f"p{i}_fs", index=['Not Started', 'In Progress', 'Complete'].index(p.get('fs_status', 'Not Started')))
+                        fs_date = st.text_input(f"P{i+1} FS Date", value=p.get('fs_date', ''), key=f"p{i}_fs_d")
+                    with col3:
+                        fa_status = st.selectbox(f"P{i+1} FA Status", options=['Not Started', 'Draft', 'Executed'], key=f"p{i}_fa", index=['Not Started', 'Draft', 'Executed'].index(p.get('fa_status', 'Not Started')))
+                        fa_date = st.text_input(f"P{i+1} FA Date", value=p.get('fa_date', ''), key=f"p{i}_fa_d")
+                    with col4:
+                        ia_status = st.selectbox(f"P{i+1} IA Status", options=['Not Started', 'Draft', 'Executed'], key=f"p{i}_ia", index=['Not Started', 'Draft', 'Executed'].index(p.get('ia_status', 'Not Started')))
+                        ia_date = st.text_input(f"P{i+1} IA Date", value=p.get('ia_date', ''), key=f"p{i}_ia_d")
+                    
+                    updated_phases.append({
+                        'sis_status': sis_status, 'sis_date': sis_date,
+                        'fs_status': fs_status, 'fs_date': fs_date,
+                        'fa_status': fa_status, 'fa_date': fa_date,
+                        'ia_status': ia_status, 'ia_date': ia_date
+                    })
+
+        # --- Tab 3: Infrastructure ---
+        with tab3:
+            st.subheader("Interconnection Details")
+            # We reuse the updated_phases list to add infrastructure details
+            for i in range(4):
+                with st.expander(f"Phase {i+1} Infrastructure", expanded=(i==0)):
+                    p = phases[i] if i < len(phases) else {}
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        updated_phases[i]['mw'] = st.number_input(f"P{i+1} Capacity (MW)", value=p.get('mw', 0), key=f"p{i}_mw")
+                        updated_phases[i]['voltage'] = st.selectbox(f"P{i+1} Voltage", options=['12.5kV', '69kV', '115kV', '138kV', '230kV', '345kV', '500kV'], key=f"p{i}_v", index=['12.5kV', '69kV', '115kV', '138kV', '230kV', '345kV', '500kV'].index(p.get('voltage', '138kV')))
+                    with col2:
+                        updated_phases[i]['service_type'] = st.selectbox(f"P{i+1} Service", options=['Radial', 'Loop', 'Switching Station', 'Network'], key=f"p{i}_svc", index=['Radial', 'Loop', 'Switching Station', 'Network'].index(p.get('service_type', 'Radial')))
+                        updated_phases[i]['substation_status'] = st.selectbox(f"P{i+1} Substation", options=['Existing', 'Upgrade Required', 'New Build'], key=f"p{i}_sub", index=['Existing', 'Upgrade Required', 'New Build'].index(p.get('substation_status', 'Existing')))
+                    with col3:
+                        updated_phases[i]['trans_dist'] = st.number_input(f"P{i+1} Trans. Dist (mi)", value=p.get('trans_dist', 0.0), key=f"p{i}_dist")
+                        updated_phases[i]['target_date'] = st.text_input(f"P{i+1} Target Date", value=p.get('target_date', ''), key=f"p{i}_tgt")
+
+        # --- Tab 4: Onsite Generation ---
+        with tab4:
+            st.subheader("Onsite / BTM Generation")
+            gen = site.get('onsite_gen', {})
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**Natural Gas**")
+                gas_mw = st.number_input("Gas Capacity (MW)", value=gen.get('gas_mw', 0))
+                gas_pipe_dist = st.number_input("Pipeline Distance (mi)", value=gen.get('gas_pipe_dist', 0.0))
+                gas_status = st.text_input("Gas Status", value=gen.get('gas_status', ''))
+            
+            with col2:
+                st.markdown("**Solar / Battery**")
+                solar_mw = st.number_input("Solar Capacity (MW)", value=gen.get('solar_mw', 0))
+                batt_mw = st.number_input("Battery Capacity (MW)", value=gen.get('batt_mw', 0))
+                batt_mwh = st.number_input("Battery Energy (MWh)", value=gen.get('batt_mwh', 0))
+
+        # --- Tab 5: Schedule ---
+        with tab5:
+            st.subheader("Year-by-Year Capacity Trajectory")
+            st.caption("Enter available MW for each year (Interconnection vs Generation)")
+            
+            schedule = site.get('schedule', {})
+            updated_schedule = {}
+            
+            col1, col2 = st.columns(2)
+            years = range(2025, 2036)
+            mid_point = len(years) // 2
+            
+            for i, year in enumerate(years):
+                with (col1 if i < mid_point else col2):
+                    st.markdown(f"**{year}**")
+                    c1, c2 = st.columns(2)
+                    y_data = schedule.get(str(year), {})
+                    ic_mw = c1.number_input(f"Interconnect MW", value=y_data.get('ic_mw', 0), key=f"y{year}_ic")
+                    gen_mw = c2.number_input(f"Generation MW", value=y_data.get('gen_mw', 0), key=f"y{year}_gen")
+                    updated_schedule[str(year)] = {'ic_mw': ic_mw, 'gen_mw': gen_mw}
+
+        # --- Tab 6: Non-Power ---
+        with tab6:
+            st.subheader("Non-Power Infrastructure")
+            np = site.get('non_power', {})
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                zoning_status = st.selectbox("Zoning Status", options=['Not Started', 'Pre-App', 'Submitted', 'Approved'], index=['Not Started', 'Pre-App', 'Submitted', 'Approved'].index(np.get('zoning_status', 'Not Started')))
+                water_source = st.text_input("Water Source", value=np.get('water_source', ''))
+                water_cap = st.text_input("Water Capacity (GPD)", value=np.get('water_cap', ''))
+            with col2:
+                fiber_status = st.selectbox("Fiber Status", options=['Unknown', 'Nearby', 'Lit Building'], index=['Unknown', 'Nearby', 'Lit Building'].index(np.get('fiber_status', 'Unknown')))
+                fiber_provider = st.text_input("Fiber Provider", value=np.get('fiber_provider', ''))
+                env_issues = st.text_area("Environmental Issues", value=np.get('env_issues', ''))
+
+        # --- Tab 7: Analysis ---
+        with tab7:
+            st.subheader("Diagnostic Analysis")
+            risks = st.text_area("Key Risks (One per line)", value="\n".join(site.get('risks', [])), height=150)
+            opps = st.text_area("Acceleration Opportunities", value="\n".join(site.get('opps', [])), height=150)
+            questions = st.text_area("Open Questions", value="\n".join(site.get('questions', [])), height=150)
+
         st.markdown("---")
-        st.subheader("Power Pathway")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            study_status = st.selectbox("Study Status",
-                options=['not_started', 'sis_requested', 'sis_in_progress', 'sis_complete', 'fs_complete', 'fa_executed', 'ia_executed'],
-                format_func=lambda x: x.replace('_', ' ').title(),
-                index=['not_started', 'sis_requested', 'sis_in_progress', 'sis_complete', 'fs_complete', 'fa_executed', 'ia_executed'].index(site.get('study_status', 'not_started')))
-            utility_commitment = st.selectbox("Utility Commitment",
-                options=['none', 'initial', 'engaged', 'verbal', 'committed'], format_func=lambda x: x.title(),
-                index=['none', 'initial', 'engaged', 'verbal', 'committed'].index(site.get('utility_commitment', 'none')))
-        with col2:
-            power_timeline_months = st.number_input("Timeline to Power (months)", min_value=0, max_value=120, value=site.get('power_timeline_months', 48))
-            queue_position = st.checkbox("Has Queue Position", value=site.get('queue_position', False))
-        with col3:
-            btm_viable = st.checkbox("BTM Generation Viable", value=site.get('btm_viable', False))
-            transmission_adjacent = st.checkbox("Adjacent to Transmission", value=site.get('transmission_adjacent', False))
-            substation_nearby = st.checkbox("Substation Nearby", value=site.get('substation_nearby', False))
-        
-        st.markdown("---")
-        st.subheader("Relationship Capital")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            end_user_status = st.selectbox("End-User Status",
-                options=['none', 'interest_expressed', 'tours_completed', 'nda_signed', 'nda_active', 'loi', 'term_sheet'],
-                format_func=lambda x: x.replace('_', ' ').title(),
-                index=['none', 'interest_expressed', 'tours_completed', 'nda_signed', 'nda_active', 'loi', 'term_sheet'].index(site.get('end_user_status', 'none')))
-        with col2:
-            community_support = st.selectbox("Community Support",
-                options=['opposition', 'concerns', 'neutral', 'supportive', 'champion'], format_func=lambda x: x.title(),
-                index=['opposition', 'concerns', 'neutral', 'supportive', 'champion'].index(site.get('community_support', 'neutral')))
-        with col3:
-            political_support = st.selectbox("Political Support",
-                options=['opposition', 'concerns', 'neutral', 'supportive', 'strong'], format_func=lambda x: x.title(),
-                index=['opposition', 'concerns', 'neutral', 'supportive', 'strong'].index(site.get('political_support', 'neutral')))
-        
-        st.markdown("---")
-        st.subheader("Site Fundamentals & Execution")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            land_control = st.selectbox("Land Control", options=['none', 'negotiating', 'loi', 'option', 'owned'], format_func=lambda x: x.title(),
-                index=['none', 'negotiating', 'loi', 'option', 'owned'].index(site.get('land_control', 'none')))
-            water_status = st.selectbox("Water Status", options=['unknown', 'constrained', 'identified', 'available', 'secured'], format_func=lambda x: x.title(),
-                index=['unknown', 'constrained', 'identified', 'available', 'secured'].index(site.get('water_status', 'unknown')))
-        with col2:
-            fiber_status = st.selectbox("Fiber Status", options=['unknown', 'distant', 'nearby', 'adjacent', 'lit'], format_func=lambda x: x.title(),
-                index=['unknown', 'distant', 'nearby', 'adjacent', 'lit'].index(site.get('fiber_status', 'unknown')))
-            zoning_approved = st.checkbox("Zoning Approved", value=site.get('zoning_approved', False))
-        with col3:
-            developer_track_record = st.selectbox("Developer Track Record", options=['none', 'limited', 'proven', 'extensive'], format_func=lambda x: x.title(),
-                index=['none', 'limited', 'proven', 'extensive'].index(site.get('developer_track_record', 'none')))
-            utility_relationships = st.selectbox("Utility Relationships", options=['none', 'developing', 'established', 'strong'], format_func=lambda x: x.title(),
-                index=['none', 'developing', 'established', 'strong'].index(site.get('utility_relationships', 'none')))
-        
-        st.markdown("---")
-        st.subheader("Financial")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            capital_access = st.selectbox("Capital Access", options=['limited', 'developing', 'available', 'committed', 'strong'], format_func=lambda x: x.title(),
-                index=['limited', 'developing', 'available', 'committed', 'strong'].index(site.get('capital_access', 'limited')))
-        with col2:
-            btm_capability = st.selectbox("BTM Capability", options=['none', 'potential', 'viable', 'multiple_sources'], format_func=lambda x: x.replace('_', ' ').title(),
-                index=['none', 'potential', 'viable', 'multiple_sources'].index(site.get('btm_capability', 'none')))
-        with col3:
-            development_budget = st.checkbox("Development Budget Allocated", value=site.get('development_budget_allocated', False))
-        
-        st.markdown("---")
-        notes = st.text_area("Notes", value=site.get('notes', ''))
-        
-        submitted = st.form_submit_button("💾 Save Site", type="primary")
+        submitted = st.form_submit_button("💾 Save Site Diagnostic", type="primary")
         
         if submitted:
             if not name or not state or not utility:
                 st.error("Please fill in required fields (Site Name, State, Utility)")
             else:
+                # Construct the complex site object
                 site_data = {
-                    'name': name, 'state': state, 'utility': utility, 'target_mw': target_mw, 'acreage': acreage,
-                    'iso': iso, 'county': county, 'developer': developer, 'study_status': study_status,
-                    'utility_commitment': utility_commitment, 'power_timeline_months': power_timeline_months,
-                    'queue_position': queue_position, 'btm_viable': btm_viable, 'transmission_adjacent': transmission_adjacent,
-                    'substation_nearby': substation_nearby, 'end_user_status': end_user_status,
-                    'community_support': community_support, 'political_support': political_support,
-                    'land_control': land_control, 'water_status': water_status, 'fiber_status': fiber_status,
-                    'zoning_approved': zoning_approved, 'developer_track_record': developer_track_record,
-                    'utility_relationships': utility_relationships, 'btm_capability': btm_capability,
-                    'capital_access': capital_access, 'development_budget_allocated': development_budget, 'notes': notes
+                    'name': name, 'state': state, 'utility': utility, 'target_mw': target_mw, 
+                    'acreage': acreage, 'iso': iso, 'county': county, 'developer': developer,
+                    'phases': updated_phases,
+                    'onsite_gen': {
+                        'gas_mw': gas_mw, 'gas_pipe_dist': gas_pipe_dist, 'gas_status': gas_status,
+                        'solar_mw': solar_mw, 'batt_mw': batt_mw, 'batt_mwh': batt_mwh
+                    },
+                    'schedule': updated_schedule,
+                    'non_power': {
+                        'zoning_status': zoning_status, 'water_source': water_source, 
+                        'water_cap': water_cap, 'fiber_status': fiber_status, 
+                        'fiber_provider': fiber_provider, 'env_issues': env_issues
+                    },
+                    'risks': risks.split('\n') if risks else [],
+                    'opps': opps.split('\n') if opps else [],
+                    'questions': questions.split('\n') if questions else [],
+                    # Maintain legacy fields for compatibility
+                    'study_status': updated_phases[0]['sis_status'],
+                    'utility_commitment': 'committed' if updated_phases[0]['ia_status'] == 'Executed' else 'none',
+                    'power_timeline_months': 48, # Default, should calculate from dates
                 }
                 
                 site_id = st.session_state.edit_site_id if editing else name.lower().replace(' ', '_')
@@ -733,7 +787,7 @@ def show_add_edit_site():
                 
                 if editing: del st.session_state.edit_site_id
                 
-                st.success(f"Site {'updated' if editing else 'added'} successfully!")
+                st.success(f"Site diagnostic {'updated' if editing else 'added'} successfully!")
                 st.rerun()
 
 
