@@ -34,7 +34,7 @@ tab1, tab2 = st.tabs(["Live Tracker", "Forecast Framework"])
 with tab1:
     st.title("Live Power Supply vs Demand Tracker")
     try:
-        ws = sh.worksheet("Sheet1")
+        ws = sh.worksheet("LiveProjection")
         data = ws.get_all_records()
         df = pd.DataFrame(data)
         
