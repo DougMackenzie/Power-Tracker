@@ -434,6 +434,85 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.draw_spider_graph(105, graph_y + 40, 30, values, labels)
     pdf.ln(85) # Space for graph
     
+    # --- Power Phasing Summary ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "Power Phasing Summary", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
+    
+    pdf.set_font("Helvetica", size=10)
+    phases = site.get('phases', [])
+    if phases:
+        for i, p in enumerate(phases):
+            pdf.set_font("Helvetica", 'B', 10)
+            pdf.cell(0, 6, f"Phase {i+1}: {p.get('mw')} MW @ {p.get('voltage')}", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", size=10)
+            pdf.multi_cell(0, 5, f"  - Interconnection: {p.get('ia_status')} (SIS: {p.get('sis_status')})\n  - Target Online: {p.get('target_date')}\n  - Infrastructure: {p.get('substation_status')} ({p.get('trans_dist')} miles)")
+            pdf.ln(2)
+    else:
+        pdf.cell(0, 6, "No phasing data available.", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+
+    # --- Capacity Trajectory ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "Capacity Trajectory", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
+    
+    schedule = site.get('schedule', {})
+    if schedule:
+        pdf.set_font("Helvetica", 'B', 9)
+        pdf.cell(30, 6, "Year", border=1)
+        pdf.cell(60, 6, "Interconnection MW", border=1)
+        pdf.cell(60, 6, "Generation MW", border=1)
+        pdf.ln()
+        
+        pdf.set_font("Helvetica", size=9)
+        for y in range(2025, 2036):
+            yd = schedule.get(str(y), {})
+            pdf.cell(30, 6, str(y), border=1)
+            pdf.cell(60, 6, str(yd.get('ic_mw', 0)), border=1)
+            pdf.cell(60, 6, str(yd.get('gen_mw', 0)), border=1)
+            pdf.ln()
+    else:
+        pdf.cell(0, 6, "No schedule data available.", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+
+    # --- Risk Assessment ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "Risk Assessment & Bottlenecks", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
+    
+    risks = site.get('risks', [])
+    if risks:
+        pdf.set_font("Helvetica", size=10)
+        for r in risks:
+            pdf.multi_cell(0, 5, f"- {r}")
+    else:
+        pdf.cell(0, 6, "No specific risks identified.", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+
+    # --- Non-Power Items ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "Non-Power Items", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
+    
+    np = site.get('non_power', {})
+    pdf.set_font("Helvetica", size=10)
+    pdf.multi_cell(0, 5, f"Zoning: {np.get('zoning_status', 'N/A')}\nWater: {np.get('water_source', 'N/A')} ({np.get('water_cap', 'N/A')} GPD)\nFiber: {np.get('fiber_status', 'N/A')} ({np.get('fiber_provider', 'N/A')})\nEnvironmental: {np.get('env_issues', 'None')}")
+    
+    return bytes(pdf.output())
+
+
+def show_dashboard():
+    """Main dashboard with portfolio overview."""
+    st.title("📊 Portfolio Dashboard")
+    
+    db = st.session_state.db
+    sites = db.get('sites', {})
+    
+    if not sites:
+        st.info("No sites in database. Add sites to see portfolio overview.")
+        return
+    
     col1, col2, col3, col4, col5 = st.columns(5)
     
     total_sites = len(sites)
