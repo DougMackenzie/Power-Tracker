@@ -384,8 +384,8 @@ def show_site_details(site_id: str):
     """Show detailed view of a single site."""
     site = st.session_state.db['sites'].get(site_id, {})
     scores = calculate_site_score(site, st.session_state.weights)
-    state_context = get_state_profile(site.get('state', ''))
     stage = determine_stage(site)
+    state_context = generate_state_context_section(site.get('state', ''))
     
     # Header
     st.title(f"📍 {site.get('name', 'Unnamed Site')}")
@@ -428,8 +428,87 @@ def show_site_details(site_id: str):
         for r in site.get('risks', [])[:3]:
             st.error(r)
 
-    if 'error' not in state_context:
-        with st.expander("🗺️ State Context", expanded=False):
+    # --- Detailed Data View ---
+    st.markdown("---")
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["⚡ Power Pathway", "🏗️ Infrastructure", "📅 Schedule", "🌍 Non-Power", "🗺️ State Context"])
+    
+    with tab1:
+        st.subheader("Power System Studies & Approvals")
+        phases = site.get('phases', [])
+        if phases:
+            cols = st.columns(len(phases))
+            for i, p in enumerate(phases):
+                with cols[i]:
+                    st.markdown(f"**Phase {i+1}**")
+                    st.caption(f"{p.get('mw', 0)} MW @ {p.get('voltage', 'N/A')}")
+                    st.write(f"**SIS:** {p.get('sis_status', 'N/A')}")
+                    st.write(f"**FS:** {p.get('fs_status', 'N/A')}")
+                    st.write(f"**FA:** {p.get('fa_status', 'N/A')}")
+                    st.write(f"**IA:** {p.get('ia_status', 'N/A')}")
+        else:
+            st.info("No phasing data available.")
+            
+    with tab2:
+        st.subheader("Interconnection & Onsite Generation")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Interconnection**")
+            # Show Phase 1 details as primary
+            p1 = phases[0] if phases else {}
+            st.write(f"**Service Type:** {p1.get('service_type', 'N/A')}")
+            st.write(f"**Substation:** {p1.get('substation_status', 'N/A')}")
+            st.write(f"**Dist. to Trans:** {p1.get('trans_dist', 'N/A')} miles")
+        with col2:
+            st.markdown("**Onsite Generation**")
+            gen = site.get('onsite_gen', {})
+            st.write(f"**Gas:** {gen.get('gas_mw', 0)} MW ({gen.get('gas_status', 'N/A')})")
+            st.write(f"**Solar:** {gen.get('solar_mw', 0)} MW")
+            st.write(f"**Battery:** {gen.get('batt_mw', 0)} MW / {gen.get('batt_mwh', 0)} MWh")
+
+    with tab3:
+        st.subheader("Capacity Trajectory")
+        schedule = site.get('schedule', {})
+        if schedule:
+            sched_data = []
+            for y in range(2025, 2036):
+                yd = schedule.get(str(y), {})
+                sched_data.append({
+                    'Year': str(y),
+                    'Interconnect MW': yd.get('ic_mw', 0),
+                    'Generation MW': yd.get('gen_mw', 0)
+                })
+            st.dataframe(pd.DataFrame(sched_data), hide_index=True, use_container_width=True)
+            
+            # Simple line chart
+            chart_data = pd.DataFrame(sched_data).set_index('Year')
+            st.line_chart(chart_data)
+        else:
+            st.info("No schedule data available.")
+
+    with tab4:
+        st.subheader("Non-Power Items")
+        np = site.get('non_power', {})
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write(f"**Zoning:** {np.get('zoning_status', 'N/A')}")
+            st.write(f"**Water Source:** {np.get('water_source', 'N/A')}")
+            st.write(f"**Water Cap:** {np.get('water_cap', 'N/A')} GPD")
+        with col2:
+            st.write(f"**Fiber Status:** {np.get('fiber_status', 'N/A')}")
+            st.write(f"**Provider:** {np.get('fiber_provider', 'N/A')}")
+            st.write(f"**Env Issues:** {np.get('env_issues', 'None')}")
+            
+        st.subheader("Analysis")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Risks**")
+            for r in site.get('risks', []): st.write(f"- {r}")
+        with col2:
+            st.markdown("**Opportunities**")
+            for o in site.get('opps', []): st.write(f"- {o}")
+
+    with tab5:
+        if 'error' not in state_context:
             col1, col2, col3 = st.columns(3)
             col1.write(f"**Tier:** {state_context['summary']['tier_label']}")
             col2.write(f"**ISO:** {state_context['summary']['primary_iso']}")
@@ -440,18 +519,30 @@ def show_site_details(site_id: str):
             
             st.write("**Risks:**")
             for w in state_context['swot']['weaknesses'][:3]: st.write(f"  ⚠️ {w}")
-    
-    with st.expander("⚡ Power Pathway Details", expanded=True):
-        st.markdown(f"**Study Status:** {site.get('study_status', 'N/A').replace('_', ' ').title()}")
-        st.markdown(f"**Utility Commitment:** {site.get('utility_commitment', 'N/A').title()}")
-        st.markdown(f"**Timeline to Power:** {site.get('power_timeline_months', 'N/A')} months")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown(f"**Queue Position:** {'Yes' if site.get('queue_position') else 'No'}")
-            st.markdown(f"**Utility Commitment:** {site.get('utility_commitment', 'N/A').title()}")
-        with col2:
-            st.markdown(f"**BTM Viable:** {'Yes' if site.get('btm_viable') else 'No'}")
+            
+            st.metric("State Score", f"{state_context['summary']['overall_score']}/100")
+        else:
+            st.warning(state_context['error'])
+
+    # Actions
+    st.markdown("---")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("✏️ Edit Site"):
+            st.session_state.edit_site_id = site_id
+            st.rerun()
+    with col2:
+        pdf_bytes = generate_site_report_pdf(site, scores, stage, state_context)
+        st.download_button(
+            label="📄 Download PDF Report",
+            data=pdf_bytes,
+            file_name=f"{site.get('name', 'site').replace(' ', '_')}_Report.pdf",
+            mime="application/pdf"
+        )
+    with col3:
+        if st.button("🗑️ Delete Site", type="secondary"):
+            delete_site(st.session_state.db, site_id)
+            st.rerun()
     
     col1, col2, col3 = st.columns(3)
     with col1:
