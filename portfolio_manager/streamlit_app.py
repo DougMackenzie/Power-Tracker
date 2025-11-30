@@ -104,113 +104,99 @@ def calculate_site_score(site: Dict, weights: Dict) -> Dict:
     }
 
 def calculate_power_pathway_score(site: Dict) -> float:
-    """Calculate power pathway score (0-100)."""
+    """Calculate power pathway score (0-100) based on detailed phasing."""
     score = 0
+    phases = site.get('phases', [])
+    if not phases: return 0
     
-    study_status = site.get('study_status', 'not_started')
-    study_scores = {
-        'ia_executed': 40, 'fa_executed': 35, 'fs_complete': 28,
-        'sis_complete': 20, 'sis_in_progress': 12, 'sis_requested': 8, 'not_started': 0
-    }
-    score += study_scores.get(study_status, 0)
+    # Score based on most advanced phase
+    max_phase_score = 0
+    for p in phases:
+        p_score = 0
+        if p.get('ia_status') == 'Executed': p_score = 100
+        elif p.get('fa_status') == 'Executed': p_score = 80
+        elif p.get('fs_status') == 'Complete': p_score = 60
+        elif p.get('sis_status') == 'Complete': p_score = 40
+        elif p.get('sis_status') == 'In Progress': p_score = 20
+        max_phase_score = max(max_phase_score, p_score)
     
-    utility_commitment = site.get('utility_commitment', 'none')
-    commitment_scores = {'committed': 25, 'verbal': 18, 'engaged': 12, 'initial': 5, 'none': 0}
-    score += commitment_scores.get(utility_commitment, 0)
+    score += max_phase_score * 0.7  # 70% weight on study status
     
-    power_timeline_months = site.get('power_timeline_months', 60)
-    if power_timeline_months <= 24: score += 20
-    elif power_timeline_months <= 36: score += 15
-    elif power_timeline_months <= 48: score += 10
-    elif power_timeline_months <= 60: score += 5
-    
-    if site.get('transmission_adjacent', False): score += 5
-    if site.get('substation_nearby', False): score += 5
-    if site.get('btm_viable', False): score += 5
+    # Timeline score
+    timeline_months = site.get('power_timeline_months', 60)
+    if timeline_months <= 36: score += 30
+    elif timeline_months <= 48: score += 20
+    elif timeline_months <= 60: score += 10
     
     return min(score, 100)
 
 def calculate_relationship_score(site: Dict) -> float:
     """Calculate relationship capital score (0-100)."""
-    score = 0
+    # Default to 50 (Neutral) if not specified, as these fields are less emphasized in new form
+    score = 50
+    if site.get('community_support') == 'champion': score += 25
+    elif site.get('community_support') == 'opposition': score -= 25
     
-    end_user_status = site.get('end_user_status', 'none')
-    end_user_scores = {
-        'term_sheet': 60, 'loi': 50, 'nda_active': 35, 'nda_signed': 25,
-        'tours_completed': 15, 'interest_expressed': 8, 'none': 0
-    }
-    score += end_user_scores.get(end_user_status, 0)
+    if site.get('political_support') == 'strong': score += 25
+    elif site.get('political_support') == 'opposition': score -= 25
     
-    community = site.get('community_support', 'neutral')
-    community_scores = {'champion': 25, 'supportive': 20, 'neutral': 12, 'concerns': 5, 'opposition': 0}
-    score += community_scores.get(community, 12)
-    
-    political = site.get('political_support', 'neutral')
-    political_scores = {'strong': 15, 'supportive': 12, 'neutral': 8, 'concerns': 3, 'opposition': 0}
-    score += political_scores.get(political, 8)
-    
-    return min(score, 100)
+    return min(max(score, 0), 100)
 
 def calculate_execution_score(site: Dict) -> float:
     """Calculate execution capability score (0-100)."""
     score = 0
+    np = site.get('non_power', {})
     
-    track_record = site.get('developer_track_record', 'none')
-    track_scores = {'extensive': 40, 'proven': 32, 'limited': 18, 'none': 5}
-    score += track_scores.get(track_record, 5)
+    # Zoning (40 pts)
+    zoning = np.get('zoning_status', 'Not Started')
+    if zoning == 'Approved': score += 40
+    elif zoning == 'Submitted': score += 20
+    elif zoning == 'Pre-App': score += 10
     
-    utility_rel = site.get('utility_relationships', 'none')
-    utility_scores = {'strong': 30, 'established': 22, 'developing': 12, 'none': 0}
-    score += utility_scores.get(utility_rel, 0)
+    # Onsite Gen Status (30 pts)
+    gen = site.get('onsite_gen', {})
+    if gen.get('gas_status') or gen.get('solar_mw', 0) > 0:
+        score += 30
     
-    btm = site.get('btm_capability', 'none')
-    btm_scores = {'multiple_sources': 30, 'viable': 22, 'potential': 12, 'none': 0}
-    score += btm_scores.get(btm, 0)
+    # Developer Track Record (30 pts) - Legacy field, default to mid
+    score += 30 
     
     return min(score, 100)
 
 def calculate_fundamentals_score(site: Dict) -> float:
     """Calculate site fundamentals score (0-100)."""
     score = 0
+    np = site.get('non_power', {})
+    phases = site.get('phases', [])
     
-    land_control = site.get('land_control', 'none')
-    land_scores = {'owned': 35, 'option': 28, 'loi': 18, 'negotiating': 8, 'none': 0}
-    score += land_scores.get(land_control, 0)
+    # Water (30 pts)
+    if np.get('water_cap'): score += 30
+    elif np.get('water_source'): score += 15
     
+    # Fiber (20 pts)
+    fiber = np.get('fiber_status', 'Unknown')
+    if fiber == 'Lit Building': score += 20
+    elif fiber == 'Nearby': score += 10
+    
+    # Transmission Distance (30 pts)
+    min_dist = 999
+    for p in phases:
+        min_dist = min(min_dist, p.get('trans_dist', 999))
+    
+    if min_dist <= 1: score += 30
+    elif min_dist <= 5: score += 20
+    elif min_dist <= 10: score += 10
+    
+    # Acreage/Density (20 pts)
     target_mw = site.get('target_mw', 0)
     acreage = site.get('acreage', 0)
-    if acreage > 0 and target_mw > 0:
-        mw_per_acre = target_mw / acreage
-        if mw_per_acre <= 3: score += 20
-        elif mw_per_acre <= 5: score += 15
-        elif mw_per_acre <= 8: score += 10
-        else: score += 5
-    
-    water_status = site.get('water_status', 'unknown')
-    water_scores = {'secured': 25, 'available': 18, 'identified': 10, 'constrained': 3, 'unknown': 5}
-    score += water_scores.get(water_status, 5)
-    
-    fiber_status = site.get('fiber_status', 'unknown')
-    fiber_scores = {'lit': 20, 'adjacent': 15, 'nearby': 10, 'distant': 5, 'unknown': 5}
-    score += fiber_scores.get(fiber_status, 5)
+    if acreage > 0 and target_mw/acreage <= 5: score += 20
     
     return min(score, 100)
 
 def calculate_financial_score(site: Dict) -> float:
     """Calculate financial capability score (0-100)."""
-    score = 0
-    
-    capital = site.get('capital_access', 'limited')
-    capital_scores = {'strong': 50, 'committed': 42, 'available': 30, 'developing': 18, 'limited': 5}
-    score += capital_scores.get(capital, 5)
-    
-    if site.get('development_budget_allocated', False): score += 25
-    
-    partnership = site.get('partnership_structure', 'none')
-    partnership_scores = {'jv_active': 25, 'jv_negotiating': 18, 'lp_identified': 12, 'seeking': 5, 'none': 0}
-    score += partnership_scores.get(partnership, 0)
-    
-    return min(score, 100)
+    return 70 # Default placeholder as financial inputs are removed
 
 def determine_stage(site: Dict) -> str:
     """Determine development stage based on site attributes."""
