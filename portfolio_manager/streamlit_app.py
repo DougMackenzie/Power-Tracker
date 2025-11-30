@@ -383,7 +383,7 @@ def show_site_details(site_id: str):
 
 
 def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context: Dict) -> bytes:
-    """Generate a PDF report matching the Site Diagnostic Report template."""
+    """Generate comprehensive PDF report with visualizations and market research."""
     class PDF(FPDF):
         def header(self):
             self.set_font('Helvetica', 'B', 10)
@@ -414,7 +414,7 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
             
             # Draw axes and labels
             for i in range(n_points):
-                angle = i * angle_step - math.pi / 2 # Start at top
+                angle = i * angle_step - math.pi / 2  # Start at top
                 ax_x = x + radius * math.cos(angle)
                 ax_y = y + radius * math.sin(angle)
                 self.line(x, y, ax_x, ax_y)
@@ -445,7 +445,7 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
             
             # Draw Data Polygon
             self.set_line_width(0.5)
-            self.set_draw_color(0, 102, 204) # Blue
+            self.set_draw_color(0, 102, 204)  # Blue
             self.set_fill_color(0, 102, 204)
             
             # Calculate points
@@ -457,18 +457,75 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
                 py = y + r_val * math.sin(angle)
                 points.append((px, py))
             
-            # Draw filled polygon
-            # FPDF doesn't have a direct 'polygon' method with fill in standard mode easily, 
-            # but we can use shape primitives or just lines. 
-            # For simplicity in standard FPDF, we'll draw lines and markers.
-            # Actually fpdf2 supports polygon.
-            
             with self.local_context(fill_opacity=0.2):
                 self.polygon(points, style='DF')
                 
             # Draw markers
             for px, py in points:
                 self.circle(px, py, 1, style='F')
+        
+        def draw_line_chart(self, x, y, width, height, years, ic_data, gen_data, max_val):
+            """Draw a line chart for capacity trajectory."""
+            # Draw axes
+            self.set_line_width(0.3)
+            self.set_draw_color(0, 0, 0)
+            self.line(x, y + height, x + width, y + height)  # X-axis
+            self.line(x, y, x, y + height)  # Y-axis
+            
+            # Calculate scaling
+            y_scale = height / max_val if max_val > 0 else 1
+            x_step = width / len(years)
+            
+            # Draw grid lines and Y labels
+            self.set_line_width(0.1)
+            self.set_draw_color(220, 220, 220)
+            self.set_font('Helvetica', size=7)
+            for i in range(5):
+                val = int((max_val / 4) * i)
+                y_pos = y + height - (val * y_scale)
+                self.line(x, y_pos, x + width, y_pos)
+                self.set_xy(x - 15, y_pos - 2)
+                self.cell(12, 4, str(val), align='R')
+            
+            # Draw IC line (light blue)
+            self.set_line_width(0.8)
+            self.set_draw_color(135, 206, 250)  # Light blue
+            for i in range(len(years) - 1):
+                x1 = x + i * x_step
+                y1 = y + height - (ic_data[i] * y_scale)
+                x2 = x + (i + 1) * x_step
+                y2 = y + height - (ic_data[i + 1] * y_scale)
+                self.line(x1, y1, x2, y2)
+            
+            # Draw Gen line (dark blue)
+            self.set_draw_color(0, 51, 102)  # Dark blue
+            for i in range(len(years) - 1):
+                x1 = x + i * x_step
+                y1 = y + height - (gen_data[i] * y_scale)
+                x2 = x + (i + 1) * x_step
+                y2 = y + height - (gen_data[i + 1] * y_scale)
+                self.line(x1, y1, x2, y2)
+            
+            # Draw X labels
+            self.set_font('Helvetica', size=7)
+            for i, year in enumerate(years):
+                if i % 2 == 0:  # Show every other year
+                    x_pos = x + i * x_step
+                    self.set_xy(x_pos - 5, y + height + 2)
+                    self.cell(10, 4, str(year), align='C')
+            
+            # Legend
+            legend_y = y - 8
+            self.set_font('Helvetica', size=8)
+            self.set_draw_color(135, 206, 250)
+            self.line(x + width - 80, legend_y, x + width - 70, legend_y)
+            self.set_xy(x + width - 68, legend_y - 2)
+            self.cell(30, 4, "Interconnect MW")
+            
+            self.set_draw_color(0, 51, 102)
+            self.line(x + width - 80, legend_y + 5, x + width - 70, legend_y + 5)
+            self.set_xy(x + width - 68, legend_y + 3)
+            self.cell(30, 4, "Generation MW")
 
     pdf = PDF()
     pdf.alias_nb_pages()
@@ -479,109 +536,229 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.set_text_color(0, 0, 0)
     pdf.cell(0, 15, f"{site.get('name', 'Unnamed Site')}", new_x="LMARGIN", new_y="NEXT")
     
-    pdf.set_font("Helvetica", 'B', 12)
-    pdf.cell(0, 8, f"{site.get('target_mw', 0)} MW Target Capacity | {site.get('acreage', 0)} Acres", new_x="LMARGIN", new_y="NEXT")
-    
     pdf.set_font("Helvetica", size=10)
-    pdf.cell(0, 6, f"Utility: {site.get('utility', 'N/A')} | State: {site.get('state', 'N/A')} | Assessment Date: {datetime.now().strftime('%b %Y')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 6, f"State: {site.get('state', 'N/A')} | Utility: {site.get('utility', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, f"Target Capacity: {site.get('target_mw', 0)} MW | Acreage: {site.get('acreage', 0)} acres", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, f"Stage: {stage}", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(5)
     
-    # --- Executive Summary ---
+    # --- Score Analysis with Strengths/Risks ---
     pdf.set_font("Helvetica", 'B', 14)
     pdf.set_fill_color(240, 240, 240)
-    pdf.cell(0, 10, "Executive Summary", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 10, "Score Analysis", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(2)
     
-    pdf.set_font("Helvetica", size=10)
-    summary_text = (
-        f"This diagnostic analyzes the critical path to power for {site.get('name')}, a {site.get('target_mw')} MW development "
-        f"in {site.get('state')} served by {site.get('utility')}. The project is currently in the '{stage}' stage with an "
-        f"overall score of {scores['overall_score']}/100. Key strengths include {', '.join(state_context['swot']['strengths'][:2])}."
-    )
-    pdf.multi_cell(0, 5, summary_text)
-    pdf.ln(5)
-
-    # --- Scoring Analysis (Spider Graph) ---
-    pdf.set_font("Helvetica", 'B', 14)
-    pdf.cell(0, 10, "Score Analysis", new_x="LMARGIN", new_y="NEXT", fill=True)
-    pdf.ln(5)
+    # Overall Score - Large and prominent
+    pdf.set_font("Helvetica", 'B', 36)
+    pdf.set_xy(140, pdf.get_y())
+    pdf.cell(60, 15, f"{scores['overall_score']:.1f}/100", align='C')
     
-    # Draw Spider Graph
+    # Spider Graph on left
     graph_y = pdf.get_y()
     labels = ["State", "Power", "Relationship", "Execution", "Fundamentals", "Financial"]
     values = [
         scores['state_score'], scores['power_score'], scores['relationship_score'],
         scores['execution_score'], scores['fundamentals_score'], scores['financial_score']
     ]
+    pdf.draw_spider_graph(50, graph_y + 35, 25, values, labels)
     
-    # Center graph on page
-    pdf.draw_spider_graph(105, graph_y + 40, 30, values, labels)
-    pdf.ln(85) # Space for graph
+    # Key Strengths (right side)
+    pdf.set_xy(110, graph_y + 15)
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.set_fill_color(220, 255, 220)  # Light green
+    pdf.cell(85, 7, "Key Strengths", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.set_xy(110, pdf.get_y())
     
-    # --- Power Phasing Summary ---
-    pdf.set_font("Helvetica", 'B', 14)
-    pdf.cell(0, 10, "Power Phasing Summary", new_x="LMARGIN", new_y="NEXT", fill=True)
-    pdf.ln(2)
+    pdf.set_font("Helvetica", size=9)
+    # Identify top scoring categories
+    strengths = []
+    if scores['state_score'] >= 70:
+        strengths.append(f"Strong State Market ({scores['state_score']:.0f})")
+    if scores['power_score'] >= 70:
+        strengths.append(f"Advanced Power Path ({scores['power_score']:.0f})")
+    if scores['fundamentals_score'] >= 70:
+        strengths.append(f"Solid Fundamentals ({scores['fundamentals_score']:.0f})")
     
-    pdf.set_font("Helvetica", size=10)
-    phases = site.get('phases', [])
-    if phases:
-        for i, p in enumerate(phases):
-            pdf.set_font("Helvetica", 'B', 10)
-            pdf.cell(0, 6, f"Phase {i+1}: {p.get('mw')} MW @ {p.get('voltage')}", new_x="LMARGIN", new_y="NEXT")
-            pdf.set_font("Helvetica", size=10)
-            pdf.multi_cell(0, 5, f"  - Screening: {p.get('screening_status', 'N/A')} | Contract Study: {p.get('contract_study_status', 'N/A')}\n  - LOA: {p.get('loa_status', 'N/A')} | Energy Contract: {p.get('energy_contract_status', 'N/A')}\n  - Target Online: {p.get('target_date')}")
-            pdf.ln(2)
-    else:
-        pdf.cell(0, 6, "No phasing data available.", new_x="LMARGIN", new_y="NEXT")
+    for strength in strengths[:3]:
+        pdf.set_xy(110, pdf.get_y())
+        pdf.multi_cell(85, 5, f"• {strength}")
+    
     pdf.ln(5)
-
-    # --- Capacity Trajectory ---
+    
+    # Key Risks (right side, below strengths)
+    pdf.set_xy(110, pdf.get_y())
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.set_fill_color(255, 220, 220)  # Light red
+    pdf.cell(85, 7, "Key Risks", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.set_xy(110, pdf.get_y())
+    
+    pdf.set_font("Helvetica", size=9)
+    risks = site.get('risks', [])
+    for risk in risks[:3]:
+        pdf.set_xy(110, pdf.get_y())
+        pdf.multi_cell(85, 5, f"• {risk}")
+    
+    pdf.ln(80)  # Move past the spider graph
+    
+    # --- Capacity Trajectory Chart ---
+    pdf.add_page()
     pdf.set_font("Helvetica", 'B', 14)
     pdf.cell(0, 10, "Capacity Trajectory", new_x="LMARGIN", new_y="NEXT", fill=True)
-    pdf.ln(2)
+    pdf.ln(5)
     
     schedule = site.get('schedule', {})
     if schedule:
+        years = list(range(2025, 2036))
+        ic_data = [schedule.get(str(y), {}).get('ic_mw', 0) for y in years]
+        gen_data = [schedule.get(str(y), {}).get('gen_mw', 0) for y in years]
+        max_val = max(max(ic_data), max(gen_data)) if ic_data and gen_data else 100
+        max_val = int(max_val * 1.1)  # Add 10% headroom
+        
+        # Draw the chart
+        chart_y = pdf.get_y()
+        pdf.draw_line_chart(25, chart_y, 160, 60, years, ic_data, gen_data, max_val)
+        pdf.ln(70)
+        
+        # Add table below chart
         pdf.set_font("Helvetica", 'B', 9)
         pdf.cell(30, 6, "Year", border=1)
         pdf.cell(60, 6, "Interconnection MW", border=1)
         pdf.cell(60, 6, "Generation MW", border=1)
+        pdf.cell(40, 6, "Available MW", border=1)
         pdf.ln()
         
-        pdf.set_font("Helvetica", size=9)
-        for y in range(2025, 2036):
+        pdf.set_font("Helvetica", size=8)
+        for y in years:
             yd = schedule.get(str(y), {})
-            pdf.cell(30, 6, str(y), border=1)
-            pdf.cell(60, 6, str(yd.get('ic_mw', 0)), border=1)
-            pdf.cell(60, 6, str(yd.get('gen_mw', 0)), border=1)
+            ic_mw = yd.get('ic_mw', 0)
+            gen_mw = yd.get('gen_mw', 0)
+            pdf.cell(30, 5, str(y), border=1)
+            pdf.cell(60, 5, str(ic_mw), border=1)
+            pdf.cell(60, 5, str(gen_mw), border=1)
+            pdf.cell(40, 5, str(min(ic_mw, gen_mw)), border=1)
             pdf.ln()
-    else:
-        pdf.cell(0, 6, "No schedule data available.", new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(5)
-
-    # --- Risk Assessment ---
+    
+    pdf.ln(10)
+    
+    # --- Critical Path to Power ---
     pdf.set_font("Helvetica", 'B', 14)
-    pdf.cell(0, 10, "Risk Assessment & Bottlenecks", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.cell(0, 10, "Critical Path to Power", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(2)
     
-    risks = site.get('risks', [])
-    if risks:
-        pdf.set_font("Helvetica", size=10)
-        for r in risks:
-            pdf.multi_cell(0, 5, f"- {r}")
-    else:
-        pdf.cell(0, 6, "No specific risks identified.", new_x="LMARGIN", new_y="NEXT")
+    phases = site.get('phases', [])
+    if phases:
+        for i, p in enumerate(phases):
+            pdf.set_font("Helvetica", 'B', 11)
+            pdf.cell(0, 7, f"Phase {i+1}: {p.get('mw', 0)} MW @ {p.get('voltage', 'N/A')} kV", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", size=9)
+            pdf.cell(0, 5, f"  Target Online: {p.get('target_date', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 5, f"  Screening Study: {p.get('screening_status', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 5, f"  Contract Study: {p.get('contract_study_status', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 5, f"  Letter of Agreement: {p.get('loa_status', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 5, f"  Energy Contract: {p.get('energy_contract_status', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(3)
+    
     pdf.ln(5)
-
-    # --- Non-Power Items ---
+    
+    # --- Comprehensive Site Overview ---
+    pdf.add_page()
     pdf.set_font("Helvetica", 'B', 14)
-    pdf.cell(0, 10, "Non-Power Items", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.cell(0, 10, "Site Overview", new_x="LMARGIN", new_y="NEXT", fill=True)
     pdf.ln(2)
     
+    # Infrastructure
+    pdf.set_font("Helvetica", 'B', 11)
+    pdf.cell(0, 7, "Infrastructure", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=9)
+    for i, p in enumerate(phases):
+        pdf.cell(0, 5, f"Phase {i+1}: {p.get('service_type', 'N/A')} service, {p.get('substation_status', 'N/A')} substation, {p.get('trans_dist', 'N/A')} mi to transmission", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(3)
+    
+    # Onsite Generation
+    pdf.set_font("Helvetica", 'B', 11)
+    pdf.cell(0, 7, "Onsite Generation", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=9)
+    gen = site.get('onsite_gen', {})
+    pdf.cell(0, 5, f"Natural Gas: {gen.get('gas_mw', 0)} MW ({gen.get('gas_status', 'N/A')}), {gen.get('gas_dist', 'N/A')} mi to pipeline", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, f"Solar: {gen.get('solar_mw', 0)} MW on {gen.get('solar_acres', 0)} acres", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, f"Battery Storage: {gen.get('batt_mw', 0)} MW / {gen.get('batt_mwh', 0)} MWh", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(3)
+    
+    # Non-Power Items
+    pdf.set_font("Helvetica", 'B', 11)
+    pdf.cell(0, 7, "Non-Power Items", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=9)
     np = site.get('non_power', {})
-    pdf.set_font("Helvetica", size=10)
-    pdf.multi_cell(0, 5, f"Zoning: {np.get('zoning_status', 'N/A')}\nWater: {np.get('water_source', 'N/A')} ({np.get('water_cap', 'N/A')} GPD)\nFiber: {np.get('fiber_status', 'N/A')} ({np.get('fiber_provider', 'N/A')})\nEnvironmental: {np.get('env_issues', 'None')}")
+    pdf.cell(0, 5, f"Zoning: {np.get('zoning_status', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, f"Water: {np.get('water_source', 'N/A')} - {np.get('water_cap', 0):,.0f} GPD capacity", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, f"Fiber: {np.get('fiber_status', 'N/A')} ({np.get('fiber_provider', 'N/A')})", new_x="LMARGIN", new_y="NEXT")
+    pdf.multi_cell(0, 5, f"Environmental: {np.get('env_issues', 'None identified')}")
+    pdf.ln(5)
+    
+    # --- State & Market Analysis ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, f"{site.get('state', 'State')} Market Analysis", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
+    
+    pdf.set_font("Helvetica", 'B', 11)
+    pdf.cell(0, 7, f"Market Tier: {state_context['summary']['tier']}", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=9)
+    pdf.multi_cell(0, 5, state_context['summary']['description'])
+    pdf.ln(3)
+    
+    # SWOT Analysis
+    pdf.set_font("Helvetica", 'B', 10)
+    pdf.set_fill_color(220, 255, 220)
+    pdf.cell(0, 6, "Strengths", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.set_font("Helvetica", size=9)
+    for s in state_context['swot']['strengths']:
+        pdf.multi_cell(0, 5, f"• {s}")
+    pdf.ln(2)
+    
+    pdf.set_font("Helvetica", 'B', 10)
+    pdf.set_fill_color(255, 255, 220)
+    pdf.cell(0, 6, "Opportunities", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.set_font("Helvetica", size=9)
+    for o in state_context['swot']['opportunities']:
+        pdf.multi_cell(0, 5, f"• {o}")
+    pdf.ln(2)
+    
+    pdf.set_font("Helvetica", 'B', 10)
+    pdf.set_fill_color(255, 220, 220)
+    pdf.cell(0, 6, "Risks & Challenges", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.set_font("Helvetica", size=9)
+    for w in state_context['swot']['weaknesses']:
+        pdf.multi_cell(0, 5, f"• {w}")
+    for t in state_context['swot']['threats']:
+        pdf.multi_cell(0, 5, f"• {t}")
+    pdf.ln(5)
+    
+    # --- Risk & Opportunity Analysis ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "Site-Specific Risk & Opportunity Analysis", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
+    
+    pdf.set_font("Helvetica", 'B', 11)
+    pdf.cell(0, 7, "Key Risks", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=9)
+    for r in site.get('risks', []):
+        pdf.multi_cell(0, 5, f"• {r}")
+    pdf.ln(3)
+    
+    pdf.set_font("Helvetica", 'B', 11)
+    pdf.cell(0, 7, "Acceleration Opportunities", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=9)
+    for o in site.get('opps', []):
+        pdf.multi_cell(0, 5, f"• {o}")
+    pdf.ln(3)
+    
+    pdf.set_font("Helvetica", 'B', 11)
+    pdf.cell(0, 7, "Open Questions", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=9)
+    for q in site.get('questions', []):
+        pdf.multi_cell(0, 5, f"• {q}")
     
     return bytes(pdf.output())
 
