@@ -452,7 +452,69 @@ def show_site_details(site_id: str):
             st.session_state.edit_site_id = site_id
             st.rerun()
     with col2:
-        if st.button("📄 Generate Report"): st.info("Report generation coming soon...")
+        report_md = generate_site_report_markdown(site, scores, stage, state_context)
+        st.download_button(
+            label="📄 Download Report",
+            data=report_md,
+            file_name=f"{site.get('name', 'site').replace(' ', '_')}_Report.md",
+            mime="text/markdown"
+        )
+
+def generate_site_report_markdown(site: Dict, scores: Dict, stage: str, state_context: Dict) -> str:
+    """Generate a Markdown report for a site."""
+    return f"""# Site Investment Memo: {site.get('name', 'Unnamed Site')}
+**Date:** {datetime.now().strftime('%Y-%m-%d')}
+**Stage:** {stage}
+**Overall Score:** {scores['overall_score']}/100
+
+## Executive Summary
+**State:** {site.get('state', 'N/A')} ({state_context['summary']['tier_label']})
+**Utility:** {site.get('utility', 'N/A')}
+**Target Capacity:** {site.get('target_mw', 0)} MW
+**Acreage:** {site.get('acreage', 0)} acres
+
+## Score Breakdown
+| Component | Score | Weight |
+|-----------|-------|--------|
+| **Overall** | **{scores['overall_score']}** | **100%** |
+| State | {scores['state_score']} | {scores['weights']['state']*100:.0f}% |
+| Power Pathway | {scores['power_score']} | {scores['weights']['power']*100:.0f}% |
+| Relationship | {scores['relationship_score']} | {scores['weights']['relationship']*100:.0f}% |
+| Execution | {scores['execution_score']} | {scores['weights']['execution']*100:.0f}% |
+| Fundamentals | {scores['fundamentals_score']} | {scores['weights']['fundamentals']*100:.0f}% |
+| Financial | {scores['financial_score']} | {scores['weights']['financial']*100:.0f}% |
+
+## State Context: {site.get('state', 'N/A')}
+**ISO:** {state_context['summary']['primary_iso']}
+**Regulatory Environment:** {state_context['summary']['regulatory_structure']}
+
+**Strengths:**
+{chr(10).join([f"- {s}" for s in state_context['swot']['strengths']])}
+
+**Risks:**
+{chr(10).join([f"- {w}" for w in state_context['swot']['weaknesses']])}
+
+## Critical Path Analysis
+### Power Pathway
+- **Study Status:** {site.get('study_status', 'N/A').replace('_', ' ').title()}
+- **Utility Commitment:** {site.get('utility_commitment', 'N/A').replace('_', ' ').title()}
+- **Timeline:** {site.get('power_timeline_months', 'N/A')} months
+- **Queue Position:** {'Yes' if site.get('queue_position') else 'No'}
+
+### Relationship Capital
+- **End-User:** {site.get('end_user_status', 'N/A').replace('_', ' ').title()}
+- **Community:** {site.get('community_support', 'N/A').title()}
+- **Political:** {site.get('political_support', 'N/A').title()}
+
+### Execution & Fundamentals
+- **Land Control:** {site.get('land_control', 'N/A').title()}
+- **Water Status:** {site.get('water_status', 'N/A').title()}
+- **Fiber Status:** {site.get('fiber_status', 'N/A').title()}
+- **Developer Track Record:** {site.get('developer_track_record', 'N/A').title()}
+
+## Notes
+{site.get('notes', 'No notes added.')}
+"""
     with col3:
         if st.button("🗑️ Delete Site", type="secondary"):
             delete_site(st.session_state.db, site_id)
