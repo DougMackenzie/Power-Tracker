@@ -38,10 +38,17 @@ with tab1:
         data = ws.get_all_records()
         df = pd.DataFrame(data)
         
+        # Check for Wide Format (Year, Demand, Supply columns)
+        wide_cols = {'Year', 'Live Total Demand', 'Live Domestic Demand', 'Live Supply'}
+        if wide_cols.issubset(df.columns):
+            # Melt to Long Format
+            df = df.melt('Year', value_vars=['Live Total Demand', 'Live Domestic Demand', 'Live Supply'], 
+                         var_name='Type', value_name='Capacity (GW)')
+        
         if df.empty:
-            st.warning("The 'LiveProjection' sheet is empty. Please add data (Year, Capacity (GW), Type) to visualize it.")
+            st.warning("The 'LiveProjection' sheet is empty. Please add data to visualize it.")
         elif not {'Year', 'Capacity (GW)', 'Type'}.issubset(df.columns):
-            st.warning(f"The 'LiveProjection' sheet is missing required columns. Found: {df.columns.tolist()}. Expected: ['Year', 'Capacity (GW)', 'Type']")
+            st.warning(f"The 'LiveProjection' sheet is missing required columns. Found: {df.columns.tolist()}. Expected: ['Year', 'Capacity (GW)', 'Type'] OR ['Year', 'Live Total Demand', 'Live Domestic Demand', 'Live Supply']")
         else:
             # Chart
             chart = alt.Chart(df).mark_line(point=True).encode(
