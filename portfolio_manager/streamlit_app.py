@@ -728,22 +728,26 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.set_font("Helvetica", 'B', 11)
     pdf.cell(0, 7, "Key Risks", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", size=9)
-    for r in site.get('risks', []):
-        pdf.multi_cell(0, 5, f"- {r}")
+    for r in site.get('risks', [])[:5]:
+        # Use cell() instead of multi_cell() to avoid rendering issues
+        clean_text = str(r).strip()[:120]
+        pdf.cell(0, 5, f"- {clean_text}", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     pdf.set_font("Helvetica", 'B', 11)
     pdf.cell(0, 7, "Acceleration Opportunities", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", size=9)
-    for o in site.get('opps', []):
-        pdf.multi_cell(0, 5, f"- {o}")
+    for o in site.get('opps', [])[:5]:
+        clean_text = str(o).strip()[:120]
+        pdf.cell(0, 5, f"- {clean_text}", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(3)
     
     pdf.set_font("Helvetica", 'B', 11)
     pdf.cell(0, 7, "Open Questions", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", size=9)
-    for q in site.get('questions', []):
-        pdf.multi_cell(0, 5, f"- {q}")
+    for q in site.get('questions', [])[:5]:
+        clean_text = str(q).strip()[:120]
+        pdf.cell(0, 5, f"- {clean_text}", new_x="LMARGIN", new_y="NEXT")
     
     return bytes(pdf.output())
 
