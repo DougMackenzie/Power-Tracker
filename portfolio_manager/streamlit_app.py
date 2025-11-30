@@ -240,13 +240,19 @@ def run():
             'state': 0.20, 'power': 0.25, 'relationship': 0.20,
             'execution': 0.15, 'fundamentals': 0.10, 'financial': 0.10
         }
+        
+    # Initialize page state if not present
+    if 'page' not in st.session_state:
+        st.session_state.page = "📊 Dashboard"
     
     st.sidebar.title("⚡ Portfolio Manager")
     
+    # Use session state for navigation
     page = st.sidebar.radio(
         "Navigation",
         ["📊 Dashboard", "🏭 Site Database", "➕ Add/Edit Site", 
-         "🏆 Rankings", "🗺️ State Analysis", "🔍 Utility Research", "⚙️ Settings"]
+         "🏆 Rankings", "🗺️ State Analysis", "🔍 Utility Research", "⚙️ Settings"],
+        key="page"
     )
     
     if page == "📊 Dashboard": show_dashboard()
@@ -256,6 +262,178 @@ def run():
     elif page == "🗺️ State Analysis": show_state_analysis()
     elif page == "🔍 Utility Research": show_utility_research()
     elif page == "⚙️ Settings": show_settings()
+
+
+# ... (skipping unchanged functions) ...
+
+def show_site_details(site_id: str):
+    # ... (start of function remains same) ...
+    site = st.session_state.db['sites'].get(site_id, {})
+    scores = calculate_site_score(site, st.session_state.weights)
+    state_context = generate_state_context_section(site.get('state', ''))
+    stage = determine_stage(site)
+    
+    # ... (UI code) ...
+    
+    # Actions
+    st.markdown("---")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("✏️ Edit Site", key=f"edit_{site_id}"):
+            st.session_state.edit_site_id = site_id
+            st.session_state.page = "➕ Add/Edit Site" # Force navigation
+            st.rerun()
+    with col2:
+        pdf_bytes = generate_site_report_pdf(site, scores, stage, state_context)
+        st.download_button(
+            label="📄 Download PDF Report",
+            data=pdf_bytes,
+            file_name=f"{site.get('name', 'site').replace(' ', '_')}_Report.pdf",
+            mime="application/pdf",
+            key=f"download_{site_id}"
+        )
+    with col3:
+        if st.button("🗑️ Delete Site", type="secondary", key=f"delete_{site_id}"):
+            delete_site(st.session_state.db, site_id)
+            st.rerun()
+
+
+def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context: Dict) -> bytes:
+    """Generate a PDF report matching the Site Diagnostic Report template."""
+    class PDF(FPDF):
+        def header(self):
+            self.set_font('Helvetica', 'B', 10)
+            self.set_text_color(100, 100, 100)
+            self.cell(0, 10, 'Site Diagnostic Report | Critical Path to Power', new_x="LMARGIN", new_y="NEXT", align='L')
+            self.ln(2)
+            self.line(10, 20, 200, 20)
+            self.ln(5)
+
+        def footer(self):
+            self.set_y(-15)
+            self.set_font('Helvetica', 'I', 8)
+            self.set_text_color(128, 128, 128)
+            self.cell(0, 10, f'Confidential | Page {self.page_no()}/{{nb}}', align='R')
+            
+        def draw_spider_graph(self, x, y, radius, data, labels):
+            """Draw a spider graph at (x,y) with given radius."""
+            import math
+            
+            # Draw background (5 concentric webs)
+            self.set_line_width(0.1)
+            self.set_draw_color(200, 200, 200)
+            self.set_text_color(100, 100, 100)
+            self.set_font('Helvetica', size=8)
+            
+            n_points = len(data)
+            angle_step = 2 * math.pi / n_points
+            
+            # Draw axes and labels
+            for i in range(n_points):
+                angle = i * angle_step - math.pi / 2 # Start at top
+                ax_x = x + radius * math.cos(angle)
+                ax_y = y + radius * math.sin(angle)
+                self.line(x, y, ax_x, ax_y)
+                
+                # Labels
+                lbl_x = x + (radius + 5) * math.cos(angle)
+                lbl_y = y + (radius + 5) * math.sin(angle)
+                
+                # Adjust label alignment
+                align = 'C'
+                if lbl_x < x - 5: align = 'R'
+                elif lbl_x > x + 5: align = 'L'
+                
+                self.set_xy(lbl_x - 10, lbl_y - 3)
+                self.cell(20, 6, labels[i], align=align)
+            
+            # Draw concentric polygons
+            for r_step in [0.2, 0.4, 0.6, 0.8, 1.0]:
+                curr_r = radius * r_step
+                for i in range(n_points):
+                    angle1 = i * angle_step - math.pi / 2
+                    angle2 = ((i + 1) % n_points) * angle_step - math.pi / 2
+                    x1 = x + curr_r * math.cos(angle1)
+                    y1 = y + curr_r * math.sin(angle1)
+                    x2 = x + curr_r * math.cos(angle2)
+                    y2 = y + curr_r * math.sin(angle2)
+                    self.line(x1, y1, x2, y2)
+            
+            # Draw Data Polygon
+            self.set_line_width(0.5)
+            self.set_draw_color(0, 102, 204) # Blue
+            self.set_fill_color(0, 102, 204)
+            
+            # Calculate points
+            points = []
+            for i, val in enumerate(data):
+                angle = i * angle_step - math.pi / 2
+                r_val = radius * (val / 100.0)
+                px = x + r_val * math.cos(angle)
+                py = y + r_val * math.sin(angle)
+                points.append((px, py))
+            
+            # Draw filled polygon
+            # FPDF doesn't have a direct 'polygon' method with fill in standard mode easily, 
+            # but we can use shape primitives or just lines. 
+            # For simplicity in standard FPDF, we'll draw lines and markers.
+            # Actually fpdf2 supports polygon.
+            
+            with self.local_context(fill_opacity=0.2):
+                self.polygon(points, style='DF')
+                
+            # Draw markers
+            for px, py in points:
+                self.circle(px, py, 1, style='F')
+
+    pdf = PDF()
+    pdf.alias_nb_pages()
+    pdf.add_page()
+    
+    # --- Title Block ---
+    pdf.set_font("Helvetica", 'B', 24)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 15, f"{site.get('name', 'Unnamed Site')}", new_x="LMARGIN", new_y="NEXT")
+    
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(0, 8, f"{site.get('target_mw', 0)} MW Target Capacity | {site.get('acreage', 0)} Acres", new_x="LMARGIN", new_y="NEXT")
+    
+    pdf.set_font("Helvetica", size=10)
+    pdf.cell(0, 6, f"Utility: {site.get('utility', 'N/A')} | State: {site.get('state', 'N/A')} | Assessment Date: {datetime.now().strftime('%b %Y')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+    
+    # --- Executive Summary ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(0, 10, "Executive Summary", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
+    
+    pdf.set_font("Helvetica", size=10)
+    summary_text = (
+        f"This diagnostic analyzes the critical path to power for {site.get('name')}, a {site.get('target_mw')} MW development "
+        f"in {site.get('state')} served by {site.get('utility')}. The project is currently in the '{stage}' stage with an "
+        f"overall score of {scores['overall_score']}/100. Key strengths include {', '.join(state_context['swot']['strengths'][:2])}."
+    )
+    pdf.multi_cell(0, 5, summary_text)
+    pdf.ln(5)
+
+    # --- Scoring Analysis (Spider Graph) ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "Score Analysis", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(5)
+    
+    # Draw Spider Graph
+    graph_y = pdf.get_y()
+    labels = ["State", "Power", "Relationship", "Execution", "Fundamentals", "Financial"]
+    values = [
+        scores['state_score'], scores['power_score'], scores['relationship_score'],
+        scores['execution_score'], scores['fundamentals_score'], scores['financial_score']
+    ]
+    
+    # Center graph on page
+    pdf.draw_spider_graph(105, graph_y + 40, 30, values, labels)
+    pdf.ln(85) # Space for graph
+
 
 
 def show_dashboard():
