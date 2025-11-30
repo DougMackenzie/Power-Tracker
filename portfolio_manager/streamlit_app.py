@@ -20,6 +20,7 @@ from datetime import date, datetime
 from typing import Dict, List, Optional
 import plotly.express as px
 import plotly.graph_objects as go
+from fpdf import FPDF
 
 # Import our modules
 from .state_analysis import (
@@ -451,70 +452,119 @@ def show_site_details(site_id: str):
         if st.button("✏️ Edit Site"):
             st.session_state.edit_site_id = site_id
             st.rerun()
+from fpdf import FPDF
+
+# ... (inside show_site_details)
     with col2:
-        report_md = generate_site_report_markdown(site, scores, stage, state_context)
+        pdf_bytes = generate_site_report_pdf(site, scores, stage, state_context)
         st.download_button(
-            label="📄 Download Report",
-            data=report_md,
-            file_name=f"{site.get('name', 'site').replace(' ', '_')}_Report.md",
-            mime="text/markdown"
+            label="📄 Download PDF Report",
+            data=pdf_bytes,
+            file_name=f"{site.get('name', 'site').replace(' ', '_')}_Report.pdf",
+            mime="application/pdf"
         )
 
-def generate_site_report_markdown(site: Dict, scores: Dict, stage: str, state_context: Dict) -> str:
-    """Generate a Markdown report for a site."""
-    return f"""# Site Investment Memo: {site.get('name', 'Unnamed Site')}
-**Date:** {datetime.now().strftime('%Y-%m-%d')}
-**Stage:** {stage}
-**Overall Score:** {scores['overall_score']}/100
+def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context: Dict) -> bytes:
+    """Generate a PDF report for a site."""
+    class PDF(FPDF):
+        def header(self):
+            self.set_font('Helvetica', 'B', 15)
+            self.cell(0, 10, 'Site Investment Memo', new_x="LMARGIN", new_y="NEXT", align='C')
+            self.ln(5)
 
-## Executive Summary
-**State:** {site.get('state', 'N/A')} ({state_context['summary']['tier_label']})
-**Utility:** {site.get('utility', 'N/A')}
-**Target Capacity:** {site.get('target_mw', 0)} MW
-**Acreage:** {site.get('acreage', 0)} acres
+        def footer(self):
+            self.set_y(-15)
+            self.set_font('Helvetica', 'I', 8)
+            self.cell(0, 10, f'Page {self.page_no()}/{{nb}}', align='C')
 
-## Score Breakdown
-| Component | Score | Weight |
-|-----------|-------|--------|
-| **Overall** | **{scores['overall_score']}** | **100%** |
-| State | {scores['state_score']} | {scores['weights']['state']*100:.0f}% |
-| Power Pathway | {scores['power_score']} | {scores['weights']['power']*100:.0f}% |
-| Relationship | {scores['relationship_score']} | {scores['weights']['relationship']*100:.0f}% |
-| Execution | {scores['execution_score']} | {scores['weights']['execution']*100:.0f}% |
-| Fundamentals | {scores['fundamentals_score']} | {scores['weights']['fundamentals']*100:.0f}% |
-| Financial | {scores['financial_score']} | {scores['weights']['financial']*100:.0f}% |
-
-## State Context: {site.get('state', 'N/A')}
-**ISO:** {state_context['summary']['primary_iso']}
-**Regulatory Environment:** {state_context['summary']['regulatory_structure']}
-
-**Strengths:**
-{chr(10).join([f"- {s}" for s in state_context['swot']['strengths']])}
-
-**Risks:**
-{chr(10).join([f"- {w}" for w in state_context['swot']['weaknesses']])}
-
-## Critical Path Analysis
-### Power Pathway
-- **Study Status:** {site.get('study_status', 'N/A').replace('_', ' ').title()}
-- **Utility Commitment:** {site.get('utility_commitment', 'N/A').replace('_', ' ').title()}
-- **Timeline:** {site.get('power_timeline_months', 'N/A')} months
-- **Queue Position:** {'Yes' if site.get('queue_position') else 'No'}
-
-### Relationship Capital
-- **End-User:** {site.get('end_user_status', 'N/A').replace('_', ' ').title()}
-- **Community:** {site.get('community_support', 'N/A').title()}
-- **Political:** {site.get('political_support', 'N/A').title()}
-
-### Execution & Fundamentals
-- **Land Control:** {site.get('land_control', 'N/A').title()}
-- **Water Status:** {site.get('water_status', 'N/A').title()}
-- **Fiber Status:** {site.get('fiber_status', 'N/A').title()}
-- **Developer Track Record:** {site.get('developer_track_record', 'N/A').title()}
-
-## Notes
-{site.get('notes', 'No notes added.')}
-"""
+    pdf = PDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", size=12)
+    
+    # Title Section
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, f"{site.get('name', 'Unnamed Site')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=10)
+    pdf.cell(0, 5, f"Date: {datetime.now().strftime('%Y-%m-%d')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, f"Stage: {stage}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, f"Overall Score: {scores['overall_score']}/100", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+    
+    # Executive Summary
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(0, 10, "Executive Summary", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=10)
+    pdf.cell(0, 5, f"State: {site.get('state', 'N/A')} ({state_context['summary']['tier_label']})", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, f"Utility: {site.get('utility', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, f"Target Capacity: {site.get('target_mw', 0)} MW", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, f"Acreage: {site.get('acreage', 0)} acres", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+    
+    # Score Breakdown
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(0, 10, "Score Breakdown", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=10)
+    
+    # Table Header
+    pdf.set_fill_color(200, 220, 255)
+    pdf.cell(60, 7, "Component", border=1, fill=True)
+    pdf.cell(30, 7, "Score", border=1, fill=True)
+    pdf.cell(30, 7, "Weight", border=1, fill=True, new_x="LMARGIN", new_y="NEXT")
+    
+    # Table Rows
+    components = [
+        ("State", scores['state_score'], scores['weights']['state']),
+        ("Power Pathway", scores['power_score'], scores['weights']['power']),
+        ("Relationship", scores['relationship_score'], scores['weights']['relationship']),
+        ("Execution", scores['execution_score'], scores['weights']['execution']),
+        ("Fundamentals", scores['fundamentals_score'], scores['weights']['fundamentals']),
+        ("Financial", scores['financial_score'], scores['weights']['financial']),
+    ]
+    
+    for name, score, weight in components:
+        pdf.cell(60, 7, name, border=1)
+        pdf.cell(30, 7, str(score), border=1)
+        pdf.cell(30, 7, f"{weight*100:.0f}%", border=1, new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+    
+    # State Context
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(0, 10, f"State Context: {site.get('state', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=10)
+    pdf.multi_cell(0, 5, f"ISO: {state_context['summary']['primary_iso']}\nRegulatory: {state_context['summary']['regulatory_structure']}")
+    
+    pdf.set_font("Helvetica", 'B', 10)
+    pdf.cell(0, 8, "Strengths:", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=10)
+    for s in state_context['swot']['strengths']:
+        pdf.cell(5) # Indent
+        pdf.cell(0, 5, f"- {s}", new_x="LMARGIN", new_y="NEXT")
+        
+    pdf.set_font("Helvetica", 'B', 10)
+    pdf.cell(0, 8, "Risks:", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=10)
+    for w in state_context['swot']['weaknesses']:
+        pdf.cell(5) # Indent
+        pdf.cell(0, 5, f"- {w}", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+    
+    # Critical Path
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(0, 10, "Critical Path Analysis", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", 'B', 10)
+    pdf.cell(0, 8, "Power Pathway", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=10)
+    pdf.cell(0, 5, f"Study Status: {site.get('study_status', 'N/A').replace('_', ' ').title()}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, f"Utility Commitment: {site.get('utility_commitment', 'N/A').replace('_', ' ').title()}", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, f"Timeline: {site.get('power_timeline_months', 'N/A')} months", new_x="LMARGIN", new_y="NEXT")
+    
+    pdf.ln(5)
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(0, 10, "Notes", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", size=10)
+    pdf.multi_cell(0, 5, site.get('notes', 'No notes added.'))
+    
+    return bytes(pdf.output())
     with col3:
         if st.button("🗑️ Delete Site", type="secondary"):
             delete_site(st.session_state.db, site_id)

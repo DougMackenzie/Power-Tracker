@@ -4,3 +4,4 @@ altair
 gspread
 google-auth
 plotly
+fpdf2
