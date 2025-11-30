@@ -545,24 +545,7 @@ def show_site_details(site_id: str):
             delete_site(st.session_state.db, site_id)
             st.rerun()
     
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("✏️ Edit Site"):
-            st.session_state.edit_site_id = site_id
-            st.rerun()
-    with col2:
-        pdf_bytes = generate_site_report_pdf(site, scores, stage, state_context)
-        st.download_button(
-            label="📄 Download PDF Report",
-            data=pdf_bytes,
-            file_name=f"{site.get('name', 'site').replace(' ', '_')}_Report.pdf",
-            mime="application/pdf"
-        )
-    with col3:
-        if st.button("🗑️ Delete Site", type="secondary"):
-            delete_site(st.session_state.db, site_id)
-            st.success("Site deleted")
-            st.rerun()
+
 
 def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context: Dict) -> bytes:
     """Generate a PDF report matching the Site Diagnostic Report template."""
@@ -598,6 +581,49 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.ln(5)
     
     # --- Executive Summary ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(0, 10, "Executive Summary", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
+    
+    pdf.set_font("Helvetica", size=10)
+    summary_text = (
+        f"This diagnostic analyzes the critical path to power for {site.get('name')}, a {site.get('target_mw')} MW development "
+        f"in {site.get('state')} served by {site.get('utility')}. The project is currently in the '{stage}' stage with an "
+        f"overall score of {scores['overall_score']}/100. Key strengths include {', '.join(state_context['swot']['strengths'][:2])}."
+    )
+    pdf.multi_cell(0, 5, summary_text)
+    pdf.ln(5)
+
+    # --- Scoring Breakdown ---
+    pdf.set_font("Helvetica", 'B', 14)
+    pdf.cell(0, 10, "Scoring Breakdown", new_x="LMARGIN", new_y="NEXT", fill=True)
+    pdf.ln(2)
+    
+    pdf.set_font("Helvetica", 'B', 9)
+    pdf.set_fill_color(220, 220, 220)
+    headers = ["Component", "Score", "Weight", "Key Driver"]
+    col_widths = [50, 30, 30, 80]
+    
+    for i, h in enumerate(headers):
+        pdf.cell(col_widths[i], 8, h, border=1, fill=True)
+    pdf.ln()
+    
+    pdf.set_font("Helvetica", size=9)
+    score_data = [
+        ("State Market", scores['state_score'], "20%", f"Tier {state_context['summary']['tier']}"),
+        ("Power Pathway", scores['power_score'], "25%", site.get('study_status', 'N/A').replace('_', ' ').title()),
+        ("Relationship Capital", scores['relationship_score'], "20%", site.get('political_support', 'Neutral').title()),
+        ("Execution Capability", scores['execution_score'], "15%", site.get('developer_track_record', 'N/A').title()),
+        ("Site Fundamentals", scores['fundamentals_score'], "10%", f"Water: {site.get('non_power', {}).get('water_status', 'N/A')}"),
+        ("Financial Strength", scores['financial_score'], "10%", f"Capital: {site.get('capital_access', 'N/A').title()}")
+    ]
+    
+    for row in score_data:
+        for i, item in enumerate(row):
+            pdf.cell(col_widths[i], 8, str(item), border=1)
+        pdf.ln()
+    pdf.ln(10)
     pdf.set_font("Helvetica", 'B', 14)
     pdf.set_fill_color(240, 240, 240)
     pdf.cell(0, 10, "Executive Summary", new_x="LMARGIN", new_y="NEXT", fill=True)
