@@ -715,31 +715,41 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.ln(3)
     
     # SWOT Analysis
-    pdf.set_font("Helvetica", 'B', 10)
-    pdf.set_fill_color(220, 255, 220)
-    pdf.cell(0, 6, "Strengths", new_x="LMARGIN", new_y="NEXT", fill=True)
-    pdf.set_font("Helvetica", size=9)
-    for s in state_context['swot']['strengths']:
-        pdf.multi_cell(0, 5, f"- {s}")
-    pdf.ln(2)
+    swot = state_context.get('swot', {})
     
-    pdf.set_font("Helvetica", 'B', 10)
-    pdf.set_fill_color(255, 255, 220)
-    pdf.cell(0, 6, "Opportunities", new_x="LMARGIN", new_y="NEXT", fill=True)
-    pdf.set_font("Helvetica", size=9)
-    for o in state_context['swot']['opportunities']:
-        pdf.multi_cell(0, 5, f"- {o}")
-    pdf.ln(2)
+    if swot.get('strengths'):
+        pdf.set_font("Helvetica", 'B', 10)
+        pdf.set_fill_color(220, 255, 220)
+        pdf.cell(0, 6, "Strengths", new_x="LMARGIN", new_y="NEXT", fill=True)
+        pdf.set_font("Helvetica", size=9)
+        for s in swot['strengths'][:5]:  # Limit to 5 items
+            # Truncate very long text
+            text = s[:150] + "..." if len(s) > 150 else s
+            pdf.multi_cell(0, 5, f"- {text}")
+        pdf.ln(2)
     
-    pdf.set_font("Helvetica", 'B', 10)
-    pdf.set_fill_color(255, 220, 220)
-    pdf.cell(0, 6, "Risks & Challenges", new_x="LMARGIN", new_y="NEXT", fill=True)
-    pdf.set_font("Helvetica", size=9)
-    for w in state_context['swot']['weaknesses']:
-        pdf.multi_cell(0, 5, f"- {w}")
-    for t in state_context['swot']['threats']:
-        pdf.multi_cell(0, 5, f"- {t}")
-    pdf.ln(5)
+    if swot.get('opportunities'):
+        pdf.set_font("Helvetica", 'B', 10)
+        pdf.set_fill_color(255, 255, 220)
+        pdf.cell(0, 6, "Opportunities", new_x="LMARGIN", new_y="NEXT", fill=True)
+        pdf.set_font("Helvetica", size=9)
+        for o in swot['opportunities'][:5]:
+            text = o[:150] + "..." if len(o) > 150 else o
+            pdf.multi_cell(0, 5, f"- {text}")
+        pdf.ln(2)
+    
+    if swot.get('weaknesses') or swot.get('threats'):
+        pdf.set_font("Helvetica", 'B', 10)
+        pdf.set_fill_color(255, 220, 220)
+        pdf.cell(0, 6, "Risks & Challenges", new_x="LMARGIN", new_y="NEXT", fill=True)
+        pdf.set_font("Helvetica", size=9)
+        for w in swot.get('weaknesses', [])[:3]:
+            text = w[:150] + "..." if len(w) > 150 else w
+            pdf.multi_cell(0, 5, f"- {text}")
+        for t in swot.get('threats', [])[:3]:
+            text = t[:150] + "..." if len(t) > 150 else t
+            pdf.multi_cell(0, 5, f"- {text}")
+        pdf.ln(5)
     
     # --- Risk & Opportunity Analysis ---
     pdf.set_font("Helvetica", 'B', 14)
