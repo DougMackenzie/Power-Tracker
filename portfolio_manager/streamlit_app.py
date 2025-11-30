@@ -1325,20 +1325,43 @@ def show_add_edit_site():
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.markdown("**Relationship**")
+                
+                # Safe mapping for Community Support
+                c_val = site.get('community_support', 'Neutral')
+                if c_val == 'champion': c_val = 'Strong Support'
+                elif c_val == 'opposition': c_val = 'Opposition'
+                if c_val not in ['Strong Support', 'Neutral', 'Opposition']: c_val = 'Neutral'
+                
                 comm_supp = st.selectbox("Community Support", options=['Strong Support', 'Neutral', 'Opposition'],
-                                       index=['Strong Support', 'Neutral', 'Opposition'].index(site.get('community_support', 'Neutral')))
+                                       index=['Strong Support', 'Neutral', 'Opposition'].index(c_val))
+                
+                # Safe mapping for Political Support
+                p_val = site.get('political_support', 'Neutral')
+                if p_val == 'strong': p_val = 'High'
+                elif p_val == 'opposition': p_val = 'Low'
+                if p_val not in ['High', 'Neutral', 'Low']: p_val = 'Neutral'
+                
                 pol_supp = st.selectbox("Political Support", options=['High', 'Neutral', 'Low'],
-                                      index=['High', 'Neutral', 'Low'].index(site.get('political_support', 'Neutral')))
+                                      index=['High', 'Neutral', 'Low'].index(p_val))
             with col2:
                 st.markdown("**Execution**")
+                
+                d_val = site.get('dev_experience', 'Medium')
+                if d_val not in ['High', 'Medium', 'Low']: d_val = 'Medium'
                 dev_exp = st.selectbox("Developer Experience", options=['High', 'Medium', 'Low'],
-                                     index=['High', 'Medium', 'Low'].index(site.get('dev_experience', 'Medium')))
+                                     index=['High', 'Medium', 'Low'].index(d_val))
+                
+                cap_val = site.get('capital_status', 'None')
+                if cap_val not in ['Secured', 'Partial', 'None']: cap_val = 'None'
                 cap_stat = st.selectbox("Capital Status", options=['Secured', 'Partial', 'None'],
-                                      index=['Secured', 'Partial', 'None'].index(site.get('capital_status', 'None')))
+                                      index=['Secured', 'Partial', 'None'].index(cap_val))
             with col3:
                 st.markdown("**Financial**")
+                
+                f_val = site.get('financial_status', 'Moderate')
+                if f_val not in ['Strong', 'Moderate', 'Weak']: f_val = 'Moderate'
                 fin_stat = st.selectbox("Financial Strength", options=['Strong', 'Moderate', 'Weak'],
-                                      index=['Strong', 'Moderate', 'Weak'].index(site.get('financial_status', 'Moderate')))
+                                      index=['Strong', 'Moderate', 'Weak'].index(f_val))
             
             st.markdown("---")
             st.subheader("Strategic Analysis")
