@@ -9,97 +9,369 @@
       "iso": "SPP",
       "county": "Tulsa",
       "developer": "Development Partner A",
-      "study_status": "sis_complete",
-      "utility_commitment": "engaged",
-      "power_timeline_months": 38,
-      "queue_position": true,
-      "btm_viable": true,
-      "transmission_adjacent": true,
-      "substation_nearby": true,
-      "end_user_status": "tours_completed",
-      "community_support": "supportive",
-      "political_support": "strong",
-      "land_control": "option",
-      "water_status": "secured",
-      "fiber_status": "adjacent",
-      "zoning_approved": false,
-      "developer_track_record": "proven",
-      "utility_relationships": "strong",
-      "btm_capability": "viable",
-      "capital_access": "strong",
-      "development_budget_allocated": true,
-      "partnership_structure": "jv_active",
-      "notes": "230kV adjacent. Municipal water secured. Strong regional support.",
-      "last_updated": "2025-11-30T15:04:00.000000"
+      "land_status": "Option",
+      "community_support": "Strong Support",
+      "political_support": "High",
+      "dev_experience": "High",
+      "capital_status": "Partial",
+      "financial_status": "Strong",
+      "last_updated": "2025-11-30T15:09:00.000000",
+      "phases": [
+        {
+          "mw": 100,
+          "screening_status": "Complete",
+          "contract_study_status": "Complete",
+          "loa_status": "Executed",
+          "energy_contract_status": "Drafted",
+          "target_date": "2028-01-01",
+          "ic_capacity": 100,
+          "voltage": "138",
+          "service_type": "Transmission",
+          "substation_status": "Upgrade Needed",
+          "trans_dist": 0.5
+        },
+        {
+          "mw": 600,
+          "screening_status": "Complete",
+          "contract_study_status": "Initiated",
+          "loa_status": "Drafted",
+          "energy_contract_status": "Not Started",
+          "target_date": "2029-01-01",
+          "ic_capacity": 600,
+          "voltage": "345",
+          "service_type": "Transmission",
+          "substation_status": "New Build",
+          "trans_dist": 2.0
+        }
+      ],
+      "onsite_gen": {
+        "gas_mw": 50,
+        "gas_dist": 3.5,
+        "gas_status": "Study",
+        "solar_mw": 25,
+        "solar_acres": 150,
+        "batt_mw": 100,
+        "batt_mwh": 400
+      },
+      "schedule": {
+        "2025": {
+          "ic_mw": 0,
+          "gen_mw": 0
+        },
+        "2026": {
+          "ic_mw": 0,
+          "gen_mw": 0
+        },
+        "2027": {
+          "ic_mw": 0,
+          "gen_mw": 0
+        },
+        "2028": {
+          "ic_mw": 100,
+          "gen_mw": 100
+        },
+        "2029": {
+          "ic_mw": 600,
+          "gen_mw": 300
+        },
+        "2030": {
+          "ic_mw": 600,
+          "gen_mw": 500
+        },
+        "2031": {
+          "ic_mw": 600,
+          "gen_mw": 600
+        },
+        "2032": {
+          "ic_mw": 600,
+          "gen_mw": 600
+        },
+        "2033": {
+          "ic_mw": 600,
+          "gen_mw": 600
+        },
+        "2034": {
+          "ic_mw": 600,
+          "gen_mw": 600
+        },
+        "2035": {
+          "ic_mw": 600,
+          "gen_mw": 600
+        }
+      },
+      "non_power": {
+        "zoning_status": "Submitted",
+        "water_source": "Municipal",
+        "water_cap": 3000000,
+        "fiber_status": "At Site",
+        "fiber_provider": "AT&T",
+        "env_issues": "Phase I ESA complete - no issues identified"
+      },
+      "risks": [
+        "Zoning approval timeline uncertain",
+        "345kV transmission build timeline dependent on utility capex",
+        "Generation ramp limited to 200MW/year by utility"
+      ],
+      "opps": [
+        "Strong local government support",
+        "Adjacent 230kV could provide interim capacity",
+        "Potential for phased land acquisition"
+      ],
+      "questions": [
+        "Can utility accelerate 345kV substation timeline?",
+        "Is there flexibility on the 200MW/year generation ramp?"
+      ]
     },
     "dfw_corridor": {
       "name": "DFW Industrial Corridor",
       "state": "TX",
       "utility": "Oncor",
-      "target_mw": 800,
-      "acreage": 900,
+      "target_mw": 250,
+      "acreage": 350,
       "iso": "ERCOT",
       "county": "Ellis",
       "developer": "Development Partner B",
-      "study_status": "fs_complete",
-      "utility_commitment": "committed",
-      "power_timeline_months": 32,
-      "queue_position": true,
-      "btm_viable": true,
-      "transmission_adjacent": true,
-      "substation_nearby": true,
-      "end_user_status": "loi",
-      "community_support": "champion",
-      "political_support": "strong",
-      "land_control": "owned",
-      "water_status": "secured",
-      "fiber_status": "lit",
-      "zoning_approved": true,
-      "developer_track_record": "extensive",
-      "utility_relationships": "strong",
-      "btm_capability": "multiple_sources",
-      "capital_access": "committed",
-      "development_budget_allocated": true,
-      "partnership_structure": "jv_active",
-      "notes": "345kV transmission. Industrial zoning approved. Strong end-user interest.",
-      "last_updated": "2025-11-30T15:04:00.000000"
+      "land_status": "Owned",
+      "community_support": "Strong Support",
+      "political_support": "High",
+      "dev_experience": "High",
+      "capital_status": "Secured",
+      "financial_status": "Strong",
+      "last_updated": "2025-11-30T15:09:00.000000",
+      "phases": [
+        {
+          "mw": 100,
+          "screening_status": "Complete",
+          "contract_study_status": "Complete",
+          "loa_status": "Executed",
+          "energy_contract_status": "Executed",
+          "target_date": "2028-01-01",
+          "ic_capacity": 100,
+          "voltage": "138",
+          "service_type": "Transmission",
+          "substation_status": "Existing",
+          "trans_dist": 0.2
+        },
+        {
+          "mw": 250,
+          "screening_status": "Complete",
+          "contract_study_status": "Complete",
+          "loa_status": "Executed",
+          "energy_contract_status": "Drafted",
+          "target_date": "2029-01-01",
+          "ic_capacity": 250,
+          "voltage": "345",
+          "service_type": "Transmission",
+          "substation_status": "Upgrade Needed",
+          "trans_dist": 1.5
+        }
+      ],
+      "onsite_gen": {
+        "gas_mw": 100,
+        "gas_dist": 1.2,
+        "gas_status": "Permitting",
+        "solar_mw": 50,
+        "solar_acres": 250,
+        "batt_mw": 200,
+        "batt_mwh": 800
+      },
+      "schedule": {
+        "2025": {
+          "ic_mw": 0,
+          "gen_mw": 0
+        },
+        "2026": {
+          "ic_mw": 0,
+          "gen_mw": 0
+        },
+        "2027": {
+          "ic_mw": 0,
+          "gen_mw": 0
+        },
+        "2028": {
+          "ic_mw": 100,
+          "gen_mw": 100
+        },
+        "2029": {
+          "ic_mw": 250,
+          "gen_mw": 250
+        },
+        "2030": {
+          "ic_mw": 250,
+          "gen_mw": 250
+        },
+        "2031": {
+          "ic_mw": 250,
+          "gen_mw": 250
+        },
+        "2032": {
+          "ic_mw": 250,
+          "gen_mw": 250
+        },
+        "2033": {
+          "ic_mw": 250,
+          "gen_mw": 250
+        },
+        "2034": {
+          "ic_mw": 250,
+          "gen_mw": 250
+        },
+        "2035": {
+          "ic_mw": 250,
+          "gen_mw": 250
+        }
+      },
+      "non_power": {
+        "zoning_status": "Approved",
+        "water_source": "Groundwater",
+        "water_cap": 2500000,
+        "fiber_status": "Lit Building",
+        "fiber_provider": "Zayo",
+        "env_issues": "None identified"
+      },
+      "risks": [
+        "ERCOT interconnection queue congestion",
+        "Natural gas pipeline capacity constraints"
+      ],
+      "opps": [
+        "ERCOT allows full ramp in year 1",
+        "Strong data center market fundamentals in DFW",
+        "Existing transmission infrastructure nearby",
+        "Industrial zoning already approved"
+      ],
+      "questions": [
+        "Can we secure additional natural gas capacity?",
+        "Potential for third phase expansion?"
+      ]
     },
     "atlanta_metro": {
       "name": "Atlanta Metro Campus",
       "state": "GA",
       "utility": "Georgia Power",
-      "target_mw": 500,
-      "acreage": 450,
+      "target_mw": 450,
+      "acreage": 500,
       "iso": "SERC",
       "county": "Douglas",
       "developer": "Development Partner C",
-      "study_status": "sis_in_progress",
-      "utility_commitment": "engaged",
-      "power_timeline_months": 40,
-      "queue_position": true,
-      "btm_viable": false,
-      "transmission_adjacent": true,
-      "substation_nearby": true,
-      "end_user_status": "nda_signed",
-      "community_support": "supportive",
-      "political_support": "supportive",
-      "land_control": "option",
-      "water_status": "available",
-      "fiber_status": "nearby",
-      "zoning_approved": false,
-      "developer_track_record": "proven",
-      "utility_relationships": "established",
-      "btm_capability": "none",
-      "capital_access": "available",
-      "development_budget_allocated": true,
-      "partnership_structure": "jv_negotiating",
-      "notes": "Georgia Power engaged. Strong market fundamentals. Option secured through 2026.",
-      "last_updated": "2025-11-30T15:04:00.000000"
+      "land_status": "Option",
+      "community_support": "Neutral",
+      "political_support": "Neutral",
+      "dev_experience": "Medium",
+      "capital_status": "Partial",
+      "financial_status": "Moderate",
+      "last_updated": "2025-11-30T15:09:00.000000",
+      "phases": [
+        {
+          "mw": 100,
+          "screening_status": "Complete",
+          "contract_study_status": "Initiated",
+          "loa_status": "Drafted",
+          "energy_contract_status": "Not Started",
+          "target_date": "2028-01-01",
+          "ic_capacity": 100,
+          "voltage": "138",
+          "service_type": "Transmission",
+          "substation_status": "Upgrade Needed",
+          "trans_dist": 1.0
+        },
+        {
+          "mw": 450,
+          "screening_status": "Initiated",
+          "contract_study_status": "Not Started",
+          "loa_status": "Not Started",
+          "energy_contract_status": "Not Started",
+          "target_date": "2029-01-01",
+          "ic_capacity": 450,
+          "voltage": "345",
+          "service_type": "Transmission",
+          "substation_status": "New Build",
+          "trans_dist": 3.5
+        }
+      ],
+      "onsite_gen": {
+        "gas_mw": 75,
+        "gas_dist": 5.0,
+        "gas_status": "Study",
+        "solar_mw": 30,
+        "solar_acres": 180,
+        "batt_mw": 150,
+        "batt_mwh": 600
+      },
+      "schedule": {
+        "2025": {
+          "ic_mw": 0,
+          "gen_mw": 0
+        },
+        "2026": {
+          "ic_mw": 0,
+          "gen_mw": 0
+        },
+        "2027": {
+          "ic_mw": 0,
+          "gen_mw": 0
+        },
+        "2028": {
+          "ic_mw": 100,
+          "gen_mw": 100
+        },
+        "2029": {
+          "ic_mw": 450,
+          "gen_mw": 250
+        },
+        "2030": {
+          "ic_mw": 450,
+          "gen_mw": 400
+        },
+        "2031": {
+          "ic_mw": 450,
+          "gen_mw": 450
+        },
+        "2032": {
+          "ic_mw": 450,
+          "gen_mw": 450
+        },
+        "2033": {
+          "ic_mw": 450,
+          "gen_mw": 450
+        },
+        "2034": {
+          "ic_mw": 450,
+          "gen_mw": 450
+        },
+        "2035": {
+          "ic_mw": 450,
+          "gen_mw": 450
+        }
+      },
+      "non_power": {
+        "zoning_status": "Pre-App",
+        "water_source": "River intake",
+        "water_cap": 4000000,
+        "fiber_status": "Nearby",
+        "fiber_provider": "Comcast Business",
+        "env_issues": "Wetlands delineation in progress - minimal impact expected"
+      },
+      "risks": [
+        "Zoning approval uncertain - may require rezoning",
+        "Georgia Power generation ramp limited to 150MW/year",
+        "Water rights permitting timeline",
+        "Wetlands mitigation may be required"
+      ],
+      "opps": [
+        "Strong Atlanta data center market",
+        "Georgia Power engaged and supportive",
+        "Potential tax incentives from county"
+      ],
+      "questions": [
+        "Can we accelerate the zoning process?",
+        "What is the wetlands impact assessment timeline?",
+        "Is there flexibility on the 150MW/year ramp?"
+      ]
     }
   },
   "metadata": {
-    "created": "2025-11-30T15:04:00.000000",
-    "last_updated": "2025-11-30T15:04:00.000000",
+    "created": "2025-11-30T15:09:00.000000",
+    "last_updated": "2025-11-30T15:09:00.000000",
     "version": "1.0"
   }
 }
