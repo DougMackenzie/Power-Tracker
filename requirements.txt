@@ -6,4 +6,6 @@ google-auth
 plotly
 fpdf2
 google-generativeai
-
+PyPDF2
+python-docx
+openpyxl

@@ -1,0 +1,201 @@
+"""
+VDR Document Processor
+======================
+Processes uploaded documents for site data extraction.
+
+Supports:
+- PDF (PyPDF2)
+- Word (python-docx)
+- Excel (openpyxl)
+"""
+
+import io
+import json
+import streamlit as st
+import google.generativeai as genai
+from typing import Dict, Any, Optional
+
+try:
+    import PyPDF2
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
+
+try:
+    from docx import Document
+    DOCX_AVAILABLE = True
+except ImportError:
+    DOCX_AVAILABLE = False
+
+try:
+    import openpyxl
+    EXCEL_AVAILABLE = True
+except ImportError:
+    EXCEL_AVAILABLE = False
+
+
+def extract_text_from_pdf(uploaded_file) -> str:
+    """Extract text from PDF file."""
+    if not PDF_AVAILABLE:
+        raise ImportError("PyPDF2 not installed")
+    
+    try:
+        pdf_reader = PyPDF2.PdfReader(uploaded_file)
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
+        return text
+    except Exception as e:
+        raise Exception(f"PDF extraction failed: {str(e)}")
+
+
+def extract_text_from_docx(uploaded_file) -> str:
+    """Extract text from Word document."""
+    if not DOCX_AVAILABLE:
+        raise ImportError("python-docx not installed")
+    
+    try:
+        doc = Document(uploaded_file)
+        text = ""
+        for paragraph in doc.paragraphs:
+            text += paragraph.text + "\n"
+        return text
+    except Exception as e:
+        raise Exception(f"DOCX extraction failed: {str(e)}")
+
+
+def extract_text_from_xlsx(uploaded_file) -> str:
+    """Extract text from Excel file."""
+    if not EXCEL_AVAILABLE:
+        raise ImportError("openpyxl not installed")
+    
+    try:
+        wb = openpyxl.load_workbook(uploaded_file)
+        text = ""
+        for sheet_name in wb.sheetnames:
+            sheet = wb[sheet_name]
+            text += f"\n--- Sheet: {sheet_name} ---\n"
+            for row in sheet.iter_rows(values_only=True):
+                row_text = "\t".join([str(cell) if cell is not None else "" for cell in row])
+                text += row_text + "\n"
+        return text
+    except Exception as e:
+        raise Exception(f"Excel extraction failed: {str(e)}")
+
+
+def process_uploaded_file(uploaded_file) -> str:
+    """Process uploaded file and extract text."""
+    filename = uploaded_file.name
+    ext = filename.split('.')[-1].lower()
+    
+    if ext == 'pdf':
+        return extract_text_from_pdf(uploaded_file)
+    elif ext == 'docx':
+        return extract_text_from_docx(uploaded_file)
+    elif ext in ['xlsx', 'xls']:
+        return extract_text_from_xlsx(uploaded_file)
+    else:
+        raise ValueError(f"Unsupported file type: {ext}")
+
+
+def extract_site_data_from_text(text: str, filename: str) -> Optional[Dict[str, Any]]:
+    """Use Gemini LLM to extract structured site data from document text."""
+    
+    # Limit text to avoid token limits (keep first 20k chars)
+    text_sample = text[:20000]
+    
+    extraction_prompt = f"""Analyze this document and extract data center site information.
+
+Document Name: {filename}
+Content:
+{text_sample}
+
+Extract the following fields if mentioned (return null if not found):
+
+{{
+  "site_name": "Site name or project name",
+  "state": "2-letter state code (TX, OK, GA, etc.)",
+  "utility": "Utility name (Oncor, PSO, AEP, Duke Energy, Georgia Power, Dominion, etc.)",
+  "target_mw": "Integer MW capacity",
+  "acreage": "Integer acreage",
+  "study_status": "One of: not_started, sis_in_progress, sis_complete, fs_in_progress, fs_complete, fa_executed, ia_executed",
+  "land_control": "One of: owned, option, loi, negotiating, none",
+  "power_date": "Target power date in YYYY-MM-DD format",
+  "voltage": "Interconnection voltage (e.g., 138kV, 345kV)",
+  "iso": "ISO/RTO (PJM, ERCOT, SPP, MISO, etc.)",
+  "developer": "Developer name if mentioned",
+  "notes": "Any other relevant information"
+}}
+
+Study status mappings:
+- "System Impact Study" / "SIS" → sis_complete (if complete) or sis_in_progress
+- "Facilities Study" / "FS" → fs_complete (if complete) or fs_in_progress
+- "Facilities Agreement" / "FA" → fa_executed
+- "Interconnection Agreement" / "IA" → ia_executed
+
+Return ONLY valid JSON. Use null for unknown values."""
+
+    try:
+        api_key = st.secrets.get("GEMINI_API_KEY")
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('models/gemini-2.0-flash-exp')
+        
+        response = model.generate_content(
+            extraction_prompt,
+            generation_config={"response_mime_type": "application/json"}
+        )
+        
+        extracted = json.loads(response.text)
+        
+        # Handle list responses
+        if isinstance(extracted, list):
+            extracted = extracted[0] if extracted else {}
+        
+        # Clean null values
+        extracted = {k: v for k, v in extracted.items() if v is not None and v != "null"}
+        
+        # Add metadata
+        extracted['_source_file'] = filename
+        
+        return extracted if extracted else None
+        
+    except Exception as e:
+        st.error(f"LLM extraction failed: {str(e)}")
+        return None
+
+
+def upload_to_google_drive(file_bytes: bytes, filename: str, folder_id: str) -> Optional[str]:
+    """Upload file to Google Drive folder."""
+    try:
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaInMemoryUpload
+        from google.oauth2.service_account import Credentials
+        
+        # Get credentials from Streamlit secrets
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        scopes = ['https://www.googleapis.com/auth/drive.file']
+        credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+        
+        # Build Drive service
+        service = build('drive', 'v3', credentials=credentials)
+        
+        # File metadata
+        file_metadata = {
+            'name': filename,
+            'parents': [folder_id]
+        }
+        
+        # Upload file
+        media = MediaInMemoryUpload(file_bytes, mimetype='application/octet-stream', resumable=True)
+        
+        file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id, webViewLink'
+        ).execute()
+        
+        return file.get('webViewLink')
+        
+    except Exception as e:
+        st.error(f"Google Drive upload failed: {str(e)}")
+        return None

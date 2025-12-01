@@ -506,7 +506,7 @@ def run():
     # Use session state for navigation
     page = st.sidebar.radio(
         "Navigation",
-        ["📊 Dashboard", "🏭 Site Database", "💬 AI Chat", "➕ Add/Edit Site", 
+        ["📊 Dashboard", "🏭 Site Database", "💬 AI Chat", "📁 VDR Upload", "➕ Add/Edit Site", 
          "🏆 Rankings", "🗺️ State Analysis", "🔍 Utility Research", "⚙️ Settings"],
         key="page"
     )
@@ -514,6 +514,7 @@ def run():
     if page == "📊 Dashboard": show_dashboard()
     elif page == "🏭 Site Database": show_site_database()
     elif page == "💬 AI Chat": show_ai_chat()
+    elif page == "📁 VDR Upload": show_vdr_upload()
     elif page == "➕ Add/Edit Site": show_add_edit_site()
     elif page == "🏆 Rankings": show_rankings()
     elif page == "🗺️ State Analysis": show_state_analysis()
@@ -1338,6 +1339,105 @@ def show_ai_chat():
         if 'chat_client' in st.session_state:
             st.session_state.chat_client.clear_history()
         st.rerun()
+
+
+# =============================================================================
+# VDR UPLOAD PAGE
+# =============================================================================
+
+def show_vdr_upload():
+    """Upload and process VDR documents for site data extraction."""
+    st.title("📁 VDR Upload")
+    
+    st.write("""
+    Upload site-related documents (PDFs, Word, Excel) for automated data extraction.
+    Files will be saved to Google Drive and analyzed using AI.
+    """)
+    
+    # Check if VDR folder ID is configured
+    vdr_folder_id = st.secrets.get("VDR_FOLDER_ID")
+    if not vdr_folder_id:
+        st.error("VDR_FOLDER_ID not configured in secrets. Please add it to continue.")
+        st.code('VDR_FOLDER_ID = "your-folder-id"')
+        return
+    
+    # File uploader
+    uploaded_files = st.file_uploader(
+        "Upload Documents",
+        type=['pdf', 'docx', 'xlsx', 'xls'],
+        accept_multiple_files=True,
+        help="Upload interconnection studies, agreements, reports, or other site documents"
+    )
+    
+    if uploaded_files:
+        st.success(f"📤 {len(uploaded_files)} file(s) uploaded")
+        
+        # Process button
+        if st.button("🔍 Process Documents", type="primary"):
+            from .vdr_processor import (
+                process_uploaded_file,
+                extract_site_data_from_text,
+                upload_to_google_drive
+            )
+            
+            all_extracted_data = {}
+            
+            for uploaded_file in uploaded_files:
+                with st.expander(f"📄 {uploaded_file.name}", expanded=True):
+                    try:
+                        # Extract text
+                        with st.spinner(f"Extracting text from {uploaded_file.name}..."):
+                            text = process_uploaded_file(uploaded_file)
+                            st.write(f"✅ Extracted {len(text)} characters")
+                            
+                            # Show preview
+                            with st.expander("Text Preview"):
+                                st.text(text[:1000] + "..." if len(text) > 1000 else text)
+                        
+                        # Upload to Google Drive
+                        with st.spinner(f"Uploading to Google Drive..."):
+                            uploaded_file.seek(0)  # Reset file pointer
+                            file_bytes = uploaded_file.read()
+                            drive_link = upload_to_google_drive(
+                                file_bytes,
+                                uploaded_file.name,
+                                vdr_folder_id
+                            )
+                            
+                            if drive_link:
+                                st.success(f"✅ [Uploaded to Drive]({drive_link})")
+                            else:
+                                st.warning("⚠️ Drive upload failed, continuing with extraction")
+                        
+                        # Extract structured data using LLM
+                        with st.spinner(f"Extracting site data with AI..."):
+                            extracted = extract_site_data_from_text(text, uploaded_file.name)
+                            
+                            if extracted:
+                                st.write("**Extracted Data:**")
+                                st.json(extracted)
+                                
+                                # Merge with combined data
+                                for key, value in extracted.items():
+                                    if key not in all_extracted_data or not all_extracted_data[key]:
+                                        all_extracted_data[key] = value
+                            else:
+                                st.info("No structured data extracted")
+                    
+                    except Exception as e:
+                        st.error(f"❌ Error processing {uploaded_file.name}: {str(e)}")
+            
+            # Show consolidated extraction form if we have data
+            if all_extracted_data:
+                st.markdown("---")
+                st.subheader("💾 Save Consolidated Data to Database")
+                st.info("Review the combined data extracted from all documents")
+                
+                # Store in session state for form
+                st.session_state.pending_site_save = all_extracted_data
+                
+                # Reuse the existing form
+                show_extracted_site_form(all_extracted_data)
 
 def show_site_database():
     """View and manage site database."""
