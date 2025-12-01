@@ -993,6 +993,155 @@ def show_dashboard():
 
 
 
+
+# Helper functions for AI Chat site extraction and saving
+
+def extract_site_from_conversation(messages):
+    """Extract site data from conversation history using regex and keyword matching."""
+    import re
+    
+    # Combine all messages into context
+    context = "\n".join([m["content"] for m in messages])
+    
+    extracted = {}
+    
+    # Extract state (2-letter codes)
+    state_match = re.search(r'\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b', context, re.IGNORECASE)
+    if state_match:
+        extracted['state'] = state_match.group(1).upper()
+    
+    # Extract utility
+    utilities = ['Oncor', 'PSO', 'AEP', 'Duke', 'Georgia Power', 'Dominion', 'AES', 'OVEC']
+    for util in utilities:
+        if util.lower() in context.lower():
+            extracted['utility'] = util
+            break
+    
+    # Extract MW capacity
+    mw_match = re.search(r'(\d+)\s*MW', context, re.IGNORECASE)
+    if mw_match:
+        extracted['target_mw'] = int(mw_match.group(1))
+    
+    # Extract acreage
+    acre_match = re.search(r'(\d+)\s*acres?', context, re.IGNORECASE)
+    if acre_match:
+        extracted['acreage'] = int(acre_match.group(1))
+    
+    # Extract study status
+    if 'IA executed' in context or 'IA Executed' in context:
+        extracted['study_status'] = 'ia_executed'
+    elif 'FA executed' in context or 'FA Executed' in context:
+        extracted['study_status'] = 'fa_executed'
+    elif 'FS complete' in context or 'FS Complete' in context:
+        extracted['study_status'] = 'fs_complete'
+    elif 'SIS complete' in context or 'System Impact Study' in context:
+        extracted['study_status'] = 'sis_complete'
+    
+    # Extract land control
+    if 'land is owned' in context.lower() or 'land owned' in context.lower():
+        extracted['land_control'] = 'owned'
+    elif 'under option' in context.lower() or 'land option' in context.lower():
+        extracted['land_control'] = 'option'
+    elif 'LOI' in context or 'letter of intent' in context.lower():
+        extracted['land_control'] = 'loi'
+    
+    # Extract power date (year)
+    power_date_match = re.search(r'power.*?(\d{4})', context, re.IGNORECASE)
+    if power_date_match:
+        year = power_date_match.group(1)
+        extracted['power_date'] = f"{year}-12-31"  # Default to end of year
+    
+    # Extract location hints for name
+    location_words = []
+    city_match = re.search(r'(?:near|in|at)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)', context)
+    if city_match:
+        location_words.append(city_match.group(1))
+    
+    # Generate suggested name
+    if location_words and extracted.get('state'):
+        extracted['suggested_name'] = f"{location_words[0]} {extracted['state']}"
+    elif extracted.get('state') and extracted.get('utility'):
+        extracted['suggested_name'] = f"{extracted['state']} {extracted['utility']}"
+    
+    return extracted if extracted else None
+
+
+def show_extracted_site_form(extracted_data):
+    """Show form to edit and confirm extracted site data."""
+    st.info("I've extracted the following details from our conversation. Please review and edit as needed:")
+    
+    with st.form("save_extracted_site"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            name = st.text_input("Site Name *", value=extracted_data.get('suggested_name', ''), 
+                                help="Give this site a memorable name")
+            state = st.selectbox("State *", 
+                                options=['', 'OK', 'TX', 'WY', 'GA', 'VA', 'OH', 'IN', 'PA', 'NV', 'CA'],
+                                index=(['', 'OK', 'TX', 'WY', 'GA', 'VA', 'OH', 'IN', 'PA', 'NV', 'CA'].index(extracted_data.get('state', '')) 
+                                      if extracted_data.get('state') in ['OK', 'TX', 'WY', 'GA', 'VA', 'OH', 'IN', 'PA', 'NV', 'CA'] else 0))
+            
+            utility = st.text_input("Utility *", value=extracted_data.get('utility', ''))
+            target_mw = st.number_input("Target MW *", value=extracted_data.get('target_mw', 500), min_value=1, step=50)
+        
+        with col2:
+            acreage = st.number_input("Acreage", value=extracted_data.get('acreage', 0), min_value=0)
+            
+            study_status_options = ['not_started', 'sis_in_progress', 'sis_complete', 'fs_in_progress',  
+                                   'fs_complete', 'fa_executed', 'ia_executed']
+            study_index = study_status_options.index(extracted_data.get('study_status', 'not_started'))
+            study_status = st.selectbox("Study Status", options=study_status_options, index=study_index)
+            
+            land_options = ['', 'owned', 'option', 'loi', 'negotiating', 'none']
+            land_index = land_options.index(extracted_data.get('land_control', '')) if extracted_data.get('land_control') in land_options else 0
+            land_control = st.selectbox("Land Control", options=land_options, index=land_index)
+            
+            power_date = st.date_input("Target Power Date", value=None)
+        
+        col1_submit, col2_submit = st.columns([1, 1])
+        with col1_submit:
+            submitted = st.form_submit_button("💾 Save to Database", use_container_width=True, type="primary")
+        with col2_submit:
+            cancelled = st.form_submit_button("❌ Cancel", use_container_width=True)
+        
+        if submitted:
+            if not name or not state or not utility:
+                st.error("Please fill in required fields: Name, State, and Utility")
+            else:
+                # Create site data
+                import hashlib
+                import datetime
+                
+                site_id = hashlib.md5(name.encode()).hexdigest()[:12]
+                
+                new_site = {
+                    'name': name,
+                    'state': state,
+                    'utility': utility,
+                    'target_mw': target_mw,
+                    'acreage': acreage,
+                    'study_status': study_status,
+                    'land_control': land_control,
+                    'power_date': power_date.isoformat() if power_date else '',
+                    'notes': f"Created from AI Chat on {datetime.date.today().isoformat()}"
+                }
+                
+                # Save to database
+                db = st.session_state.db
+                db['sites'][site_id] = new_site
+                save_database(db)
+                
+                # Clear pending save
+                st.session_state.pending_site_save = None
+                
+                st.success(f"✅ Site '{name}' saved to database!")
+                st.balloons()
+                st.rerun()
+        
+        if cancelled:
+            st.session_state.pending_site_save = None
+            st.rerun()
+
 # =============================================================================
 # AI CHAT PAGE
 # =============================================================================
@@ -1086,8 +1235,22 @@ def show_ai_chat():
                     st.markdown(response)
                     st.session_state.chat_messages.append({"role": "assistant", "content": response})
                     
+                    # Check if user wants to save the site
+                    save_keywords = ['yes save', 'save the site', 'add to database', 'save it', 'add it']
+                    if any(keyword in prompt.lower() for keyword in save_keywords):
+                        # Extract site data from conversation
+                        extracted_data = extract_site_from_conversation(st.session_state.chat_messages)
+                        if extracted_data:
+                            st.session_state.pending_site_save = extracted_data
+                    
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
+    
+    # Show save form if site data was extracted
+    if 'pending_site_save' in st.session_state and st.session_state.pending_site_save:
+        st.markdown("---")
+        st.subheader("💾 Save Site to Database")
+        show_extracted_site_form(st.session_state.pending_site_save)
     
     # Sidebar controls
     st.sidebar.markdown("---")
