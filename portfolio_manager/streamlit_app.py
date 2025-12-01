@@ -1501,9 +1501,9 @@ def show_add_edit_site():
                 # Reload database from Google Sheets to ensure fresh data
                 st.session_state.db = load_database()
                 
-                # Clear edit state if editing
-                if editing:
-                    del st.session_state.edit_site_id
+                # Set edit_site_id so subsequent saves update this site instead of creating new ones
+                if not editing:
+                    st.session_state.edit_site_id = site_id
                 
                 # Clear processing flag
                 st.session_state.processing_save = False
