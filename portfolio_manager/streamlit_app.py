@@ -1215,18 +1215,19 @@ def show_extracted_site_form(extracted_data):
                     st.success(f"✅ Site '{name}' saved to Google Sheets database!")
                     st.balloons()
                     
-                    # Add button to go back
-                    if st.button("✅ Done - Upload More Documents"):
-                        st.session_state.pending_site_save = None
-                        st.session_state.save_successful = False
-                        st.rerun()
-                    
                 except Exception as e:
                     st.error(f"❌ Save failed: {str(e)}")
                     st.exception(e)  # Show full traceback
         
         if cancelled:
             st.session_state.pending_site_save = None
+            st.rerun()
+    
+    # Show Done button outside the form after successful save
+    if st.session_state.get('save_successful'):
+        if st.button("✅ Done - Upload More Documents"):
+            st.session_state.pending_site_save = None
+            st.session_state.save_successful = False
             st.rerun()
 
 # =============================================================================
