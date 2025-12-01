@@ -1209,12 +1209,17 @@ def show_extracted_site_form(extracted_data):
                     # Reload session state
                     st.session_state.db = load_database()
                     
-                    # Clear pending save
-                    st.session_state.pending_site_save = None
+                    # Mark as saved but keep form visible
+                    st.session_state.save_successful = True
                     
                     st.success(f"✅ Site '{name}' saved to Google Sheets database!")
                     st.balloons()
-                    st.rerun()
+                    
+                    # Add button to go back
+                    if st.button("✅ Done - Upload More Documents"):
+                        st.session_state.pending_site_save = None
+                        st.session_state.save_successful = False
+                        st.rerun()
                     
                 except Exception as e:
                     st.error(f"❌ Save failed: {str(e)}")
