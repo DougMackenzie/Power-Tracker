@@ -1129,7 +1129,9 @@ def show_extracted_site_form(extracted_data):
         col1, col2 = st.columns(2)
         
         with col1:
-            name = st.text_input("Site Name *", value=extracted_data.get('suggested_name', ''), 
+            # Check both site_name (from VDR) and suggested_name (from chat)
+            default_name = extracted_data.get('site_name') or extracted_data.get('suggested_name', '')
+            name = st.text_input("Site Name *", value=default_name, 
                                 help="Give this site a memorable name")
             state = st.selectbox("State *", 
                                 options=['', 'OK', 'TX', 'WY', 'GA', 'VA', 'OH', 'IN', 'PA', 'NV', 'CA'],
@@ -1364,9 +1366,9 @@ def show_vdr_upload():
     # File uploader
     uploaded_files = st.file_uploader(
         "Upload Documents",
-        type=['pdf', 'docx', 'xlsx', 'xls'],
+        type=['pdf', 'docx', 'xlsx', 'xls', 'txt', 'csv'],
         accept_multiple_files=True,
-        help="Upload interconnection studies, agreements, reports, or other site documents"
+        help="Upload interconnection studies, agreements, reports, spreadsheets, or text files"
     )
     
     if uploaded_files:

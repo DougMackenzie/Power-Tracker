@@ -83,6 +83,16 @@ def extract_text_from_xlsx(uploaded_file) -> str:
         raise Exception(f"Excel extraction failed: {str(e)}")
 
 
+def extract_text_from_csv_txt(uploaded_file) -> str:
+    """Extract text from CSV or TXT file."""
+    try:
+        # Read as text
+        text = uploaded_file.read().decode('utf-8', errors='ignore')
+        return text
+    except Exception as e:
+        raise Exception(f"Text file extraction failed: {str(e)}")
+
+
 def process_uploaded_file(uploaded_file) -> str:
     """Process uploaded file and extract text."""
     filename = uploaded_file.name
@@ -94,6 +104,8 @@ def process_uploaded_file(uploaded_file) -> str:
         return extract_text_from_docx(uploaded_file)
     elif ext in ['xlsx', 'xls']:
         return extract_text_from_xlsx(uploaded_file)
+    elif ext in ['txt', 'csv']:
+        return extract_text_from_csv_txt(uploaded_file)
     else:
         raise ValueError(f"Unsupported file type: {ext}")
 
@@ -197,5 +209,7 @@ def upload_to_google_drive(file_bytes: bytes, filename: str, folder_id: str) -> 
         return file.get('webViewLink')
         
     except Exception as e:
-        st.error(f"Google Drive upload failed: {str(e)}")
+        # Don't fail the whole process if Drive upload fails
+        st.warning(f"⚠️ Google Drive upload failed: {str(e)}")
+        st.info("Data extraction will continue without Drive upload. Make sure the VDR Uploads folder is shared with your service account.")
         return None
