@@ -162,7 +162,11 @@ When you have enough information, offer to save the site to the database with yo
 def build_state_profiles_context() -> str:
     """Build state profiles summary for system prompt."""
     try:
-        from state_analysis import STATE_PROFILES, get_state_profile
+        # Try different import paths depending on context
+        try:
+            from portfolio_manager.state_analysis import STATE_PROFILES, get_state_profile
+        except ImportError:
+            from state_analysis import STATE_PROFILES, get_state_profile
         
         lines = []
         for code in ['OK', 'TX', 'WY', 'GA', 'VA', 'OH', 'IN', 'PA', 'NV', 'CA']:
