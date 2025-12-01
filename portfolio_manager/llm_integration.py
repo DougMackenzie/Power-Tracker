@@ -172,9 +172,9 @@ def build_state_profiles_context() -> str:
         for code in ['OK', 'TX', 'WY', 'GA', 'VA', 'OH', 'IN', 'PA', 'NV', 'CA']:
             profile = get_state_profile(code)
             if profile:
-                lines.append(f"- **{profile.name} ({code})**: Tier {profile.tier}, Score {profile.overall_score}, "
-                           f"ISO: {profile.primary_iso}, Rate: ${profile.industrial_power_rate}/kWh, "
-                           f"Queue: {profile.avg_queue_time}")
+                lines.append(f"- **{profile.state_name} ({code})**: Tier {profile.tier}, Score {profile.overall_score}, "
+                           f"ISO: {profile.primary_iso}, Rate: ${profile.avg_industrial_rate}/kWh, "
+                           f"Queue: {profile.avg_queue_time_months} months")
         
         return "\n".join(lines) if lines else "State profiles not available."
     except ImportError:
