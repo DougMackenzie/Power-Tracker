@@ -997,73 +997,91 @@ def show_dashboard():
 # Helper functions for AI Chat site extraction and saving
 
 def extract_site_from_conversation(messages):
-    """Extract site data from conversation history using regex and keyword matching."""
-    import re
+    """Extract site data from conversation history using LLM for smart extraction."""
+    import json
+    import google.generativeai as genai
+    import streamlit as st
     
     # Combine all messages into context
-    context = "\n".join([m["content"] for m in messages])
+    conversation_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
     
-    extracted = {}
-    
-    # Extract state (2-letter codes)
-    state_match = re.search(r'\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)\b', context, re.IGNORECASE)
-    if state_match:
-        extracted['state'] = state_match.group(1).upper()
-    
-    # Extract utility
-    utilities = ['Oncor', 'PSO', 'AEP', 'Duke', 'Georgia Power', 'Dominion', 'AES', 'OVEC']
-    for util in utilities:
-        if util.lower() in context.lower():
-            extracted['utility'] = util
-            break
-    
-    # Extract MW capacity
-    mw_match = re.search(r'(\d+)\s*MW', context, re.IGNORECASE)
-    if mw_match:
-        extracted['target_mw'] = int(mw_match.group(1))
-    
-    # Extract acreage
-    acre_match = re.search(r'(\d+)\s*acres?', context, re.IGNORECASE)
-    if acre_match:
-        extracted['acreage'] = int(acre_match.group(1))
-    
-    # Extract study status
-    if 'IA executed' in context or 'IA Executed' in context:
-        extracted['study_status'] = 'ia_executed'
-    elif 'FA executed' in context or 'FA Executed' in context:
-        extracted['study_status'] = 'fa_executed'
-    elif 'FS complete' in context or 'FS Complete' in context:
-        extracted['study_status'] = 'fs_complete'
-    elif 'SIS complete' in context or 'System Impact Study' in context:
-        extracted['study_status'] = 'sis_complete'
-    
-    # Extract land control
-    if 'land is owned' in context.lower() or 'land owned' in context.lower():
-        extracted['land_control'] = 'owned'
-    elif 'under option' in context.lower() or 'land option' in context.lower():
-        extracted['land_control'] = 'option'
-    elif 'LOI' in context or 'letter of intent' in context.lower():
-        extracted['land_control'] = 'loi'
-    
-    # Extract power date (year)
-    power_date_match = re.search(r'power.*?(\d{4})', context, re.IGNORECASE)
-    if power_date_match:
-        year = power_date_match.group(1)
-        extracted['power_date'] = f"{year}-12-31"  # Default to end of year
-    
-    # Extract location hints for name
-    location_words = []
-    city_match = re.search(r'(?:near|in|at)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)', context)
-    if city_match:
-        location_words.append(city_match.group(1))
-    
-    # Generate suggested name
-    if location_words and extracted.get('state'):
-        extracted['suggested_name'] = f"{location_words[0]} {extracted['state']}"
-    elif extracted.get('state') and extracted.get('utility'):
-        extracted['suggested_name'] = f"{extracted['state']} {extracted['utility']}"
-    
-    return extracted if extracted else None
+    # Create extraction prompt
+    extraction_prompt = f"""Analyze this conversation about a data center site and extract structured data.
+
+Conversation:
+{conversation_text}
+
+Extract the following fields if mentioned (return null if not found):
+
+{{
+  "state": "2-letter state code (TX, OK, GA, etc.) or null",
+  "utility": "Utility name (Oncor, PSO, AEP, Duke Energy, Georgia Power, Dominion, etc.) or null",
+  "target_mw": "Integer MW capacity or null",
+  "acreage": "Integer acreage or null",
+  "study_status": "One of: not_started, sis_in_progress, sis_complete, fs_in_progress, fs_complete, fa_executed, ia_executed, or null",
+  "land_control": "One of: owned, option, loi, negotiating, none, or null",
+  "power_date": "YYYY-MM-DD format or null",
+  "location_hint": "City or region name for suggested site name, or null"
+}}
+
+Study status mappings:
+- "System Impact Study" / "SIS" → sis_complete (if complete) or sis_in_progress
+- "Facilities Study" / "FS" → fs_complete (if complete) or fs_in_progress  
+- "Facilities Agreement" / "FA" → fa_executed
+- "Interconnection Agreement" / "IA" → ia_executed
+
+Land control mappings:
+- "owned" / "we own" → owned
+- "under option" / "land option" / "option agreement" → option
+- "LOI" / "letter of intent" → loi
+- "negotiating" → negotiating
+
+Return ONLY valid JSON with these exact field names. Use null for unknown values."""
+
+    try:
+        # Use Gemini API directly for extraction
+        api_key = st.secrets.get("GEMINI_API_KEY")
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('models/gemini-2.0-flash-exp')
+        
+        response = model.generate_content(
+            extraction_prompt,
+            generation_config={"response_mime_type": "application/json"}
+        )
+        
+        extracted = json.loads(response.text)
+        
+        # Clean up null values and generate suggested name
+        extracted = {k: v for k, v in extracted.items() if v is not None}
+        
+        # Generate suggested name
+        if 'location_hint' in extracted and extracted.get('state'):
+            extracted['suggested_name'] = f"{extracted['location_hint']} {extracted['state']}"
+        elif extracted.get('state') and extracted.get('utility'):
+            extracted['suggested_name'] = f"{extracted['state']} {extracted['utility']}"
+        
+        # Remove location_hint (it was just for name generation)
+        extracted.pop('location_hint', None)
+        
+        return extracted if extracted else None
+        
+    except Exception as e:
+        st.warning(f"LLM extraction failed: {str(e)}. Using fallback extraction.")
+        # Fallback to basic regex if LLM fails
+        import re
+        context = " ".join([m["content"] for m in messages])
+        extracted = {}
+        
+        state_match = re.search(r'\b(TX|OK|GA|IN|OH|VA|PA|WY|NV|CA)\b', context, re.IGNORECASE)
+        if state_match:
+            extracted['state'] = state_match.group(1).upper()
+        
+        mw_match = re.search(r'(\d+)\s*MW', context, re.IGNORECASE)
+        if mw_match:
+            extracted['target_mw'] = int(mw_match.group(1))
+        
+        return extracted if extracted else None
+
 
 
 def show_extracted_site_form(extracted_data):
