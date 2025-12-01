@@ -506,13 +506,14 @@ def run():
     # Use session state for navigation
     page = st.sidebar.radio(
         "Navigation",
-        ["📊 Dashboard", "🏭 Site Database", "➕ Add/Edit Site", 
+        ["📊 Dashboard", "🏭 Site Database", "💬 AI Chat", "➕ Add/Edit Site", 
          "🏆 Rankings", "🗺️ State Analysis", "🔍 Utility Research", "⚙️ Settings"],
         key="page"
     )
     
     if page == "📊 Dashboard": show_dashboard()
     elif page == "🏭 Site Database": show_site_database()
+    elif page == "💬 AI Chat": show_ai_chat()
     elif page == "➕ Add/Edit Site": show_add_edit_site()
     elif page == "🏆 Rankings": show_rankings()
     elif page == "🗺️ State Analysis": show_state_analysis()
@@ -989,6 +990,115 @@ def show_dashboard():
         'MW': st.column_config.NumberColumn(format="%d MW")
     }, hide_index=True, use_container_width=True)
 
+
+
+
+# =============================================================================
+# AI CHAT PAGE
+# =============================================================================
+
+def show_ai_chat():
+    """AI-powered site diagnostic chat."""
+    st.title("💬 AI Site Diagnostic Chat")
+    
+    # Check if LLM is available
+    try:
+        from llm_integration import PortfolioChat
+    except ImportError:
+        st.error("LLM integration not available. Install: `pip install google-generativeai`")
+        st.code("pip install google-generativeai", language="bash")
+        return
+    
+    # Initialize chat messages
+    if 'chat_messages' not in st.session_state:
+        st.session_state.chat_messages = []
+    
+    # Initialize chat client with Gemini
+    try:
+        if 'chat_client' not in st.session_state:
+            # Get API key from secrets
+            api_key = st.secrets.get("GEMINI_API_KEY")
+            if not api_key:
+                st.error("No Gemini API key found.")
+                st.markdown("""
+                Add to `.streamlit/secrets.toml`:
+                ```toml
+                GEMINI_API_KEY = "your-key-here"
+                ```
+                """)
+                return
+            
+            st.session_state.chat_client = PortfolioChat(provider="gemini", api_key=api_key)
+            # Load portfolio context
+            sites = st.session_state.db['sites']
+            st.session_state.chat_client.set_portfolio_context(sites)
+            
+    except Exception as e:
+        st.error(f"Failed to initialize chat: {str(e)}")
+        return
+    
+    # Info box
+    with st.expander("ℹ️ How to use AI Chat", expanded=False):
+        st.markdown("""
+        **This chat understands your full portfolio context.** Describe sites naturally:
+        
+        *"We're evaluating a 750MW opportunity in Oklahoma, about 5 miles from a 345kV 
+        PSO substation. Land is under option, and we've had initial conversations with 
+        the utility but haven't filed for queue yet."*
+        
+        The AI will:
+        - Assess the site against your scoring framework
+        - Ask targeted diagnostic questions
+        - Compare to your existing portfolio
+        - Identify critical path items
+        - Help you evaluate the opportunity
+        
+        **Example questions:**
+        - "How does this compare to our other OK sites?"
+        - "What's the typical queue time for PSO?"
+        - "What should I ask the utility next?"
+        - "What are the risks with this site?"
+        """)
+    
+    st.markdown("---")
+    
+    # Display chat history
+    for msg in st.session_state.chat_messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+    
+    # Chat input
+    if prompt := st.chat_input("Describe a site or ask a question..."):
+        # Add user message
+        st.session_state.chat_messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        # Get AI response
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                try:
+                    response = st.session_state.chat_client.chat(prompt)
+                    st.markdown(response)
+                    st.session_state.chat_messages.append({"role": "assistant", "content": response})
+                    
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+    
+    # Sidebar controls
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Chat Controls")
+    
+    if st.sidebar.button("🔄 Refresh Portfolio Context"):
+        sites = st.session_state.db['sites']
+        st.session_state.chat_client.set_portfolio_context(sites)
+        st.sidebar.success("Context refreshed!")
+    
+    if st.sidebar.button("🗑️ Clear Chat History"):
+        st.session_state.chat_messages = []
+        if 'chat_client' in st.session_state:
+            st.session_state.chat_client.clear_history()
+        st.rerun()
 
 def show_site_database():
     """View and manage site database."""
