@@ -1051,8 +1051,16 @@ Return ONLY valid JSON with these exact field names. Use null for unknown values
         
         extracted = json.loads(response.text)
         
+        # Handle if Gemini returns a list instead of dict
+        if isinstance(extracted, list):
+            extracted = extracted[0] if extracted else {}
+        
+        # Ensure it's a dict
+        if not isinstance(extracted, dict):
+            raise ValueError(f"Expected dict, got {type(extracted)}")
+        
         # Clean up null values and generate suggested name
-        extracted = {k: v for k, v in extracted.items() if v is not None}
+        extracted = {k: v for k, v in extracted.items() if v is not None and v != "null"}
         
         # Generate suggested name
         if 'location_hint' in extracted and extracted.get('state'):
@@ -1067,18 +1075,46 @@ Return ONLY valid JSON with these exact field names. Use null for unknown values
         
     except Exception as e:
         st.warning(f"LLM extraction failed: {str(e)}. Using fallback extraction.")
-        # Fallback to basic regex if LLM fails
+        # Improved fallback extraction
         import re
         context = " ".join([m["content"] for m in messages])
         extracted = {}
         
+        # State extraction
         state_match = re.search(r'\b(TX|OK|GA|IN|OH|VA|PA|WY|NV|CA)\b', context, re.IGNORECASE)
         if state_match:
             extracted['state'] = state_match.group(1).upper()
         
+        # Utility extraction - expanded list
+        utilities = ['Oncor', 'PSO', 'AEP', 'Duke', 'Georgia Power', 'Dominion', 'OVEC']
+        for util in utilities:
+            if util.lower() in context.lower():
+                extracted['utility'] = util
+                break
+        
+        # MW extraction
         mw_match = re.search(r'(\d+)\s*MW', context, re.IGNORECASE)
         if mw_match:
             extracted['target_mw'] = int(mw_match.group(1))
+        
+        # Acreage extraction
+        acre_match = re.search(r'(\d+)\s*acres?', context, re.IGNORECASE)
+        if acre_match:
+            extracted['acreage'] = int(acre_match.group(1))
+        
+        # Study status extraction
+        if 'FS complete' in context or 'FS Complete' in context or 'Facilities Study' in context:
+            extracted['study_status'] = 'fs_complete'
+        elif 'SIS complete' in context or 'SIS Complete' in context:
+            extracted['study_status'] = 'sis_complete'
+        
+        # Land control extraction
+        if 'option' in context.lower():
+            extracted['land_control'] = 'option'
+        
+        # Generate name
+        if extracted.get('utility') and extracted.get('state'):
+            extracted['suggested_name'] = f"{extracted['utility']} {extracted['state']} Site"
         
         return extracted if extracted else None
 
