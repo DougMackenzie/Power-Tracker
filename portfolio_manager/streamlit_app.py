@@ -1144,10 +1144,23 @@ def show_extracted_site_form(extracted_data):
         with col2:
             acreage = st.number_input("Acreage", min_value=0, value=max(0, extracted_data.get('acreage', 0)))
             
-            study_status_options = ['not_started', 'sis_in_progress', 'sis_complete', 'fs_in_progress',  
-                                   'fs_complete', 'fa_executed', 'ia_executed']
-            study_index = study_status_options.index(extracted_data.get('study_status', 'not_started'))
-            study_status = st.selectbox("Study Status", options=study_status_options, index=study_index)
+            # New phasing terminology
+            study_status_options = ['not_started', 'screening_study', 'contract_study', 'loa', 'energy_contract']
+            study_status_labels = ['Not Started', 'Screening Study', 'Contract Study', 'Letter of Agreement', 'Energy Contract']
+            
+            # Map old terminology to new if needed
+            old_status = extracted_data.get('study_status', 'not_started')
+            mapped_status = {
+                'sis_in_progress': 'screening_study',
+                'sis_complete': 'screening_study',
+                'fs_in_progress': 'contract_study',
+                'fs_complete': 'contract_study',
+                'fa_executed': 'loa',
+                'ia_executed': 'energy_contract'
+            }.get(old_status, old_status)
+            
+            study_index = study_status_options.index(mapped_status) if mapped_status in study_status_options else 0
+            study_status = st.selectbox("Study Status", options=study_status_options, format_func=lambda x: study_status_labels[study_status_options.index(x)], index=study_index)
             
             land_options = ['', 'owned', 'option', 'loi', 'negotiating', 'none']
             land_index = land_options.index(extracted_data.get('land_control', '')) if extracted_data.get('land_control') in land_options else 0
@@ -1180,18 +1193,22 @@ def show_extracted_site_form(extracted_data):
                     'study_status': study_status,
                     'land_control': land_control,
                     'power_date': power_date.isoformat() if power_date else '',
-                    'notes': f"Created from AI Chat on {datetime.date.today().isoformat()}"
+                    'notes': extracted_data.get('notes', f"Created from VDR Upload on {datetime.date.today().isoformat()}"),
+                    'stage': 'Pre-Development'  # Default stage
                 }
                 
-                # Save to database
-                db = st.session_state.db
+                # Save to Google Sheets database
+                db = load_database()  # Reload from Sheets to get latest
                 db['sites'][site_id] = new_site
                 save_database(db)
+                
+                # Reload session state
+                st.session_state.db = load_database()
                 
                 # Clear pending save
                 st.session_state.pending_site_save = None
                 
-                st.success(f"✅ Site '{name}' saved to database!")
+                st.success(f"✅ Site '{name}' saved to Google Sheets database!")
                 st.balloons()
                 st.rerun()
         

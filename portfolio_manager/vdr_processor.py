@@ -130,7 +130,7 @@ Extract the following fields if mentioned (return null if not found):
   "utility": "Utility name (Oncor, PSO, AEP, Duke Energy, Georgia Power, Dominion, etc.)",
   "target_mw": "Integer MW capacity",
   "acreage": "Integer acreage",
-  "study_status": "One of: not_started, sis_in_progress, sis_complete, fs_in_progress, fs_complete, fa_executed, ia_executed",
+  "study_status": "One of: not_started, screening_study, contract_study, loa, energy_contract",
   "land_control": "One of: owned, option, loi, negotiating, none",
   "power_date": "Target power date in YYYY-MM-DD format",
   "voltage": "Interconnection voltage (e.g., 138kV, 345kV)",
@@ -139,11 +139,11 @@ Extract the following fields if mentioned (return null if not found):
   "notes": "Any other relevant information"
 }}
 
-Study status mappings:
-- "System Impact Study" / "SIS" → sis_complete (if complete) or sis_in_progress
-- "Facilities Study" / "FS" → fs_complete (if complete) or fs_in_progress
-- "Facilities Agreement" / "FA" → fa_executed
-- "Interconnection Agreement" / "IA" → ia_executed
+Study status mappings (map old terminology to new phasing structure):
+- "System Impact Study" / "SIS" / "Screening Study" → screening_study
+- "Facilities Study" / "FS" / "Contract Study" → contract_study
+- "Facilities Agreement" / "FA" / "Letter of Agreement" / "LOA" → loa
+- "Interconnection Agreement" / "IA" / "Energy Contract" → energy_contract
 
 Return ONLY valid JSON. Use null for unknown values."""
 
