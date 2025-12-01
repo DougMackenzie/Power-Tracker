@@ -1185,6 +1185,48 @@ def show_extracted_site_form(extracted_data):
                     
                     site_id = hashlib.md5(name.encode()).hexdigest()[:12]
                     
+                    # Parse COD date from extracted data or calculate from timeline
+                    cod_date = None
+                    if extracted_data.get('cod_date'):
+                        try:
+                            cod_date = datetime.datetime.strptime(extracted_data['cod_date'], '%Y-%m-%d').date()
+                        except:
+                            pass
+                    elif power_date:
+                        cod_date = power_date
+                    
+                    # Generate capacity schedule if we have COD
+                    schedule = []
+                    if cod_date and target_mw > 0:
+                        # Build ramp: assume 200MW/year or all at once if <200MW
+                        annual_ramp = min(200, target_mw)
+                        years_to_full = int(target_mw / annual_ramp)
+                        
+                        current_mw = 0
+                        for year_offset in range(years_to_full + 1):
+                            increment = min(annual_ramp, target_mw - current_mw)
+                            if increment > 0:
+                                schedule.append({
+                                    'date': (cod_date.replace(year=cod_date.year + year_offset)).isoformat(),
+                                    'interconnection_mw': current_mw + increment,
+                                    'gas_mw': 0,
+                                    'solar_mw': 0,
+                                    'battery_mw': 0
+                                })
+                                current_mw += increment
+                    
+                    # Determine study completion dates based on current status
+                    today = datetime.date.today()
+                    study_dates = {}
+                    if study_status in ['screening_study', 'contract_study', 'loa', 'energy_contract']:
+                        study_dates['screening_study'] = (today - datetime.timedelta(days=180)).isoformat()
+                    if study_status in ['contract_study', 'loa', 'energy_contract']:
+                        study_dates['contract_study'] = (today - datetime.timedelta(days=90)).isoformat()
+                    if study_status in ['loa', 'energy_contract']:
+                        study_dates['loa'] = (today - datetime.timedelta(days=30)).isoformat()
+                    if study_status == 'energy_contract':
+                        study_dates['energy_contract'] = today.isoformat()
+                    
                     # Build complete site profile from extracted data
                     new_site = {
                         # Basic Info
@@ -1209,12 +1251,15 @@ def show_extracted_site_form(extracted_data):
                             'iso': extracted_data.get('iso', ''),
                             'interconnection_cost': extracted_data.get('interconnection_cost', ''),
                             'queue_position': extracted_data.get('queue_position', ''),
-                            'screening_study': study_status == 'screening_study',
-                            'contract_study': study_status == 'contract_study',
-                            'loa': study_status == 'loa',
-                            'energy_contract': study_status == 'energy_contract',
-                            'cod_date': extracted_data.get('cod_date', power_date.isoformat() if power_date else '')
+                            'screening_study': study_dates.get('screening_study'),
+                            'contract_study': study_dates.get('contract_study'),
+                            'loa': study_dates.get('loa'),
+                            'energy_contract': study_dates.get('energy_contract'),
+                            'cod_date': cod_date.isoformat() if cod_date else ''
                         }],
+                        
+                        # Capacity Schedule
+                        'schedule': schedule,
                         
                         # Developer/Contact Info
                         'developer': extracted_data.get('developer', ''),
