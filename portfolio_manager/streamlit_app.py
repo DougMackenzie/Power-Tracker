@@ -1004,9 +1004,13 @@ def show_ai_chat():
     # Check if LLM is available
     try:
         from llm_integration import PortfolioChat
-    except ImportError:
-        st.error("LLM integration not available. Install: `pip install google-generativeai`")
+    except ImportError as e:
+        st.error(f"LLM integration not available. Error: {str(e)}")
         st.code("pip install google-generativeai", language="bash")
+        st.info("If the issue persists, check Streamlit Cloud logs for deployment errors.")
+        return
+    except Exception as e:
+        st.error(f"Unexpected error loading LLM integration: {str(e)}")
         return
     
     # Initialize chat messages
