@@ -1289,13 +1289,19 @@ def show_ai_chat():
                     st.markdown(response)
                     st.session_state.chat_messages.append({"role": "assistant", "content": response})
                     
-                    # Check if user wants to save the site
-                    save_keywords = ['yes save', 'save the site', 'add to database', 'save it', 'add it']
-                    if any(keyword in prompt.lower() for keyword in save_keywords):
+                    # Check if user wants to save the site (expanded keywords for flexibility)
+                    save_keywords = [
+                        'yes save', 'save the site', 'add to database', 'save it', 'add it',
+                        'yes', 'yep', 'yeah', 'ye', 'ok', 'okay', 'sure', 'proceed'
+                    ]
+                    # Only trigger if prompt is short (likely a confirmation) and contains save keyword
+                    prompt_lower = prompt.lower().strip()
+                    if any(keyword in prompt_lower for keyword in save_keywords) and len(prompt_lower) < 30:
                         # Extract site data from conversation
                         extracted_data = extract_site_from_conversation(st.session_state.chat_messages)
                         if extracted_data:
                             st.session_state.pending_site_save = extracted_data
+                            st.rerun()  # Force rerun to show the form immediately
                     
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
