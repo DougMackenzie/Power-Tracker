@@ -1198,19 +1198,28 @@ def show_extracted_site_form(extracted_data):
                         'power_date': power_date.isoformat() if power_date else '',
                         'stage': 'Pre-Development',
                         
-                        # Infrastructure (from extracted data)
-                        'voltage': extracted_data.get('voltage', ''),
-                        'iso': extracted_data.get('iso', ''),
-                        'substation': extracted_data.get('substation', ''),
-                        'service_type': extracted_data.get('service_type', ''),
-                        'transmission_distance': extracted_data.get('transmission_distance', ''),
+                        # Power System - Create Phase 1 with extracted infrastructure data
+                        'phases': [{
+                            'phase': 1,
+                            'mw': extracted_data.get('target_mw', target_mw),
+                            'service_type': extracted_data.get('service_type', ''),
+                            'substation_status': extracted_data.get('substation', ''),  # Map substation -> substation_status
+                            'trans_dist': extracted_data.get('transmission_distance', ''),  # Map transmission_distance -> trans_dist
+                            'voltage': extracted_data.get('voltage', ''),
+                            'iso': extracted_data.get('iso', ''),
+                            'interconnection_cost': extracted_data.get('interconnection_cost', ''),
+                            'queue_position': extracted_data.get('queue_position', ''),
+                            'screening_study': study_status == 'screening_study',
+                            'contract_study': study_status == 'contract_study',
+                            'loa': study_status == 'loa',
+                            'energy_contract': study_status == 'energy_contract',
+                            'cod_date': extracted_data.get('cod_date', power_date.isoformat() if power_date else '')
+                        }],
                         
                         # Developer/Contact Info
                         'developer': extracted_data.get('developer', ''),
                         
                         # Notes (comprehensive from all extracted info)
-                        # NOTE: `_build_comprehensive_notes` is not defined in this scope.
-                        # This line might need adjustment based on where that function is intended to be.
                         'notes': extracted_data.get('notes', f"Created from VDR Upload on {datetime.date.today().isoformat()}"),
                         
                         # Metadata
