@@ -1082,10 +1082,10 @@ def show_extracted_site_form(extracted_data):
                                       if extracted_data.get('state') in ['OK', 'TX', 'WY', 'GA', 'VA', 'OH', 'IN', 'PA', 'NV', 'CA'] else 0))
             
             utility = st.text_input("Utility *", value=extracted_data.get('utility', ''))
-            target_mw = st.number_input("Target MW *", value=extracted_data.get('target_mw', 500), min_value=1, step=50)
+            target_mw = st.number_input("Target MW *", min_value=1, value=max(1, extracted_data.get('target_mw', 500)), step=50)
         
         with col2:
-            acreage = st.number_input("Acreage", value=extracted_data.get('acreage', 0), min_value=0)
+            acreage = st.number_input("Acreage", min_value=0, value=max(0, extracted_data.get('acreage', 0)))
             
             study_status_options = ['not_started', 'sis_in_progress', 'sis_complete', 'fs_in_progress',  
                                    'fs_complete', 'fa_executed', 'ia_executed']
