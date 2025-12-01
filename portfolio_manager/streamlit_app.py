@@ -497,6 +497,12 @@ def run():
     
     st.sidebar.title("⚡ Portfolio Manager")
     
+    # Check if we need to navigate (from Edit Site button)
+    if 'navigation_target' in st.session_state:
+        target_page = st.session_state.navigation_target
+        del st.session_state.navigation_target
+        st.session_state.page = target_page
+    
     # Use session state for navigation
     page = st.sidebar.radio(
         "Navigation",
@@ -531,7 +537,7 @@ def show_site_details(site_id: str):
     with col1:
         if st.button("✏️ Edit Site", key=f"edit_{site_id}"):
             st.session_state.edit_site_id = site_id
-            st.session_state.page = "➕ Add/Edit Site" # Force navigation
+            st.session_state.navigation_target = "➕ Add/Edit Site"
             st.rerun()
     with col2:
         pdf_bytes = generate_site_report_pdf(site, scores, stage, state_context)
@@ -1192,7 +1198,7 @@ def show_site_details(site_id: str):
     with col1:
         if st.button("✏️ Edit Site", key=f"edit_{site_id}"):
             st.session_state.edit_site_id = site_id
-            st.session_state['page'] = "➕ Add/Edit Site"  # Force navigation
+            st.session_state.navigation_target = "➕ Add/Edit Site"
             st.rerun()
     with col2:
         pdf_bytes = generate_site_report_pdf(site, scores, stage, state_context)
