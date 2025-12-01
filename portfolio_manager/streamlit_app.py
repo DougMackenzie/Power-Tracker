@@ -1178,39 +1178,47 @@ def show_extracted_site_form(extracted_data):
             if not name or not state or not utility:
                 st.error("Please fill in required fields: Name, State, and Utility")
             else:
-                # Create site data
-                import hashlib
-                import datetime
-                
-                site_id = hashlib.md5(name.encode()).hexdigest()[:12]
-                
-                new_site = {
-                    'name': name,
-                    'state': state,
-                    'utility': utility,
-                    'target_mw': target_mw,
-                    'acreage': acreage,
-                    'study_status': study_status,
-                    'land_control': land_control,
-                    'power_date': power_date.isoformat() if power_date else '',
-                    'notes': extracted_data.get('notes', f"Created from VDR Upload on {datetime.date.today().isoformat()}"),
-                    'stage': 'Pre-Development'  # Default stage
-                }
-                
-                # Save to Google Sheets database
-                db = load_database()  # Reload from Sheets to get latest
-                db['sites'][site_id] = new_site
-                save_database(db)
-                
-                # Reload session state
-                st.session_state.db = load_database()
-                
-                # Clear pending save
-                st.session_state.pending_site_save = None
-                
-                st.success(f"✅ Site '{name}' saved to Google Sheets database!")
-                st.balloons()
-                st.rerun()
+                try:
+                    # Create site data
+                    import hashlib
+                    import datetime
+                    
+                    site_id = hashlib.md5(name.encode()).hexdigest()[:12]
+                    
+                    new_site = {
+                        'name': name,
+                        'state': state,
+                        'utility': utility,
+                        'target_mw': target_mw,
+                        'acreage': acreage,
+                        'study_status': study_status,
+                        'land_control': land_control,
+                        'power_date': power_date.isoformat() if power_date else '',
+                        'notes': extracted_data.get('notes', f"Created from VDR Upload on {datetime.date.today().isoformat()}"),
+                        'stage': 'Pre-Development'  # Default stage
+                    }
+                    
+                    # Debug: Show what we're trying to save
+                    st.info(f"Saving site with ID: {site_id}")
+                    
+                    # Save to Google Sheets database
+                    db = load_database()  # Reload from Sheets to get latest
+                    db['sites'][site_id] = new_site
+                    save_database(db)
+                    
+                    # Reload session state
+                    st.session_state.db = load_database()
+                    
+                    # Clear pending save
+                    st.session_state.pending_site_save = None
+                    
+                    st.success(f"✅ Site '{name}' saved to Google Sheets database!")
+                    st.balloons()
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"❌ Save failed: {str(e)}")
+                    st.exception(e)  # Show full traceback
         
         if cancelled:
             st.session_state.pending_site_save = None
