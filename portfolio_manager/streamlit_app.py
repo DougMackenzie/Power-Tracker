@@ -1003,7 +1003,7 @@ def show_ai_chat():
     
     # Check if LLM is available
     try:
-        from llm_integration import PortfolioChat
+        from .llm_integration import PortfolioChat
     except ImportError as e:
         st.error(f"LLM integration not available. Error: {str(e)}")
         st.code("pip install google-generativeai", language="bash")
