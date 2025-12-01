@@ -1454,17 +1454,17 @@ def show_vdr_upload():
                     except Exception as e:
                         st.error(f"❌ Error processing {uploaded_file.name}: {str(e)}")
             
-            # Show consolidated extraction form if we have data
+            # Store extracted data in session state for the form
             if all_extracted_data:
-                st.markdown("---")
-                st.subheader("💾 Save Consolidated Data to Database")
-                st.info("Review the combined data extracted from all documents")
-                
-                # Store in session state for form
                 st.session_state.pending_site_save = all_extracted_data
-                
-                # Reuse the existing form
-                show_extracted_site_form(all_extracted_data)
+                st.rerun()  # Rerun to show the form outside the button block
+    
+    # Show the save form if we have pending data (OUTSIDE the button block!)
+    if st.session_state.get('pending_site_save'):
+        st.markdown("---")
+        st.subheader("💾 Save Consolidated Data to Database")
+        st.info("Review the combined data extracted from all documents")
+        show_extracted_site_form(st.session_state.pending_site_save)
 
 def show_site_database():
     """View and manage site database."""
