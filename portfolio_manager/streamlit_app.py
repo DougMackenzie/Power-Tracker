@@ -1185,7 +1185,9 @@ def show_extracted_site_form(extracted_data):
                     
                     site_id = hashlib.md5(name.encode()).hexdigest()[:12]
                     
+                    # Build complete site profile from extracted data
                     new_site = {
+                        # Basic Info
                         'name': name,
                         'state': state,
                         'utility': utility,
@@ -1194,8 +1196,27 @@ def show_extracted_site_form(extracted_data):
                         'study_status': study_status,
                         'land_control': land_control,
                         'power_date': power_date.isoformat() if power_date else '',
+                        'stage': 'Pre-Development',
+                        
+                        # Infrastructure (from extracted data)
+                        'voltage': extracted_data.get('voltage', ''),
+                        'iso': extracted_data.get('iso', ''),
+                        'substation': extracted_data.get('substation', ''),
+                        'service_type': extracted_data.get('service_type', ''),
+                        'transmission_distance': extracted_data.get('transmission_distance', ''),
+                        
+                        # Developer/Contact Info
+                        'developer': extracted_data.get('developer', ''),
+                        
+                        # Notes (comprehensive from all extracted info)
+                        # NOTE: `_build_comprehensive_notes` is not defined in this scope.
+                        # This line might need adjustment based on where that function is intended to be.
                         'notes': extracted_data.get('notes', f"Created from VDR Upload on {datetime.date.today().isoformat()}"),
-                        'stage': 'Pre-Development'  # Default stage
+                        
+                        # Metadata
+                        'created_from': 'VDR Upload',
+                        'created_date': datetime.date.today().isoformat(),
+                        'source_files': extracted_data.get('_source_file', '')
                     }
                     
                     # Debug: Show what we're trying to save

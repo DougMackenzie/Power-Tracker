@@ -135,8 +135,14 @@ Extract the following fields if mentioned (return null if not found):
   "power_date": "Target power date in YYYY-MM-DD format",
   "voltage": "Interconnection voltage (e.g., 138kV, 345kV)",
   "iso": "ISO/RTO (PJM, ERCOT, SPP, MISO, etc.)",
+  "substation": "Nearest substation name",
+  "transmission_distance": "Distance to transmission line in miles",
+  "service_type": "Network or Radial service",
+  "interconnection_cost": "Estimated interconnection cost in millions",
   "developer": "Developer name if mentioned",
-  "notes": "Any other relevant information"
+  "queue_position": "Queue position number if mentioned",
+  "cod_date": "Commercial Operation Date if mentioned",
+  "notes": "Any other relevant information including POI details, timeline notes, risks, opportunities"
 }}
 
 Study status mappings (map old terminology to new phasing structure):
