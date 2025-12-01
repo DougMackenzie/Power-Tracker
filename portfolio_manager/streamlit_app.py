@@ -1192,7 +1192,7 @@ def show_site_details(site_id: str):
     with col1:
         if st.button("✏️ Edit Site", key=f"edit_{site_id}"):
             st.session_state.edit_site_id = site_id
-            st.session_state.page = "➕ Add/Edit Site"  # Force navigation
+            st.session_state['page'] = "➕ Add/Edit Site"  # Force navigation
             st.rerun()
     with col2:
         pdf_bytes = generate_site_report_pdf(site, scores, stage, state_context)
