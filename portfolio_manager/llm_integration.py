@@ -223,7 +223,7 @@ def build_system_prompt(sites: Dict[str, Dict]) -> str:
 class GeminiClient:
     """Google Gemini API client."""
     
-    def __init__(self, api_key: str, model: str = "gemini-2.0-flash-exp"):
+    def __init__(self, api_key: str, model: str = "models/gemini-2.0-flash-exp"):
         if not GEMINI_AVAILABLE:
             raise ImportError("google-generativeai not installed. Run: pip install google-generativeai")
         
@@ -342,7 +342,7 @@ class PortfolioChat:
         
         # Initialize appropriate client
         if self.provider == "gemini":
-            self.client = GeminiClient(api_key, model or "gemini-2.0-flash-exp")
+            self.client = GeminiClient(api_key, model or "models/gemini-2.0-flash-exp")
         elif self.provider == "claude":
             self.client = ClaudeClient(api_key, model or "claude-sonnet-4-20250514")
         else:
