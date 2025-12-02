@@ -1077,38 +1077,115 @@ def extract_site_from_conversation(messages):
     # Combine all messages into context
     conversation_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
     
-    # Create extraction prompt
-    extraction_prompt = f"""Analyze this conversation about a data center site and extract structured data.
+    # Create comprehensive extraction prompt
+    extraction_prompt = f"""Analyze this conversation about a data center site and extract ALL available structured data.
 
 Conversation:
 {conversation_text}
 
-Extract the following fields if mentioned (return null if not found):
+Extract a complete JSON object with the following structure. Use null for any field not mentioned in the conversation:
 
 {{
-  "state": "2-letter state code (TX, OK, GA, etc.) or null",
-  "utility": "Utility name (Oncor, PSO, AEP, Duke Energy, Georgia Power, Dominion, etc.) or null",
-  "target_mw": "Integer MW capacity or null",
-  "acreage": "Integer acreage or null",
-  "study_status": "One of: not_started, sis_in_progress, sis_complete, fs_in_progress, fs_complete, fa_executed, ia_executed, or null",
-  "land_control": "One of: owned, option, loi, negotiating, none, or null",
-  "power_date": "YYYY-MM-DD format or null",
-  "location_hint": "City or region name for suggested site name, or null"
+  // Basic Information
+  "state": "2-letter state code (TX, OK, GA, OH, etc.) or null",
+  "utility": "Utility name (Oncor, PSO, AEP, Duke Energy, Georgia Power, etc.) or null",
+  "target_mw": "Total target capacity in MW (integer) or null",
+  "acreage": "Site acreage (integer) or null",
+  "county": "County name or null",
+  "developer": "Developer name or null",
+  "location_hint": "City or region name for suggested site name, or null",
+  
+  // Land & Permitting
+  "land_status": "One of: None, Option, Leased, Owned, or null",
+  "community_support": "One of: Strong, Neutral, Opposition, or null",
+  "political_support": "One of: High, Neutral, Low, or null",
+  
+  // Phasing - Array of phase objects (extract ALL phases mentioned)
+  "phases": [
+    {{
+      "mw": "Phase MW capacity (integer)",
+      "screening_status": "One of: Not Started, Initiated, Complete",
+      "contract_study_status": "One of: Not Started, Initiated, Complete",
+      "loa_status": "One of: Not Started, Drafted, Executed",
+      "energy_contract_status": "One of: Not Started, Drafted, Executed",
+      "target_date": "YYYY-MM-DD format or null",
+      "voltage": "One of: 13.8, 34.5, 69, 115, 138, 230, 345, 500 (string) or null",
+      "service_type": "One of: Transmission, Distribution, or null",
+      "substation_status": "One of: Existing, Upgrade Needed, New Build, or null",
+      "trans_dist": "Distance to transmission in miles (float) or null",
+      "ic_capacity": "Interconnection capacity in MW (integer) or null"
+    }}
+    // Include ALL phases if multiple are mentioned
+  ],
+  
+  // Capacity Schedule - Year-by-year power trajectory
+  "schedule": {{
+    "2025": {{"ic_mw": 0, "gen_mw": 0}},
+    "2026": {{"ic_mw": 0, "gen_mw": 0}},
+    // ... populate years based on mentioned timeline and ramp schedule
+    // If MW/year increment is mentioned (e.g., "200MW/year from 2029-2034"), calculate each year
+    // ic_mw = interconnection capacity that year
+    // gen_mw = generation capacity that year
+  }},
+  
+  // Onsite Generation
+  "onsite_gen": {{
+    "gas_mw": "Gas generation capacity in MW (float) or null",
+    "gas_dist": "Distance to gas pipeline in miles (float) or null",
+    "gas_status": "One of: None, Study, Permitting, Construction, Operational, or null",
+    "solar_mw": "Solar capacity in MW (float) or null",
+    "solar_acres": "Solar acreage (float) or null",
+    "batt_mw": "Battery power in MW (float) or null",
+    "batt_mwh": "Battery energy in MWh (float) or null"
+  }},
+  
+  // Non-Power Infrastructure
+  "non_power": {{
+    "zoning_status": "One of: Not Started, Pre-App, Submitted, Approved, or null",
+    "water_source": "Description or null",
+    "water_cap": "Water capacity or null",
+    "fiber_status": "One of: Unknown, Nearby, At Site, Lit Building, or null",
+    "fiber_provider": "Provider name or null",
+    "env_issues": "Description or null"
+  }},
+  
+  // Project Status
+  "dev_experience": "One of: High, Medium, Low, or null",
+  "capital_status": "One of: Secured, Partial, None, or null",
+  "financial_status": "One of: Strong, Moderate, Weak, or null",
+  
+  // Strategic Analysis
+  "risks": ["Risk 1", "Risk 2", ...] or null,
+  "opps": ["Opportunity 1", "Opportunity 2", ...] or null,
+  "questions": ["Question 1", "Question 2", ...] or null
 }}
 
-Study status mappings:
-- "System Impact Study" / "SIS" → sis_complete (if complete) or sis_in_progress
-- "Facilities Study" / "FS" → fs_complete (if complete) or fs_in_progress  
-- "Facilities Agreement" / "FA" → fa_executed
-- "Interconnection Agreement" / "IA" → ia_executed
+IMPORTANT EXTRACTION RULES:
 
-Land control mappings:
-- "owned" / "we own" → owned
-- "under option" / "land option" / "option agreement" → option
-- "LOI" / "letter of intent" → loi
-- "negotiating" → negotiating
+1. **Phases**: If multiple phases are mentioned, create separate objects for each. Extract all details for each phase.
 
-Return ONLY valid JSON with these exact field names. Use null for unknown values."""
+2. **Schedule**: If a power ramp or timeline is mentioned (e.g., "200MW Day 1 in Jan 2029, then 200MW/year until 2034"):
+   - Calculate each year's capacity
+   - For "Day 1 in Jan 2029", start at 2029
+   - For "200MW/year increments", add 200MW each subsequent year
+   - Both ic_mw (interconnect) and gen_mw (generation) should reflect the total capacity that year
+
+3. **Voltage**: Extract from phrases like "345kV system", "138kV", "230kV interconnection"
+
+4. **Study Status Mapping**:
+   - "Screening Study" → screening_status: Complete/Initiated/Not Started
+   - "System Impact Study / SIS" → contract_study_status: Complete/Initiated/Not Started
+   - "Facilities Study / FS" → use as contract_study_status if mentioned
+   - "LOA / Letter of Agreement" → loa_status: Executed/Drafted/Not Started
+   - "Energy Contract / PPA" → energy_contract_status: Executed/Drafted/Not Started
+
+5. **Land Status**: "under option" → Option, "owned" → Owned, "leased" → Leased
+
+6. **Dates**: Convert all dates to YYYY-MM-DD format. "Jan 2029" → "2029-01-01"
+
+7. **Strategic Items**: Extract any mentioned risks, opportunities, or open questions into arrays
+
+Return ONLY valid JSON. Be thorough - extract every detail mentioned in the conversation."""
 
     try:
         # Use Gemini API directly for extraction
