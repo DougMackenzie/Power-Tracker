@@ -937,7 +937,13 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     pdf.set_font("Helvetica", size=9)
     np = site.get('non_power', {})
     pdf.cell(0, 5, f"Zoning: {np.get('zoning_status', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 5, f"Water: {np.get('water_source', 'N/A')} - {np.get('water_cap', 0):,.0f} GPD capacity", new_x="LMARGIN", new_y="NEXT")
+    # Safe water capacity conversion
+    water_cap_raw = np.get('water_cap', 0)
+    try:
+        water_cap = float(water_cap_raw) if water_cap_raw else 0
+    except (ValueError, TypeError):
+        water_cap = 0
+    pdf.cell(0, 5, f"Water: {np.get('water_source', 'N/A')} - {water_cap:,.0f} GPD capacity", new_x="LMARGIN", new_y="NEXT")
     pdf.cell(0, 5, f"Fiber: {np.get('fiber_status', 'N/A')} ({np.get('fiber_provider', 'N/A')})", new_x="LMARGIN", new_y="NEXT")
     pdf.multi_cell(0, 5, f"Environmental: {np.get('env_issues', 'None identified')}")
     pdf.ln(5)
@@ -1164,11 +1170,55 @@ IMPORTANT EXTRACTION RULES:
 
 1. **Phases**: If multiple phases are mentioned, create separate objects for each. Extract all details for each phase.
 
-2. **Schedule**: If a power ramp or timeline is mentioned (e.g., "200MW Day 1 in Jan 2029, then 200MW/year until 2034"):
-   - Calculate each year's capacity
-   - For "Day 1 in Jan 2029", start at 2029
-   - For "200MW/year increments", add 200MW each subsequent year
-   - Both ic_mw (interconnect) and gen_mw (generation) should reflect the total capacity that year
+2. **Schedule - CRITICAL INTERPRETATION RULES**:
+   
+   **Interconnection vs. Generation Capacity:**
+   - "Full interconnect rating" / "interconnection" → ic_mw field
+   - "Generation capacity" / "energy procurement" / "load" → gen_mw field
+   
+   **Understanding "Ramps XMW/year":**
+   - "Ramps 250MW/year" means INCREMENTAL additions of 250MW each year
+   - NOT 250MW total per year, but 250MW ADDED each year
+   
+   **Example 1:**
+   Input: "Full interconnect rating on Jan 1, 2028, ramps 250MW/year via generation capacity"
+   Interpretation:
+   - IC capacity is IMMEDIATELY 1200MW (or whatever "full" means) starting 2028
+   - Generation STARTS at 250MW in 2028
+   - ADDS 250MW each subsequent year: 2029=500MW, 2030=750MW, 2031=1000MW, 2032=1200MW
+   
+   Output:
+   {
+     "2028": {"ic_mw": 1200, "gen_mw": 250},
+     "2029": {"ic_mw": 1200, "gen_mw": 500},
+     "2030": {"ic_mw": 1200, "gen_mw": 750},
+     "2031": {"ic_mw": 1200, "gen_mw": 1000},
+     "2032": {"ic_mw": 1200, "gen_mw": 1200},
+     "2033": {"ic_mw": 1200, "gen_mw": 1200}
+   }
+   
+   **Example 2:**
+   Input: "200MW Day 1 in Jan 2029, then scales 200MW/year until 1GW"
+   Interpretation:
+   - Starts with 200MW total (both IC and gen) in 2029
+   - ADDS 200MW each year until reaching 1000MW
+   
+   Output:
+   {
+     "2029": {"ic_mw": 200, "gen_mw": 200},
+     "2030": {"ic_mw": 400, "gen_mw": 400},
+     "2031": {"ic_mw": 600, "gen_mw": 600},
+     "2032": {"ic_mw": 800, "gen_mw": 800},
+     "2033": {"ic_mw": 1000, "gen_mw": 1000},
+     "2034": {"ic_mw": 1000, "gen_mw": 1000},
+     "2035": {"ic_mw": 1000, "gen_mw": 1000}
+   }
+   
+   **Key Points:**
+   - Ramp = INCREMENTAL (cumulative additions)
+   - Continue until reaching target capacity or 2035, whichever comes first
+   - After reaching target, maintain that level
+   - Fill all years from start year through 2035
 
 3. **Voltage**: Extract from phrases like "345kV system", "138kV", "230kV interconnection"
 
