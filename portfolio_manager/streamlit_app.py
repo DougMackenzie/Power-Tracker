@@ -1203,29 +1203,32 @@ def show_extracted_site_form(extracted_data):
                         except:
                             pass
                     
-                    # Calculate from timeline if available (e.g., "36 months from IA execution")
+                    # Calculate from timeline if available (e.g., "36 months from agreement execution")
                     if not cod_date and timeline_info:
                         import re
                         months_match = re.search(r'(\d+)\s*months?', timeline_info.lower())
                         if months_match:
                             months = int(months_match.group(1))
                             
-                            # Check if we have the trigger event date (e.g., IA execution date)
+                            # Check if we have the trigger event date (agreement execution, approval, etc.)
                             reference_date = None
-                            if 'ia' in timeline_info.lower() and extracted_data.get('ia_execution_date'):
+                            agreement_date = extracted_data.get('agreement_execution_date')
+                            
+                            # Look for common agreement terminology in timeline
+                            if agreement_date and any(term in timeline_info.lower() for term in ['ia', 'agreement', 'fa', 'gia', 'lgia', 'execution', 'approval']):
                                 try:
-                                    reference_date = datetime.datetime.strptime(extracted_data['ia_execution_date'], '%Y-%m-%d').date()
+                                    reference_date = datetime.datetime.strptime(agreement_date, '%Y-%m-%d').date()
                                 except:
                                     pass
                             
                             # Use reference date if found, otherwise estimate from today
                             if reference_date:
                                 cod_date = reference_date + datetime.timedelta(days=months * 30)
-                                st.info(f"📅 Calculated COD: {months} months from IA execution ({reference_date.isoformat()}) = {cod_date.isoformat()}")
+                                st.info(f"📅 Calculated COD: {months} months from agreement execution ({reference_date.isoformat()}) = {cod_date.isoformat()}")
                             else:
                                 today = datetime.date.today()
                                 cod_date = today + datetime.timedelta(days=months * 30)
-                                st.warning(f"⚠️ IA execution date not found in documents. Estimating COD as {months} months from today ({today.isoformat()}) = {cod_date.isoformat()}")
+                                st.warning(f"⚠️ Agreement execution date not found in documents. Estimating COD as {months} months from today ({today.isoformat()}) = {cod_date.isoformat()}")
                     
                     # Fallback to form input
                     if not cod_date and power_date:
@@ -1319,11 +1322,11 @@ def show_extracted_site_form(extracted_data):
                         
                         # Onsite Generation
                         'onsite_gen': {
-                            'gas_mw': gas_mw,
-                            'gas_status': 'Planned' if gas_mw > 0 else 'N/A',
-                            'solar_mw': solar_mw,
-                            'batt_mw': battery_mw,
-                            'batt_mwh': battery_mwh
+                            'gas_mw': gas_mw or 0,
+                            'gas_status': 'Planned' if (gas_mw and gas_mw > 0) else 'N/A',
+                            'solar_mw': solar_mw or 0,
+                            'batt_mw': battery_mw or 0,
+                            'batt_mwh': battery_mwh or 0
                         },
                         
                         # Developer/Contact Info

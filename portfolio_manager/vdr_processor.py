@@ -141,9 +141,9 @@ Extract the following fields if mentioned (return null if not found):
   "developer": "Developer name if mentioned",
   "queue_position": "Queue position number if mentioned",
   
-  "timeline_to_cod": "Timeline description (e.g., '36 months from IA execution', '24 months from LOA')",
+  "timeline_to_cod": "Timeline description (e.g., '36 months from agreement execution', '24 months from approval')",
   "cod_date": "Commercial Operation Date in YYYY-MM-DD if explicitly stated",
-  "ia_execution_date": "Interconnection Agreement execution date if mentioned",
+  "agreement_execution_date": "Date when the final interconnection/facilities agreement was executed (look for: IA execution, FA execution, Interconnection Agreement, Facilities Agreement, GIA, LGIA date)",
   
   "phases": [
     {{
