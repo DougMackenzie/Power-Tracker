@@ -56,119 +56,137 @@ def get_sheets_client():
 
 def load_database() -> Dict:
     """Load site database from Google Sheets."""
-    try:
-        client = get_sheets_client()
-        sheet = client.open(SHEET_NAME)
-        
-        # Try to get Sites worksheet, create if doesn't exist
+    import time
+    
+    max_retries = 3
+    for attempt in range(max_retries):
         try:
-            sites_ws = sheet.worksheet("Sites")
-        except:
-            sites_ws = sheet.add_worksheet(title="Sites", rows=1000, cols=50)
-            # Add headers
-            headers = [
-                "site_id", "name", "state", "utility", "target_mw", "acreage", "iso", "county",
-                "developer", "land_status", "community_support", "political_support",
-                "dev_experience", "capital_status", "financial_status", "last_updated",
-                "phases_json", "onsite_gen_json", "schedule_json", "non_power_json",
-                "risks_json", "opps_json", "questions_json"
-            ]
-            sites_ws.append_row(headers)
-        
-        # Load all site data
-        all_rows = sites_ws.get_all_records()
-        sites = {}
-        
-        for row in all_rows:
-            if not row.get('site_id'):
-                continue
-                
-            site_id = row['site_id']
+            client = get_sheets_client()
+            sheet = client.open(SHEET_NAME)
             
-            # Safe conversion helper for numeric fields
-            def safe_int(value, default=0):
-                if not value or value == '':
-                    return default
-                try:
-                    return int(float(value))  # Handle float strings like "100.0"
-                except (ValueError, TypeError):
-                    return default
+            # Try to get Sites worksheet, create if doesn't exist
+            try:
+                sites_ws = sheet.worksheet("Sites")
+            except:
+                sites_ws = sheet.add_worksheet(title="Sites", rows=1000, cols=50)
+                # Add headers
+                headers = [
+                    "site_id", "name", "state", "utility", "target_mw", "acreage", "iso", "county",
+                    "developer", "land_status", "community_support", "political_support",
+                    "dev_experience", "capital_status", "financial_status", "last_updated",
+                    "phases_json", "onsite_gen_json", "schedule_json", "non_power_json",
+                    "risks_json", "opps_json", "questions_json"
+                ]
+                sites_ws.append_row(headers)
             
-            # Reconstruct site dictionary
-            site = {
-                'name': str(row.get('name', '')),
-                'state': str(row.get('state', '')),
-                'utility': str(row.get('utility', '')),
-                'target_mw': safe_int(row.get('target_mw'), 0),
-                'acreage': safe_int(row.get('acreage'), 0),
-                'iso': str(row.get('iso', '')),
-                'county': str(row.get('county', '')),
-                'developer': str(row.get('developer', '')),
-                'land_status': str(row.get('land_status', '')),
-                'community_support': str(row.get('community_support', '')),
-                'political_support': str(row.get('political_support', '')),
-                'dev_experience': str(row.get('dev_experience', '')),
-                'capital_status': str(row.get('capital_status', '')),
-                'financial_status': str(row.get('financial_status', '')),
-                'last_updated': str(row.get('last_updated', '')),
-            }
-            
-            # Parse JSON fields with better error handling
-            for json_field in ['phases', 'onsite_gen', 'schedule', 'non_power', 'risks', 'opps', 'questions']:
-                json_key = f'{json_field}_json'
-                default_value = [] if json_field in ['risks', 'opps', 'questions', 'phases'] else {}
-                
-                json_str = row.get(json_key, '')
-                if json_str and json_str.strip():
-                    try:
-                        parsed = json.loads(json_str)
-                        # Validate the parsed data type
-                        if json_field in ['risks', 'opps', 'questions', 'phases']:
-                            site[json_field] = parsed if isinstance(parsed, list) else default_value
-                        else:
-                            site[json_field] = parsed if isinstance(parsed, dict) else default_value
-                    except json.JSONDecodeError:
-                        site[json_field] = default_value
+            # Load all site data with retry
+            try:
+                all_rows = sites_ws.get_all_records()
+            except Exception as e:
+                st.warning(f"Error fetching data (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)  # Exponential backoff
+                    continue
                 else:
-                    site[json_field] = default_value
+                    raise
             
-            sites[site_id] = site
-        
-        # Try to get metadata
-        try:
-            meta_ws = sheet.worksheet("Metadata")
-            meta_rows = meta_ws.get_all_records()
-            metadata = meta_rows[0] if meta_rows else {
-                'created': datetime.now().isoformat(),
-                'last_updated': datetime.now().isoformat(),
-                'version': '1.0'
+            sites = {}
+            
+            for row in all_rows:
+                if not row.get('site_id'):
+                    continue
+                    
+                site_id = row['site_id']
+                
+                # Safe conversion helper for numeric fields
+                def safe_int(value, default=0):
+                    if not value or value == '':
+                        return default
+                    try:
+                        return int(float(value))  # Handle float strings like "100.0"
+                    except (ValueError, TypeError):
+                        return default
+                
+                # Reconstruct site dictionary
+                site = {
+                    'name': str(row.get('name', '')),
+                    'state': str(row.get('state', '')),
+                    'utility': str(row.get('utility', '')),
+                    'target_mw': safe_int(row.get('target_mw'), 0),
+                    'acreage': safe_int(row.get('acreage'), 0),
+                    'iso': str(row.get('iso', '')),
+                    'county': str(row.get('county', '')),
+                    'developer': str(row.get('developer', '')),
+                    'land_status': str(row.get('land_status', '')),
+                    'community_support': str(row.get('community_support', '')),
+                    'political_support': str(row.get('political_support', '')),
+                    'dev_experience': str(row.get('dev_experience', '')),
+                    'capital_status': str(row.get('capital_status', '')),
+                    'financial_status': str(row.get('financial_status', '')),
+                    'last_updated': str(row.get('last_updated', '')),
+                }
+                
+                # Parse JSON fields with better error handling
+                for json_field in ['phases', 'onsite_gen', 'schedule', 'non_power', 'risks', 'opps', 'questions']:
+                    json_key = f'{json_field}_json'
+                    default_value = [] if json_field in ['risks', 'opps', 'questions', 'phases'] else {}
+                    
+                    json_str = row.get(json_key, '')
+                    if json_str and json_str.strip():
+                        try:
+                            parsed = json.loads(json_str)
+                            # Validate the parsed data type
+                            if json_field in ['risks', 'opps', 'questions', 'phases']:
+                                site[json_field] = parsed if isinstance(parsed, list) else default_value
+                            else:
+                                site[json_field] = parsed if isinstance(parsed, dict) else default_value
+                        except json.JSONDecodeError:
+                            site[json_field] = default_value
+                    else:
+                        site[json_field] = default_value
+                
+                sites[site_id] = site
+            
+            # Try to get metadata
+            try:
+                meta_ws = sheet.worksheet("Metadata")
+                meta_rows = meta_ws.get_all_records()
+                metadata = meta_rows[0] if meta_rows else {
+                    'created': datetime.now().isoformat(),
+                    'last_updated': datetime.now().isoformat(),
+                    'version': '1.0'
+                }
+            except:
+                meta_ws = sheet.add_worksheet(title="Metadata", rows=10, cols=5)
+                meta_ws.append_row(['created', 'last_updated', 'version'])
+                metadata = {
+                    'created': datetime.now().isoformat(),
+                    'last_updated': datetime.now().isoformat(),
+                    'version': '1.0'
+                }
+                meta_ws.append_row([metadata['created'], metadata['last_updated'], metadata['version']])
+            
+            return {
+                'sites': sites,
+                'metadata': metadata
             }
-        except:
-            meta_ws = sheet.add_worksheet(title="Metadata", rows=10, cols=5)
-            meta_ws.append_row(['created', 'last_updated', 'version'])
-            metadata = {
-                'created': datetime.now().isoformat(),
-                'last_updated': datetime.now().isoformat(),
-                'version': '1.0'
-            }
-            meta_ws.append_row([metadata['created'], metadata['last_updated'], metadata['version']])
-        
-        return {
-            'sites': sites,
-            'metadata': metadata
-        }
-        
-    except Exception as e:
-        st.error(f"Error loading from Google Sheets: {e}")
-        # Return empty database as fallback
-        return {
-            'sites': {},
-            'metadata': {
-                'created': datetime.now().isoformat(),
-                'last_updated': datetime.now().isoformat(),
-                'version': '1.0'
-            }
-        }
+            
+        except Exception as e:
+            st.error(f"Error loading from Google Sheets: {type(e).__name__}: {e}")
+            if attempt < max_retries - 1:
+                st.warning(f"Retrying... (attempt {attempt + 2}/{max_retries})")
+                time.sleep(2 ** attempt)
+                continue
+            else:
+                # Return empty database as fallback
+                return {
+                    'sites': {},
+                    'metadata': {
+                        'created': datetime.now().isoformat(),
+                        'last_updated': datetime.now().isoformat(),
+                        'version': '1.0'
+                    }
+                }
 
 def save_database(db: Dict):
     """Save site database to Google Sheets."""
