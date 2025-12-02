@@ -2039,14 +2039,43 @@ def show_add_edit_site():
                 p_base = phases[i]
                 with cols[i]:
                     st.markdown(f"**Phase {i+1} Infra**")
-                    ic_cap = st.number_input(f"IC Capacity (MW)", key=f"p{i}_ic", value=p_data.get('ic_capacity', 0))
+                    
+                    # Safe IC capacity value
+                    raw_ic = p_data.get('ic_capacity', 0)
+                    try:
+                        safe_ic = int(float(raw_ic)) if raw_ic else 0
+                        safe_ic = max(0, min(safe_ic, 100000))
+                    except (ValueError, TypeError):
+                        safe_ic = 0
+                    ic_cap = st.number_input(f"IC Capacity (MW)", key=f"p{i}_ic", value=safe_ic, min_value=0, max_value=100000)
+                    
                     voltage = st.selectbox(f"Voltage (kV)", options=['13.8', '34.5', '69', '115', '138', '230', '345', '500'], key=f"p{i}_v",
                                          index=['13.8', '34.5', '69', '115', '138', '230', '345', '500'].index(p_data.get('voltage', '138')) if p_data.get('voltage') in ['13.8', '34.5', '69', '115', '138', '230', '345', '500'] else 4)
-                    service = st.selectbox(f"Service Type", options=['Transmission', 'Distribution'], key=f"p{i}_svc",
-                                         index=['Transmission', 'Distribution'].index(p_data.get('service_type', 'Transmission')))
-                    sub_status = st.selectbox(f"Substation", options=['Existing', 'Upgrade Needed', 'New Build'], key=f"p{i}_sub",
-                                            index=['Existing', 'Upgrade Needed', 'New Build'].index(p_data.get('substation_status', 'New Build')))
-                    dist = st.number_input(f"Dist. to Trans (mi)", key=f"p{i}_dist", value=p_data.get('trans_dist', 0.0))
+                    
+                    # Safe service type
+                    service_options = ['Transmission', 'Distribution']
+                    current_service = p_data.get('service_type', 'Transmission')
+                    if current_service not in service_options:
+                        current_service = 'Transmission'
+                    service = st.selectbox(f"Service Type", options=service_options, key=f"p{i}_svc",
+                                         index=service_options.index(current_service))
+                    
+                    # Safe substation status
+                    sub_options = ['Existing', 'Upgrade Needed', 'New Build']
+                    current_sub = p_data.get('substation_status', 'New Build')
+                    if current_sub not in sub_options:
+                        current_sub = 'New Build'
+                    sub_status = st.selectbox(f"Substation", options=sub_options, key=f"p{i}_sub",
+                                            index=sub_options.index(current_sub))
+                    
+                    # Safe distance value
+                    raw_dist = p_data.get('trans_dist', 0.0)
+                    try:
+                        safe_dist = float(raw_dist) if raw_dist else 0.0
+                        safe_dist = max(0.0, min(safe_dist, 1000.0))
+                    except (ValueError, TypeError):
+                        safe_dist = 0.0
+                    dist = st.number_input(f"Dist. to Trans (mi)", key=f"p{i}_dist", value=safe_dist, min_value=0.0, max_value=1000.0)
                     
                     p_base.update({
                         'ic_capacity': ic_cap, 'voltage': voltage, 'service_type': service,
