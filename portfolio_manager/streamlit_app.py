@@ -1807,6 +1807,9 @@ def show_site_details(site_id: str):
         with col2:
             st.markdown("**Onsite Generation**")
             gen = site.get('onsite_gen', {})
+            # Ensure gen is a dict
+            if not isinstance(gen, dict):
+                gen = {}
             st.write(f"**Gas:** {gen.get('gas_mw', 0)} MW ({gen.get('gas_status', 'N/A')})")
             st.write(f"**Solar:** {gen.get('solar_mw', 0)} MW")
             st.write(f"**Battery:** {gen.get('batt_mw', 0)} MW / {gen.get('batt_mwh', 0)} MWh")
@@ -1814,10 +1817,17 @@ def show_site_details(site_id: str):
     with tab3:
         st.subheader("Capacity Trajectory")
         schedule = site.get('schedule', {})
+        # Ensure schedule is a dict
+        if not isinstance(schedule, dict):
+            schedule = {}
+        
         if schedule:
             sched_data = []
             for y in range(2025, 2036):
                 yd = schedule.get(str(y), {})
+                # Ensure yd is a dict
+                if not isinstance(yd, dict):
+                    yd = {}
                 sched_data.append({
                     'Year': str(y),
                     'Interconnect MW': yd.get('ic_mw', 0),
@@ -1834,6 +1844,10 @@ def show_site_details(site_id: str):
     with tab4:
         st.subheader("Non-Power Items")
         np = site.get('non_power', {})
+        # Ensure np is a dict
+        if not isinstance(np, dict):
+            np = {}
+        
         col1, col2 = st.columns(2)
         with col1:
             st.write(f"**Zoning:** {np.get('zoning_status', 'N/A')}")
