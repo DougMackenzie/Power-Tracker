@@ -1941,8 +1941,16 @@ def show_add_edit_site():
                                    index=list(STATE_PROFILES.keys()).index(site.get('state')) + 1 if site.get('state') in STATE_PROFILES else 0)
                 utility = st.text_input("Utility*", value=site.get('utility', ''))
             with col2:
-                target_mw = st.number_input("Target Capacity (MW)*", value=site.get('target_mw', 0))
-                acreage = st.number_input("Acreage*", value=site.get('acreage', 0))
+                # Safe numeric values
+                def safe_number(val, default=0):
+                    try:
+                        num = int(float(val)) if val else default
+                        return max(0, min(num, 100000))  # Reasonable cap for MW/acreage
+                    except (ValueError, TypeError):
+                        return default
+                
+                target_mw = st.number_input("Target Capacity (MW)*", value=safe_number(site.get('target_mw', 0)), min_value=0, max_value=100000)
+                acreage = st.number_input("Acreage*", value=safe_number(site.get('acreage', 0)), min_value=0, max_value=100000)
                 iso = st.selectbox("ISO/RTO", options=['SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC', 'NYISO', 'ISO-NE'],
                                  index=['SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC', 'NYISO', 'ISO-NE'].index(site.get('iso')) if site.get('iso') in ['SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC', 'NYISO', 'ISO-NE'] else 0)
             with col3:
@@ -1971,7 +1979,14 @@ def show_add_edit_site():
                 p_data = current_phases[i] if i < len(current_phases) else {}
                 with cols[i]:
                     st.markdown(f"**Phase {i+1}**")
-                    mw = st.number_input(f"MW", key=f"p{i}_mw", value=p_data.get('mw', 0))
+                    # Safe MW value - cap at JavaScript safe integer limit
+                    raw_mw = p_data.get('mw', 0)
+                    try:
+                        safe_mw = int(float(raw_mw)) if raw_mw else 0
+                        safe_mw = max(0, min(safe_mw, 9007199254740991))  # JS Number.MAX_SAFE_INTEGER
+                    except (ValueError, TypeError):
+                        safe_mw = 0
+                    mw = st.number_input(f"MW", key=f"p{i}_mw", value=safe_mw, min_value=0, max_value=100000)
                     
                     scr = st.selectbox(f"Screening Study", options=['Not Started', 'Initiated', 'Complete'], key=f"p{i}_scr",
                                      index=['Not Started', 'Initiated', 'Complete'].index(p_data.get('screening_status', 'Not Started')))
