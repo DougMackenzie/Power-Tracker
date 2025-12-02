@@ -1158,16 +1158,29 @@ CRITICAL RULES FOR SCHEDULE EXTRACTION:
 1. "Full interconnect rating" means IC capacity is at full target immediately
 2. "Ramps XMW/year via generation" means generation STARTS at X and ADDS X each year
 3. Values must be integers or floats, NOT strings
+4. ALWAYS populate schedule through year 2035, even after reaching target
 
 EXAMPLE INTERPRETATION:
 Input: "1.2GW site, full interconnect Jan 1 2028, ramps 250MW/year generation"
 Should extract:
-- IC reaches 1200 immediately in 2028
-- Generation starts at 250 in 2028, adds 250 each year
-- Schedule: 2028 has ic_mw=1200 and gen_mw=250
-- Schedule: 2029 has ic_mw=1200 and gen_mw=500 (250+250)
-- Schedule: 2030 has ic_mw=1200 and gen_mw=750 (500+250)
-- Continue until gen_mw reaches target or 2035
+- IC reaches 1200 immediately in 2028 and stays at 1200
+- Generation starts at 250 in 2028, adds 250 each year until reaching 1200
+- After reaching 1200, MAINTAIN that level through 2035
+
+Complete schedule extraction:
+{{
+  "2025": {{"ic_mw": 0, "gen_mw": 0}},
+  "2026": {{"ic_mw": 0, "gen_mw": 0}},
+  "2027": {{"ic_mw": 0, "gen_mw": 0}},
+  "2028": {{"ic_mw": 1200, "gen_mw": 250}},
+  "2029": {{"ic_mw": 1200, "gen_mw": 500}},
+  "2030": {{"ic_mw": 1200, "gen_mw": 750}},
+  "2031": {{"ic_mw": 1200, "gen_mw": 1000}},
+  "2032": {{"ic_mw": 1200, "gen_mw": 1200}},
+  "2033": {{"ic_mw": 1200, "gen_mw": 1200}},
+  "2034": {{"ic_mw": 1200, "gen_mw": 1200}},
+  "2035": {{"ic_mw": 1200, "gen_mw": 1200}}
+}}
 
 Return ONLY valid JSON with proper number types (not strings)."""
 
