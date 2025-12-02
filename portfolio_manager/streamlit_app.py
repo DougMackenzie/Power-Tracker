@@ -2090,21 +2090,39 @@ def show_add_edit_site():
         with tab4:
             st.subheader("Onsite Generation")
             gen = site.get('onsite_gen', {})
+            # Ensure gen is a dict
+            if not isinstance(gen, dict):
+                gen = {}
+            
+            # Safe number helper
+            def safe_gen_number(val, default=0):
+                try:
+                    num = float(val) if val else default
+                    return max(0, min(num, 100000))
+                except (ValueError, TypeError):
+                    return default
+            
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.markdown("🔥 **Natural Gas**")
-                gas_mw = st.number_input("Gas Capacity (MW)", value=gen.get('gas_mw', 0))
-                gas_dist = st.number_input("Dist. to Pipeline (mi)", value=gen.get('gas_dist', 0.0))
-                gas_status = st.selectbox("Gas Status", options=['None', 'Study', 'Permitting', 'Construction', 'Operational'],
-                                        index=['None', 'Study', 'Permitting', 'Construction', 'Operational'].index(gen.get('gas_status', 'None')))
+                gas_mw = st.number_input("Gas Capacity (MW)", value=safe_gen_number(gen.get('gas_mw', 0)), min_value=0.0, max_value=10000.0)
+                gas_dist = st.number_input("Dist. to Pipeline (mi)", value=safe_gen_number(gen.get('gas_dist', 0.0)), min_value=0.0, max_value=1000.0)
+                
+                # Safe gas status
+                gas_options = ['None', 'Study', 'Permitting', 'Construction', 'Operational']
+                current_gas_status = str(gen.get('gas_status', 'None'))
+                if current_gas_status not in gas_options:
+                    current_gas_status = 'None'
+                gas_status = st.selectbox("Gas Status", options=gas_options,
+                                        index=gas_options.index(current_gas_status))
             with col2:
                 st.markdown("☀️ **Solar**")
-                solar_mw = st.number_input("Solar Capacity (MW)", value=gen.get('solar_mw', 0))
-                solar_acres = st.number_input("Solar Acres", value=gen.get('solar_acres', 0))
+                solar_mw = st.number_input("Solar Capacity (MW)", value=safe_gen_number(gen.get('solar_mw', 0)), min_value=0.0, max_value=10000.0)
+                solar_acres = st.number_input("Solar Acres", value=safe_gen_number(gen.get('solar_acres', 0)), min_value=0.0, max_value=100000.0)
             with col3:
                 st.markdown("🔋 **Battery Storage**")
-                batt_mw = st.number_input("BESS Power (MW)", value=gen.get('batt_mw', 0))
-                batt_mwh = st.number_input("BESS Energy (MWh)", value=gen.get('batt_mwh', 0))
+                batt_mw = st.number_input("BESS Power (MW)", value=safe_gen_number(gen.get('batt_mw', 0)), min_value=0.0, max_value=10000.0)
+                batt_mwh = st.number_input("BESS Energy (MWh)", value=safe_gen_number(gen.get('batt_mwh', 0)), min_value=0.0, max_value=100000.0)
             
             onsite_gen = {
                 'gas_mw': gas_mw, 'gas_dist': gas_dist, 'gas_status': gas_status,
