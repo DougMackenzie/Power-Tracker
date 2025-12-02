@@ -1187,33 +1187,67 @@ def show_extracted_site_form(extracted_data):
                     
                     # Parse COD date from extracted data or calculate from timeline
                     cod_date = None
+                    timeline_info = extracted_data.get('timeline_to_cod', '')
+                    
+                    # Try explicit COD date first
                     if extracted_data.get('cod_date'):
                         try:
                             cod_date = datetime.datetime.strptime(extracted_data['cod_date'], '%Y-%m-%d').date()
                         except:
                             pass
-                    elif power_date:
+                    
+                    # Calculate from timeline if available (e.g., "36 months from IA execution")
+                    if not cod_date and timeline_info:
+                        import re
+                        months_match = re.search(r'(\d+)\s*months?', timeline_info.lower())
+                        if months_match:
+                            months = int(months_match.group(1))
+                            today = datetime.date.today()
+                            cod_date = today + datetime.timedelta(days=months * 30)
+                    
+                    # Fallback to form input
+                    if not cod_date and power_date:
                         cod_date = power_date
                     
-                    # Generate capacity schedule if we have COD
+                    # Get generation mix from extracted data
+                    generation = extracted_data.get('generation', {})
+                    gas_mw = generation.get('gas_mw', 0) if generation else 0
+                    solar_mw = generation.get('solar_mw', 0) if generation else 0
+                    battery_mw = generation.get('battery_mw', 0) if generation else 0
+                    battery_mwh = generation.get('battery_mwh', 0) if generation else 0
+                    
+                    # Generate capacity schedule from phases if available
                     schedule = []
-                    if cod_date and target_mw > 0:
-                        # Build ramp: assume 200MW/year or all at once if <200MW
-                        annual_ramp = min(200, target_mw)
-                        years_to_full = int(target_mw / annual_ramp)
-                        
-                        current_mw = 0
-                        for year_offset in range(years_to_full + 1):
-                            increment = min(annual_ramp, target_mw - current_mw)
-                            if increment > 0:
+                    phases_data = extracted_data.get('phases', [])
+                    
+                    if phases_data and isinstance(phases_data, list) and len(phases_data) > 0:
+                        # Use extracted phase information
+                        for phase in phases_data:
+                            phase_cod = None
+                            if phase.get('cod_date'):
+                                try:
+                                    phase_cod = datetime.datetime.strptime(phase['cod_date'], '%Y-%m-%d').date()
+                                except:
+                                    pass
+                            
+                            if phase_cod and phase.get('interconnection_mw'):
                                 schedule.append({
-                                    'date': (cod_date.replace(year=cod_date.year + year_offset)).isoformat(),
-                                    'interconnection_mw': current_mw + increment,
-                                    'gas_mw': 0,
-                                    'solar_mw': 0,
-                                    'battery_mw': 0
+                                    'date': phase_cod.isoformat(),
+                                    'interconnection_mw': phase['interconnection_mw'],
+                                    'gas_mw': gas_mw if phase.get('phase_number') == 1 else 0,
+                                    'solar_mw': solar_mw if phase.get('phase_number') == 1 else 0,
+                                    'battery_mw': battery_mw if phase.get('phase_number') == 1 else 0
                                 })
-                                current_mw += increment
+                    
+                    # If no phases extracted, create single entry at COD with full capacity
+                    elif cod_date and target_mw > 0:
+                        schedule.append({
+                            'date': cod_date.isoformat(),
+                            'interconnection_mw': target_mw,
+                            'gas_mw': gas_mw or 0,
+                            'solar_mw': solar_mw or 0,
+                            'battery_mw': battery_mw or 0
+                        })
                     
                     # Determine study completion dates based on current status
                     today = datetime.date.today()
@@ -1260,6 +1294,15 @@ def show_extracted_site_form(extracted_data):
                         
                         # Capacity Schedule
                         'schedule': schedule,
+                        
+                        # Onsite Generation
+                        'onsite_gen': {
+                            'gas_mw': gas_mw,
+                            'gas_status': 'Planned' if gas_mw > 0 else 'N/A',
+                            'solar_mw': solar_mw,
+                            'batt_mw': battery_mw,
+                            'batt_mwh': battery_mwh
+                        },
                         
                         # Developer/Contact Info
                         'developer': extracted_data.get('developer', ''),

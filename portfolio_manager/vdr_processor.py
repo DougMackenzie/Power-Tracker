@@ -128,11 +128,10 @@ Extract the following fields if mentioned (return null if not found):
   "site_name": "Site name or project name",
   "state": "2-letter state code (TX, OK, GA, etc.)",
   "utility": "Utility name (Oncor, PSO, AEP, Duke Energy, Georgia Power, Dominion, etc.)",
-  "target_mw": "Integer MW capacity",
+  "target_mw": "Total interconnection MW capacity",
   "acreage": "Integer acreage",
   "study_status": "One of: not_started, screening_study, contract_study, loa, energy_contract",
   "land_control": "One of: owned, option, loi, negotiating, none",
-  "power_date": "Target power date in YYYY-MM-DD format",
   "voltage": "Interconnection voltage (e.g., 138kV, 345kV)",
   "iso": "ISO/RTO (PJM, ERCOT, SPP, MISO, etc.)",
   "substation": "Nearest substation name",
@@ -141,7 +140,29 @@ Extract the following fields if mentioned (return null if not found):
   "interconnection_cost": "Estimated interconnection cost in millions",
   "developer": "Developer name if mentioned",
   "queue_position": "Queue position number if mentioned",
-  "cod_date": "Commercial Operation Date if mentioned",
+  
+  "timeline_to_cod": "Timeline description (e.g., '36 months from IA execution', '24 months from LOA')",
+  "cod_date": "Commercial Operation Date in YYYY-MM-DD if explicitly stated",
+  "ia_execution_date": "Interconnection Agreement execution date if mentioned",
+  
+  "phases": [
+    {{
+      "phase_number": "Phase number (1, 2, etc.)",
+      "interconnection_mw": "Interconnection capacity for this phase in MW",
+      "cod_date": "COD for this phase in YYYY-MM-DD",
+      "timeline": "Timeline description for this phase"
+    }}
+  ],
+  
+  "generation": {{
+    "gas_mw": "Natural gas generation capacity in MW",
+    "solar_mw": "Solar generation capacity in MW",
+    "battery_mw": "Battery storage capacity in MW",
+    "battery_mwh": "Battery storage energy capacity in MWh",
+    "other_mw": "Other generation types in MW"
+  }},
+  
+  "load_profile": "Description of expected load growth or ramp (e.g., '200MW per year starting 2025')",
   "notes": "Any other relevant information including POI details, timeline notes, risks, opportunities"
 }}
 
@@ -150,6 +171,11 @@ Study status mappings (map old terminology to new phasing structure):
 - "Facilities Study" / "FS" / "Contract Study" → contract_study
 - "Facilities Agreement" / "FA" / "Letter of Agreement" / "LOA" → loa
 - "Interconnection Agreement" / "IA" / "Energy Contract" → energy_contract
+
+Timeline parsing instructions:
+- If you see "X months from [event]", extract timeline_to_cod and the reference event
+- Calculate actual dates when possible based on today's date (December 1, 2025)
+- Extract phase-specific timelines if project is described in multiple phases
 
 Return ONLY valid JSON. Use null for unknown values."""
 
