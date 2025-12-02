@@ -85,35 +85,52 @@ def load_database() -> Dict:
                 
             site_id = row['site_id']
             
+            # Safe conversion helper for numeric fields
+            def safe_int(value, default=0):
+                if not value or value == '':
+                    return default
+                try:
+                    return int(float(value))  # Handle float strings like "100.0"
+                except (ValueError, TypeError):
+                    return default
+            
             # Reconstruct site dictionary
             site = {
-                'name': row.get('name', ''),
-                'state': row.get('state', ''),
-                'utility': row.get('utility', ''),
-                'target_mw': int(row.get('target_mw', 0)) if row.get('target_mw') else 0,
-                'acreage': int(row.get('acreage', 0)) if row.get('acreage') else 0,
-                'iso': row.get('iso', ''),
-                'county': row.get('county', ''),
-                'developer': row.get('developer', ''),
-                'land_status': row.get('land_status', ''),
-                'community_support': row.get('community_support', ''),
-                'political_support': row.get('political_support', ''),
-                'dev_experience': row.get('dev_experience', ''),
-                'capital_status': row.get('capital_status', ''),
-                'financial_status': row.get('financial_status', ''),
-                'last_updated': row.get('last_updated', ''),
+                'name': str(row.get('name', '')),
+                'state': str(row.get('state', '')),
+                'utility': str(row.get('utility', '')),
+                'target_mw': safe_int(row.get('target_mw'), 0),
+                'acreage': safe_int(row.get('acreage'), 0),
+                'iso': str(row.get('iso', '')),
+                'county': str(row.get('county', '')),
+                'developer': str(row.get('developer', '')),
+                'land_status': str(row.get('land_status', '')),
+                'community_support': str(row.get('community_support', '')),
+                'political_support': str(row.get('political_support', '')),
+                'dev_experience': str(row.get('dev_experience', '')),
+                'capital_status': str(row.get('capital_status', '')),
+                'financial_status': str(row.get('financial_status', '')),
+                'last_updated': str(row.get('last_updated', '')),
             }
             
-            # Parse JSON fields
+            # Parse JSON fields with better error handling
             for json_field in ['phases', 'onsite_gen', 'schedule', 'non_power', 'risks', 'opps', 'questions']:
                 json_key = f'{json_field}_json'
-                if row.get(json_key):
+                default_value = [] if json_field in ['risks', 'opps', 'questions', 'phases'] else {}
+                
+                json_str = row.get(json_key, '')
+                if json_str and json_str.strip():
                     try:
-                        site[json_field] = json.loads(row[json_key])
-                    except:
-                        site[json_field] = [] if json_field in ['risks', 'opps', 'questions'] else {}
+                        parsed = json.loads(json_str)
+                        # Validate the parsed data type
+                        if json_field in ['risks', 'opps', 'questions', 'phases']:
+                            site[json_field] = parsed if isinstance(parsed, list) else default_value
+                        else:
+                            site[json_field] = parsed if isinstance(parsed, dict) else default_value
+                    except json.JSONDecodeError:
+                        site[json_field] = default_value
                 else:
-                    site[json_field] = [] if json_field in ['risks', 'opps', 'questions'] else {}
+                    site[json_field] = default_value
             
             sites[site_id] = site
         
@@ -273,11 +290,20 @@ def calculate_power_pathway_score(site: Dict) -> float:
     """Calculate power pathway score (0-100) based on detailed phasing."""
     score = 0
     phases = site.get('phases', [])
+    
+    # Ensure phases is a list
+    if not isinstance(phases, list):
+        phases = []
+    
     if not phases: return 0
     
     # Score based on most advanced phase
     max_phase_score = 0
     for p in phases:
+        # Ensure each phase is a dictionary
+        if not isinstance(p, dict):
+            continue
+            
         p_score = 0
         if p.get('energy_contract_status') == 'Executed': p_score = 100
         elif p.get('loa_status') == 'Executed': p_score = 75
@@ -289,10 +315,13 @@ def calculate_power_pathway_score(site: Dict) -> float:
     score += max_phase_score * 0.7  # 70% weight on study status
     
     # Timeline score
-    timeline_months = site.get('power_timeline_months', 60)
-    if timeline_months <= 36: score += 30
-    elif timeline_months <= 48: score += 20
-    elif timeline_months <= 60: score += 10
+    try:
+        timeline_months = int(site.get('power_timeline_months', 60))
+        if timeline_months <= 36: score += 30
+        elif timeline_months <= 48: score += 20
+        elif timeline_months <= 60: score += 10
+    except (TypeError, ValueError):
+        pass
     
     return min(score, 100)
 
@@ -333,6 +362,11 @@ def calculate_execution_score(site: Dict) -> float:
     
     # Permitting/Zoning (40 pts)
     np = site.get('non_power', {})
+    
+    # Ensure np is a dict
+    if not isinstance(np, dict):
+        np = {}
+    
     zoning = np.get('zoning_status', 'Not Started')
     if zoning == 'Approved': score += 40
     elif zoning == 'Submitted': score += 20
@@ -344,7 +378,16 @@ def calculate_fundamentals_score(site: Dict) -> float:
     """Calculate site fundamentals score (0-100)."""
     score = 0
     np = site.get('non_power', {})
+    
+    # Ensure np is a dict
+    if not isinstance(np, dict):
+        np = {}
+    
     phases = site.get('phases', [])
+    
+    # Ensure phases is a list
+    if not isinstance(phases, list):
+        phases = []
     
     # Land Control (20 pts)
     land = site.get('land_status', 'None')
@@ -363,16 +406,26 @@ def calculate_fundamentals_score(site: Dict) -> float:
     # Transmission Distance (30 pts)
     min_dist = 999
     for p in phases:
-        min_dist = min(min_dist, p.get('trans_dist', 999))
+        # Ensure each phase is a dictionary
+        if isinstance(p, dict) and 'trans_dist' in p:
+            try:
+                trans_dist = float(p.get('trans_dist', 999))
+                min_dist = min(min_dist, trans_dist)
+            except (TypeError, ValueError):
+                continue
     
     if min_dist <= 1: score += 30
     elif min_dist <= 5: score += 20
     elif min_dist <= 10: score += 10
     
     # Acreage/Density (20 pts)
-    target_mw = site.get('target_mw', 0)
-    acreage = site.get('acreage', 0)
-    if acreage > 0 and target_mw/acreage <= 5: score += 20
+    try:
+        target_mw = float(site.get('target_mw', 0))
+        acreage = float(site.get('acreage', 0))
+        if acreage > 0 and target_mw > 0 and (target_mw / acreage) <= 5:
+            score += 20
+    except (TypeError, ValueError, ZeroDivisionError):
+        pass
     
     return min(score, 100)
 
