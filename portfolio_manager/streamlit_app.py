@@ -1139,10 +1139,17 @@ def show_extracted_site_form(extracted_data):
                                       if extracted_data.get('state') in ['OK', 'TX', 'WY', 'GA', 'VA', 'OH', 'IN', 'PA', 'NV', 'CA'] else 0))
             
             utility = st.text_input("Utility *", value=extracted_data.get('utility', ''))
-            target_mw = st.number_input("Target MW *", min_value=1, value=max(1, extracted_data.get('target_mw', 500)), step=50)
+            
+            # Safely handle target_mw which might be None
+            extracted_mw = extracted_data.get('target_mw')
+            default_mw = int(extracted_mw) if extracted_mw and str(extracted_mw).replace('.','').isdigit() else 500
+            target_mw = st.number_input("Target MW *", min_value=1, value=max(1, default_mw), step=50)
         
         with col2:
-            acreage = st.number_input("Acreage", min_value=0, value=max(0, extracted_data.get('acreage', 0)))
+            # Safely handle acreage which might be None
+            extracted_acreage = extracted_data.get('acreage')
+            default_acreage = int(extracted_acreage) if extracted_acreage and str(extracted_acreage).replace('.','').isdigit() else 0
+            acreage = st.number_input("Acreage", min_value=0, value=max(0, default_acreage))
             
             # New phasing terminology
             study_status_options = ['not_started', 'screening_study', 'contract_study', 'loa', 'energy_contract']
