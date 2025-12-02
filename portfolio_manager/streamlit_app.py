@@ -1089,153 +1089,88 @@ def extract_site_from_conversation(messages):
 Conversation:
 {conversation_text}
 
-Extract a complete JSON object with the following structure. Use null for any field not mentioned in the conversation:
+You must return a valid JSON object with this structure:
 
 {{
-  // Basic Information
-  "state": "2-letter state code (TX, OK, GA, OH, etc.) or null",
-  "utility": "Utility name (Oncor, PSO, AEP, Duke Energy, Georgia Power, etc.) or null",
-  "target_mw": "Total target capacity in MW (integer) or null",
-  "acreage": "Site acreage (integer) or null",
+  "state": "2-letter state code or null",
+  "utility": "Utility name or null",
+  "target_mw": 1200,
+  "acreage": 200,
   "county": "County name or null",
   "developer": "Developer name or null",
-  "location_hint": "City or region name for suggested site name, or null",
+  "location_hint": "City/region for site name or null",
+  "land_status": "None/Option/Leased/Owned or null",
+  "community_support": "Strong/Neutral/Opposition or null",
+  "political_support": "High/Neutral/Low or null",
+  "iso": "ISO name or null",
+  "dev_experience": "High/Medium/Low or null",
+  "capital_status": "Secured/Partial/None or null",
+  "financial_status": "Strong/Moderate/Weak or null",
   
-  // Land & Permitting
-  "land_status": "One of: None, Option, Leased, Owned, or null",
-  "community_support": "One of: Strong, Neutral, Opposition, or null",
-  "political_support": "One of: High, Neutral, Low, or null",
-  
-  // Phasing - Array of phase objects (extract ALL phases mentioned)
   "phases": [
     {{
-      "mw": "Phase MW capacity (integer)",
-      "screening_status": "One of: Not Started, Initiated, Complete",
-      "contract_study_status": "One of: Not Started, Initiated, Complete",
-      "loa_status": "One of: Not Started, Drafted, Executed",
-      "energy_contract_status": "One of: Not Started, Drafted, Executed",
-      "target_date": "YYYY-MM-DD format or null",
-      "voltage": "One of: 13.8, 34.5, 69, 115, 138, 230, 345, 500 (string) or null",
-      "service_type": "One of: Transmission, Distribution, or null",
-      "substation_status": "One of: Existing, Upgrade Needed, New Build, or null",
-      "trans_dist": "Distance to transmission in miles (float) or null",
-      "ic_capacity": "Interconnection capacity in MW (integer) or null"
+      "mw": 1200,
+      "screening_status": "Not Started",
+      "contract_study_status": "Complete",
+      "loa_status": "Executed",
+      "energy_contract_status": "Not Started",
+      "target_date": "2028-01-01",
+      "voltage": "345",
+      "service_type": "Transmission",
+      "substation_status": "Existing",
+      "trans_dist": 5.0,
+      "ic_capacity": 1200
     }}
-    // Include ALL phases if multiple are mentioned
   ],
   
-  // Capacity Schedule - Year-by-year power trajectory
   "schedule": {{
-    "2025": {{"ic_mw": 0, "gen_mw": 0}},
-    "2026": {{"ic_mw": 0, "gen_mw": 0}},
-    // ... populate years based on mentioned timeline and ramp schedule
-    // If MW/year increment is mentioned (e.g., "200MW/year from 2029-2034"), calculate each year
-    // ic_mw = interconnection capacity that year
-    // gen_mw = generation capacity that year
+    "2028": {{"ic_mw": 1200, "gen_mw": 250}},
+    "2029": {{"ic_mw": 1200, "gen_mw": 500}},
+    "2030": {{"ic_mw": 1200, "gen_mw": 750}}
   }},
   
-  // Onsite Generation
   "onsite_gen": {{
-    "gas_mw": "Gas generation capacity in MW (float) or null",
-    "gas_dist": "Distance to gas pipeline in miles (float) or null",
-    "gas_status": "One of: None, Study, Permitting, Construction, Operational, or null",
-    "solar_mw": "Solar capacity in MW (float) or null",
-    "solar_acres": "Solar acreage (float) or null",
-    "batt_mw": "Battery power in MW (float) or null",
-    "batt_mwh": "Battery energy in MWh (float) or null"
+    "gas_mw": 0,
+    "gas_dist": 0,
+    "gas_status": "None",
+    "solar_mw": 0,
+    "solar_acres": 0,
+    "batt_mw": 0,
+    "batt_mwh": 0
   }},
   
-  // Non-Power Infrastructure
   "non_power": {{
-    "zoning_status": "One of: Not Started, Pre-App, Submitted, Approved, or null",
-    "water_source": "Description or null",
-    "water_cap": "Water capacity or null",
-    "fiber_status": "One of: Unknown, Nearby, At Site, Lit Building, or null",
-    "fiber_provider": "Provider name or null",
-    "env_issues": "Description or null"
+    "zoning_status": "Not Started",
+    "water_source": "Municipal",
+    "water_cap": "10000",
+    "fiber_status": "Unknown",
+    "fiber_provider": null,
+    "env_issues": null
   }},
   
-  // Project Status
-  "dev_experience": "One of: High, Medium, Low, or null",
-  "capital_status": "One of: Secured, Partial, None, or null",
-  "financial_status": "One of: Strong, Moderate, Weak, or null",
-  
-  // Strategic Analysis
-  "risks": ["Risk 1", "Risk 2", ...] or null,
-  "opps": ["Opportunity 1", "Opportunity 2", ...] or null,
-  "questions": ["Question 1", "Question 2", ...] or null
+  "risks": ["Risk 1", "Risk 2"],
+  "opps": ["Opportunity 1"],
+  "questions": ["Question 1"]
 }}
 
-IMPORTANT EXTRACTION RULES:
+CRITICAL RULES FOR SCHEDULE EXTRACTION:
 
-1. **Phases**: If multiple phases are mentioned, create separate objects for each. Extract all details for each phase.
+1. "Full interconnect rating" means IC capacity is at full target immediately
+2. "Ramps XMW/year via generation" means generation STARTS at X and ADDS X each year
+3. Values must be integers or floats, NOT strings
 
-2. **Schedule - CRITICAL INTERPRETATION RULES**:
-   
-   **Interconnection vs. Generation Capacity:**
-   - "Full interconnect rating" / "interconnection" → ic_mw field
-   - "Generation capacity" / "energy procurement" / "load" → gen_mw field
-   
-   **Understanding "Ramps XMW/year":**
-   - "Ramps 250MW/year" means INCREMENTAL additions of 250MW each year
-   - NOT 250MW total per year, but 250MW ADDED each year
-   
-   **Example 1:**
-   Input: "Full interconnect rating on Jan 1, 2028, ramps 250MW/year via generation capacity"
-   Interpretation:
-   - IC capacity is IMMEDIATELY 1200MW (or whatever "full" means) starting 2028
-   - Generation STARTS at 250MW in 2028
-   - ADDS 250MW each subsequent year: 2029=500MW, 2030=750MW, 2031=1000MW, 2032=1200MW
-   
-   Output:
-   {
-     "2028": {"ic_mw": 1200, "gen_mw": 250},
-     "2029": {"ic_mw": 1200, "gen_mw": 500},
-     "2030": {"ic_mw": 1200, "gen_mw": 750},
-     "2031": {"ic_mw": 1200, "gen_mw": 1000},
-     "2032": {"ic_mw": 1200, "gen_mw": 1200},
-     "2033": {"ic_mw": 1200, "gen_mw": 1200}
-   }
-   
-   **Example 2:**
-   Input: "200MW Day 1 in Jan 2029, then scales 200MW/year until 1GW"
-   Interpretation:
-   - Starts with 200MW total (both IC and gen) in 2029
-   - ADDS 200MW each year until reaching 1000MW
-   
-   Output:
-   {
-     "2029": {"ic_mw": 200, "gen_mw": 200},
-     "2030": {"ic_mw": 400, "gen_mw": 400},
-     "2031": {"ic_mw": 600, "gen_mw": 600},
-     "2032": {"ic_mw": 800, "gen_mw": 800},
-     "2033": {"ic_mw": 1000, "gen_mw": 1000},
-     "2034": {"ic_mw": 1000, "gen_mw": 1000},
-     "2035": {"ic_mw": 1000, "gen_mw": 1000}
-   }
-   
-   **Key Points:**
-   - Ramp = INCREMENTAL (cumulative additions)
-   - Continue until reaching target capacity or 2035, whichever comes first
-   - After reaching target, maintain that level
-   - Fill all years from start year through 2035
+EXAMPLE INTERPRETATION:
+Input: "1.2GW site, full interconnect Jan 1 2028, ramps 250MW/year generation"
+Should extract:
+- IC reaches 1200 immediately in 2028
+- Generation starts at 250 in 2028, adds 250 each year
+- Schedule: 2028 has ic_mw=1200 and gen_mw=250
+- Schedule: 2029 has ic_mw=1200 and gen_mw=500 (250+250)
+- Schedule: 2030 has ic_mw=1200 and gen_mw=750 (500+250)
+- Continue until gen_mw reaches target or 2035
 
-3. **Voltage**: Extract from phrases like "345kV system", "138kV", "230kV interconnection"
+Return ONLY valid JSON with proper number types (not strings)."""
 
-4. **Study Status Mapping**:
-   - "Screening Study" → screening_status: Complete/Initiated/Not Started
-   - "System Impact Study / SIS" → contract_study_status: Complete/Initiated/Not Started
-   - "Facilities Study / FS" → use as contract_study_status if mentioned
-   - "LOA / Letter of Agreement" → loa_status: Executed/Drafted/Not Started
-   - "Energy Contract / PPA" → energy_contract_status: Executed/Drafted/Not Started
-
-5. **Land Status**: "under option" → Option, "owned" → Owned, "leased" → Leased
-
-6. **Dates**: Convert all dates to YYYY-MM-DD format. "Jan 2029" → "2029-01-01"
-
-7. **Strategic Items**: Extract any mentioned risks, opportunities, or open questions into arrays
-
-Return ONLY valid JSON. Be thorough - extract every detail mentioned in the conversation."""
 
     try:
         # Use Gemini API directly for extraction
