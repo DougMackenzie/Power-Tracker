@@ -2230,7 +2230,14 @@ def show_add_edit_site():
                 zoning = st.selectbox("Zoning Status", options=['Not Started', 'Pre-App', 'Submitted', 'Approved'],
                                     index=['Not Started', 'Pre-App', 'Submitted', 'Approved'].index(np.get('zoning_status', 'Not Started')))
                 water_src = st.text_input("Water Source", value=np.get('water_source', ''))
-                water_cap = st.number_input("Water Capacity (GPD)", value=np.get('water_cap', 0))
+                # Safe water capacity conversion
+                raw_water_cap = np.get('water_cap', 0)
+                try:
+                    safe_water_cap = int(float(raw_water_cap)) if raw_water_cap else 0
+                    safe_water_cap = max(0, min(safe_water_cap, 1000000))
+                except (ValueError, TypeError):
+                    safe_water_cap = 0
+                water_cap = st.number_input("Water Capacity (GPD)", value=safe_water_cap, min_value=0, max_value=1000000)
             with col2:
                 fiber_stat = st.selectbox("Fiber Status", options=['Unknown', 'Nearby', 'At Site', 'Lit Building'],
                                         index=['Unknown', 'Nearby', 'At Site', 'Lit Building'].index(np.get('fiber_status', 'Unknown')))
