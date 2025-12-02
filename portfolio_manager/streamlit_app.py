@@ -1948,8 +1948,13 @@ def show_add_edit_site():
             with col3:
                 county = st.text_input("County", value=site.get('county', ''))
                 developer = st.text_input("Developer", value=site.get('developer', ''))
-                land_status = st.selectbox("Land Status", options=['None', 'Option', 'Leased', 'Owned'],
-                                         index=['None', 'Option', 'Leased', 'Owned'].index(site.get('land_status', 'None')))
+                land_status_options = ['None', 'Option', 'Leased', 'Owned']
+                current_land_status = str(site.get('land_status', 'None'))
+                # Ensure the current value is in the options list
+                if current_land_status not in land_status_options:
+                    current_land_status = 'None'
+                land_status = st.selectbox("Land Status", options=land_status_options,
+                                          index=land_status_options.index(current_land_status))
                 date_str = st.date_input("Assessment Date", value=datetime.now())
 
         # --- Tab 2: Phasing & Studies ---
