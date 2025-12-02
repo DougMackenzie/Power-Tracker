@@ -2094,13 +2094,13 @@ def show_add_edit_site():
             if not isinstance(gen, dict):
                 gen = {}
             
-            # Safe number helper
-            def safe_gen_number(val, default=0):
+            # Safe number helper - always returns float
+            def safe_gen_number(val, default=0.0):
                 try:
-                    num = float(val) if val else default
-                    return max(0, min(num, 100000))
+                    num = float(val) if val else float(default)
+                    return float(max(0.0, min(num, 100000.0)))
                 except (ValueError, TypeError):
-                    return default
+                    return float(default)
             
             col1, col2, col3 = st.columns(3)
             with col1:
