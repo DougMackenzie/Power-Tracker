@@ -1389,38 +1389,31 @@ def show_extracted_site_form(extracted_data):
                     battery_mw = generation.get('battery_mw', 0) if generation else 0
                     battery_mwh = generation.get('battery_mwh', 0) if generation else 0
                     
-                    # Generate capacity schedule from phases if available
-                    schedule = []
-                    phases_data = extracted_data.get('phases', [])
+                    # Use schedule data directly from extraction if available
+                    schedule_data = extracted_data.get('schedule', {})
+                    if not isinstance(schedule_data, dict):
+                        schedule_data = {}
                     
-                    if phases_data and isinstance(phases_data, list) and len(phases_data) > 0:
-                        # Use extracted phase information
-                        for phase in phases_data:
-                            phase_cod = None
-                            if phase.get('cod_date'):
-                                try:
-                                    phase_cod = datetime.datetime.strptime(phase['cod_date'], '%Y-%m-%d').date()
-                                except:
-                                    pass
-                            
-                            if phase_cod and phase.get('interconnection_mw'):
-                                schedule.append({
-                                    'date': phase_cod.isoformat(),
-                                    'interconnection_mw': phase['interconnection_mw'],
-                                    'gas_mw': gas_mw if phase.get('phase_number') == 1 else 0,
-                                    'solar_mw': solar_mw if phase.get('phase_number') == 1 else 0,
-                                    'battery_mw': battery_mw if phase.get('phase_number') == 1 else 0
-                                })
+                    # Use phases data from extraction if available
+                    phases_list = extracted_data.get('phases', [])
+                    if not isinstance(phases_list, list):
+                        phases_list = []
                     
-                    # If no phases extracted, create single entry at COD with full capacity
-                    elif cod_date and target_mw > 0:
-                        schedule.append({
-                            'date': cod_date.isoformat(),
-                            'interconnection_mw': target_mw,
-                            'gas_mw': gas_mw or 0,
-                            'solar_mw': solar_mw or 0,
-                            'battery_mw': battery_mw or 0
-                        })
+                    # If no phases from extraction, create a default phase
+                    if not phases_list:
+                        phases_list = [{
+                            'mw': target_mw,
+                            'voltage': extracted_data.get('voltage', ''),
+                            'service_type': extracted_data.get('service_type', ''),
+                            'substation_status': extracted_data.get('substation', ''),
+                            'trans_dist': extracted_data.get('transmission_distance', ''),
+                            'screening_status': 'Not Started',
+                            'contract_study_status': 'Not Started',
+                            'loa_status': 'Not Started',
+                            'energy_contract_status': 'Not Started',
+                            'target_date': power_date.isoformat() if power_date else '',
+                            'ic_capacity': target_mw
+                        }]
                     
                     # Determine study completion dates based on current status
                     today = datetime.date.today()
@@ -1443,42 +1436,40 @@ def show_extracted_site_form(extracted_data):
                         'target_mw': target_mw,
                         'acreage': acreage,
                         'study_status': study_status,
-                        'land_control': land_control,
+                        'land_status': land_control if land_control else 'None',
                         'power_date': power_date.isoformat() if power_date else '',
-                        'stage': 'Pre-Development',
+                        'community_support': extracted_data.get('community_support', 'Neutral'),
+                        'political_support': extracted_data.get('political_support', 'Neutral'),
+                        'county': extracted_data.get('county', ''),
+                        'developer': extracted_data.get('developer', ''),
+                        'dev_experience': extracted_data.get('dev_experience', 'Medium'),
+                        'capital_status': extracted_data.get('capital_status', 'None'),
+                        'financial_status': extracted_data.get('financial_status', 'Moderate'),
+                        'iso': extracted_data.get('iso', ''),
+                        'last_updated': datetime.datetime.now().isoformat(),
                         
-                        # Power System - Create Phase 1 with extracted infrastructure data
-                        'phases': [{
-                            'phase': 1,
-                            'mw': extracted_data.get('target_mw', target_mw),
-                            'service_type': extracted_data.get('service_type', ''),
-                            'substation_status': extracted_data.get('substation', ''),  # Map substation -> substation_status
-                            'trans_dist': extracted_data.get('transmission_distance', ''),  # Map transmission_distance -> trans_dist
-                            'voltage': extracted_data.get('voltage', ''),
-                            'iso': extracted_data.get('iso', ''),
-                            'interconnection_cost': extracted_data.get('interconnection_cost', ''),
-                            'queue_position': extracted_data.get('queue_position', ''),
-                            'screening_study': study_dates.get('screening_study'),
-                            'contract_study': study_dates.get('contract_study'),
-                            'loa': study_dates.get('loa'),
-                            'energy_contract': study_dates.get('energy_contract'),
-                            'cod_date': cod_date.isoformat() if cod_date else ''
-                        }],
+                        # Phases - Use extracted phases data
+                        'phases': phases_list,
                         
-                        # Capacity Schedule
-                        'schedule': schedule,
+                        # Capacity Schedule - Use extracted schedule in year-keyed dictionary format
+                        'schedule': schedule_data,
                         
-                        # Onsite Generation
-                        'onsite_gen': {
+                        # Onsite Generation - Use extracted onsite_gen if available
+                        'onsite_gen': extracted_data.get('onsite_gen', {
                             'gas_mw': gas_mw or 0,
-                            'gas_status': 'Planned' if (gas_mw and gas_mw > 0) else 'N/A',
+                            'gas_status': 'Planned' if (gas_mw and gas_mw > 0) else 'None',
                             'solar_mw': solar_mw or 0,
                             'batt_mw': battery_mw or 0,
                             'batt_mwh': battery_mwh or 0
-                        },
+                        }),
                         
-                        # Developer/Contact Info
-                        'developer': extracted_data.get('developer', ''),
+                        # Non-Power Infrastructure
+                        'non_power': extracted_data.get('non_power', {}),
+                        
+                        # Strategic Analysis
+                        'risks': extracted_data.get('risks', []),
+                        'opps': extracted_data.get('opps', []),
+                        'questions': extracted_data.get('questions', []),
                         
                         # Notes (comprehensive from all extracted info)
                         'notes': extracted_data.get('notes', f"Created from VDR Upload on {datetime.date.today().isoformat()}"),
