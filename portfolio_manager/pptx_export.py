@@ -1154,7 +1154,7 @@ def export_site_to_pptx(
         # Title
         p = tf.paragraphs[0]
         p.text = "Critical Path to Power"
-        p.font.size = Pt(16)
+        p.font.size = Pt(18)
         p.font.bold = True
         p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
         p.space_after = Pt(10)
@@ -1164,7 +1164,7 @@ def export_site_to_pptx(
             # Phase header
             p = tf.add_paragraph()
             p.text = f"Phase {phase.phase_num}: {int(phase.target_mw)} MW @ {phase.voltage_kv} kV"
-            p.font.size = Pt(13)
+            p.font.size = Pt(14)
             p.font.bold = True
             p.font.color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
             p.space_after = Pt(4)
@@ -1172,7 +1172,7 @@ def export_site_to_pptx(
             # Target date
             p = tf.add_paragraph()
             p.text = f"Target: {phase.target_online}"
-            p.font.size = Pt(9)
+            p.font.size = Pt(10)
             p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
             p.space_after = Pt(6)
             
@@ -1207,7 +1207,7 @@ def export_site_to_pptx(
                 # Status text run
                 run = p.add_run()
                 run.text = f"{study_name}: {status}"
-                run.font.size = Pt(9)
+                run.font.size = Pt(10)
                 run.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
                 
                 p.space_after = Pt(3)
@@ -1438,43 +1438,82 @@ def export_site_to_pptx(
         defaults = site_state_defaults.get(state_code, site_state_defaults.get('OK'))
         state_name = site_data.get('state', defaults.get('name', 'State'))
         
-        # === TOP-LEFT QUADRANT: State Comparison (Simplified) ===
-        tl_title = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(6.0), Inches(0.4))
-        p = tl_title.text_frame.paragraphs[0]
-        p.text = "New Generation Capacity: State Comparison"
-        p.font.size = Pt(12)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
         
-        # Simplified state comparison text
-        comp_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.5), Inches(6.0), Inches(2.3))
-        tf = comp_box.text_frame
-        tf.word_wrap = True
-        
-        # Add state comparisons as text
-        states_data = [
-            (state_code, defaults.get('queue', 30), defaults.get('rate', 5.5)),
-            ('TX', 36, 6.5),
-            ('GA', 42, 7.2),
-            ('OH', 36, 6.8),
-        ]
-        
-        for i, (code, queue, rate) in enumerate(states_data[:4]):
-            if i == 0:
-                p = tf.paragraphs[0]
-            else:
-                p = tf.add_paragraph()
+        # === TOP-LEFT QUADRANT: State Comparison Chart ===
+        if MATPLOTLIB_AVAILABLE:
+            import matplotlib.pyplot as plt
+            import matplotlib
+            matplotlib.use('Agg')
             
-            p.text = f"{code}:"
-            p.font.size = Pt(11)
-            p.font.bold = True
-            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
+            # State comparison data
+            states_data = [
+                (state_code, defaults.get('queue', 30), defaults.get('rate', 5.5)),
+                ('TX', 36, 6.5),
+                ('GA', 42, 7.2),
+                ('OH', 36, 6.8),
+            ]
             
-            run = p.add_run()
-            run.text = f"  Gen. Queue: {queue} months  |  Power Cost: {rate} ¢/kWh"
-            run.font.size = Pt(9)
-            run.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-            p.space_after = Pt(6)
+            states = [s[0] for s in states_data[:4]]
+            queue_months = [s[1] for s in states_data[:4]]
+            power_rates = [s[2] for s in states_data[:4]]
+            
+            # Create bar chart
+            fig, ax1 = plt.subplots(figsize=(5.5, 2.8))
+            
+            x = range(len(states))
+            width = 0.35
+            
+            # Queue months bars
+            bars1 = ax1.bar([i - width/2 for i in x], queue_months, width, 
+                           color=JLL_COLORS['teal'], label='Gen. Queue (months)', alpha=0.8)
+            ax1.set_ylabel('Gen. Interconnection (months)', fontsize=9, color=JLL_COLORS['teal'])
+            ax1.tick_params(axis='y', labelcolor=JLL_COLORS['teal'], labelsize=8)
+            ax1.set_ylim(0, max(queue_months) * 1.2)
+            
+            # Add values on bars
+            for bar, val in zip(bars1, queue_months):
+                height = bar.get_height()
+                ax1.text(bar.get_x() + bar.get_width()/2., height,
+                        f'{int(val)}', ha='center', va='bottom', fontsize=8, color=JLL_COLORS['dark_gray'])
+            
+            # Power cost bars (second axis)
+            ax2 = ax1.twinx()
+            bars2 = ax2.bar([i + width/2 for i in x], power_rates, width,
+                           color='#d4af37', label='Power Cost (¢/kWh)', alpha=0.8)
+            ax2.set_ylabel('Power Cost (¢/kWh)', fontsize=9, color='#d4af37')
+            ax2.tick_params(axis='y', labelcolor='#d4af37', labelsize=8)
+            ax2.set_ylim(0, max(power_rates) * 1.3)
+            
+            # Add values on bars
+            for bar, val in zip(bars2, power_rates):
+                height = bar.get_height()
+                ax2.text(bar.get_x() + bar.get_width()/2., height,
+                        f'{val:.1f}¢', ha='center', va='bottom', fontsize=8, color=JLL_COLORS['dark_gray'])
+            
+            # Set x-axis
+            ax1.set_xticks(x)
+            ax1.set_xticklabels(states, fontsize=10, fontweight='bold')
+            ax1.set_xlabel('')
+            
+            # Title
+            ax1.set_title('New Generation Capacity: State Comparison', 
+                         fontsize=11, fontweight='bold', pad=10, color=JLL_COLORS['dark_blue'])
+            
+            # Remove top/right spines
+            ax1.spines['top'].set_visible(False)
+            ax2.spines['top'].set_visible(False)
+            
+            plt.tight_layout()
+            
+            # Save chart
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                state_chart_path = tmp.name
+            plt.savefig(state_chart_path, dpi=150, bbox_inches='tight', facecolor='white')
+            plt.close()
+            
+            # Add chart to slide
+            slide.shapes.add_picture(state_chart_path, Inches(0.5), Inches(1.0), width=Inches(5.8))
+            os.unlink(state_chart_path)
         
         # === TOP-RIGHT QUADRANT: Competitive Landscape ===
         tr_title = slide.shapes.add_textbox(Inches(6.8), Inches(1.0), Inches(5.8), Inches(0.4))
@@ -1791,7 +1830,7 @@ def create_default_template(output_path: str) -> str:
         cell.text_frame.margin_right = Inches(0.05)
         
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(8)
+            paragraph.font.size = Pt(9)
             paragraph.font.bold = True
             paragraph.font.color.rgb = RGBColor(255, 255, 255)
             paragraph.alignment = PP_ALIGN.CENTER
@@ -1827,7 +1866,7 @@ def create_default_template(output_path: str) -> str:
         cell.text_frame.word_wrap = True
         
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(7)
+            paragraph.font.size = Pt(8)
             paragraph.font.bold = True
             paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
             paragraph.line_spacing = 0.85
@@ -1842,7 +1881,7 @@ def create_default_template(output_path: str) -> str:
         cell.text_frame.word_wrap = True
         
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(7)
+            paragraph.font.size = Pt(8)
             paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
             paragraph.line_spacing = 0.85
         
@@ -1871,7 +1910,7 @@ def create_default_template(output_path: str) -> str:
         cell.text_frame.margin_right = Inches(0.05)
         
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(6.5)
+            paragraph.font.size = Pt(7.5)
             paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
             paragraph.line_spacing = 0.8
     
