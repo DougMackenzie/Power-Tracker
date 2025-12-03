@@ -165,13 +165,16 @@ elif app_mode == "Site Profile Builder":
     
     try:
         # Load sites from portfolio manager
-        # The portfolio manager stores sites in session state or can load them
-        if hasattr(pm, 'load_sites'):
-            sites = pm.load_sites()
+        # Priority 1: Portfolio Manager's Google Sheets database (session state)
+        if hasattr(st, 'session_state') and hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
+            sites = st.session_state.db['sites']
+            st.success(f"✅ Loaded {len(sites)} sites from Portfolio Manager database")
+        # Priority 2: Check session state directly
         elif 'sites' in st.session_state:
             sites = st.session_state.sites
+            st.success(f"✅ Loaded {len(sites)} sites from session")
         else:
-            # Try to load from site_database.json
+            # Priority 3: Try to load from site_database.json as fallback
             import json
             import os
             db_path = os.path.join(os.path.dirname(__file__), 'portfolio_manager', 'site_database.json')
@@ -185,15 +188,16 @@ elif app_mode == "Site Profile Builder":
                 else:
                     sites = db_data
                     
-                st.success(f"✅ Loaded {len(sites)} sites from database")
+                st.info(f"📁 Loaded {len(sites)} sites from JSON file (visit Portfolio Manager to load all sites from Google Sheets)")
             else:
                 sites = {}
-                st.info("No sites found. Use Portfolio Manager to add sites first.")
+                st.warning("⚠️ No sites found. Please visit Portfolio Manager first to load your sites from Google Sheets.")
         
         if sites:
             show_site_profile_builder(sites)
         else:
-            st.warning("No sites available. Use Portfolio Manager to add sites first.")
+            st.warning("No sites available.")
+            st.info("👉 Visit **Portfolio Manager** first to load your sites, then return here to build profiles.")
             if st.button("Go to Portfolio Manager"):
                 st.session_state.app_mode = "Portfolio Manager"
                 st.rerun()

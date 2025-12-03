@@ -512,38 +512,55 @@ def show_save_section(builder: SiteProfileBuilder, site_id: str, data_layer):
                 st.markdown(f"**{key}**: _{len(profile_dict)} profile fields_")
     
     if st.button("💾 Save to Portfolio", type="primary"):
-        import os
-        import json
         from datetime import datetime
         
         try:
-            # Load the database directly
-            db_path = os.path.join(os.path.dirname(__file__), 'site_database.json')
-            
-            if os.path.exists(db_path):
-                with open(db_path, 'r') as f:
-                    db_data = json.load(f)
+            # Try first to use Portfolio Manager's Google Sheets database
+            if hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
+                db = st.session_state.db
                 
-                # Get the sites dict
-                sites = db_data.get('sites', db_data)
-                
-                if site_id in sites:
+                if site_id in db['sites']:
                     # Merge with new data
-                    sites[site_id].update(save_fields)
-                    sites[site_id]['last_updated'] = datetime.now().isoformat()
+                    db['sites'][site_id].update(save_fields)
+                    db['sites'][site_id]['last_updated'] = datetime.now().isoformat()
                     
-                    # Save back to database
-                    db_data['sites'] = sites
-                    with open(db_path, 'w') as f:
-                        json.dump(db_data, f, indent=2)
+                    # Save back to Google Sheets
+                    from .streamlit_app import save_database
+                    save_database(db)
                     
-                    st.success(f"✅ Saved {len(save_fields)} fields to {site_id}")
+                    st.success(f"✅ Saved {len(save_fields)} fields to {site_id} (Google Sheets)")
                     st.balloons()
                 else:
                     st.error(f"Site {site_id} not found in database")
             else:
-                st.error(f"Database not found: {db_path}")
+                # Fallback to JSON file
+                import os
+                db_path = os.path.join(os.path.dirname(__file__), 'site_database.json')
                 
+                if os.path.exists(db_path):
+                    with open(db_path, 'r') as f:
+                        db_data = json.load(f)
+                    
+                    # Get the sites dict
+                    sites = db_data.get('sites', db_data)
+                    
+                    if site_id in sites:
+                        # Merge with new data
+                        sites[site_id].update(save_fields)
+                        sites[site_id]['last_updated'] = datetime.now().isoformat()
+                        
+                        # Save back to database
+                        db_data['sites'] = sites
+                        with open(db_path, 'w') as f:
+                            json.dump(db_data, f, indent=2)
+                        
+                        st.success(f"✅ Saved {len(save_fields)} fields to {site_id} (JSON file)")
+                        st.balloons()
+                    else:
+                        st.error(f"Site {site_id} not found in database")
+                else:
+                    st.error(f"Database not found: {db_path}")
+                    
         except Exception as e:
             st.error(f"Save failed: {e}")
             import traceback
