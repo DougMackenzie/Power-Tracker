@@ -72,7 +72,7 @@ JLL_COLORS = {
 }
 
 # Template version - increment to force regeneration
-TEMPLATE_VERSION = "2.1"  # Matched formatting from reference template
+TEMPLATE_VERSION = "2.2"  # Fixed table height calculation
 
 TEMPLATE_SLIDES = {
     'title': 0,
@@ -1804,7 +1804,9 @@ def create_default_template(output_path: str) -> str:
     # EXACT specifications from reference template
     rows, cols = 15, 4
     left, top = Inches(0.4), Inches(0.75)
-    width, height = Inches(7.25), Inches(6.4)
+    width = Inches(7.25)
+    # Height calculated from row heights: 0.31 + (14 × 0.32) = 4.79
+    height = Inches(4.8)  # Matches sum of row heights
     
     table = slide.shapes.add_table(rows, cols, left, top, width, height).table
     
