@@ -1063,6 +1063,7 @@ def export_site_to_pptx(
         from pptx.util import Inches, Pt
         from pptx.dml.color import RGBColor
         from pptx.enum.shapes import MSO_SHAPE
+        from pptx.enum.text import PP_ALIGN
     except ImportError:
         raise ImportError("python-pptx required")
 
