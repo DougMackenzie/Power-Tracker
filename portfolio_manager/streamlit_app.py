@@ -1079,8 +1079,10 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
 
 def get_or_create_template(template_dir: str = "/tmp/pptx_templates") -> str:
     """Get existing template or create a new one."""
+    from portfolio_manager.pptx_export import TEMPLATE_VERSION
+    
     os.makedirs(template_dir, exist_ok=True)
-    template_path = os.path.join(template_dir, "default_site_profile_template.pptx")
+    template_path = os.path.join(template_dir, f"default_site_profile_template_v{TEMPLATE_VERSION}.pptx")
     
     if not os.path.exists(template_path):
         create_default_template(template_path)

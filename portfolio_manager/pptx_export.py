@@ -71,6 +71,9 @@ JLL_COLORS = {
     'light_blue': '#4a90d9',
 }
 
+# Template version - increment to force regeneration
+TEMPLATE_VERSION = "2.0"  # Updated with professional formatting
+
 TEMPLATE_SLIDES = {
     'title': 0,
     'site_profile': 1,
