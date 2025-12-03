@@ -28,6 +28,11 @@ from .state_analysis import (
     generate_state_context_section, rank_all_states, compare_states,
     generate_utility_research_queries, get_iso_research_queries
 )
+from .program_tracker import (
+    ProgramTrackerData, TRACKER_COLUMN_ORDER, TRACKER_COLUMNS,
+    calculate_portfolio_summary
+)
+from .program_management_page import show_program_tracker
 
 # =============================================================================
 # DATABASE MANAGEMENT - Google Sheets Integration
@@ -75,7 +80,12 @@ def load_database() -> Dict:
                     "developer", "land_status", "community_support", "political_support",
                     "dev_experience", "capital_status", "financial_status", "last_updated",
                     "phases_json", "onsite_gen_json", "schedule_json", "non_power_json",
-                    "risks_json", "opps_json", "questions_json"
+                    "risks_json", "opps_json", "questions_json",
+                    # Program tracker columns
+                    "client", "total_fee_potential", "contract_status",
+                    "site_control_stage", "power_stage", "marketing_stage", "buyer_stage",
+                    "zoning_stage", "water_stage", "incentives_stage",
+                    "probability", "weighted_fee", "tracker_notes"
                 ]
                 sites_ws.append_row(headers)
             
@@ -145,6 +155,30 @@ def load_database() -> Dict:
                     else:
                         site[json_field] = default_value
                 
+                # Load program tracker fields
+                site['client'] = str(row.get('client', ''))
+                site['total_fee_potential'] = safe_int(row.get('total_fee_potential'), 0)
+                site['contract_status'] = str(row.get('contract_status', 'No'))
+                site['site_control_stage'] = safe_int(row.get('site_control_stage'), 1)
+                site['power_stage'] = safe_int(row.get('power_stage'), 1)
+                site['marketing_stage'] = safe_int(row.get('marketing_stage'), 1)
+                site['buyer_stage'] = safe_int(row.get('buyer_stage'), 1)
+                site['zoning_stage'] = safe_int(row.get('zoning_stage'), 1)
+                site['water_stage'] = safe_int(row.get('water_stage'), 1)
+                site['incentives_stage'] = safe_int(row.get('incentives_stage'), 1)
+                
+                # These are calculated, but we load them in case they exist
+                try:
+                    site['probability'] = float(row.get('probability', 0))
+                except (TypeError, ValueError):
+                    site['probability'] = 0.0
+                try:
+                    site['weighted_fee'] = float(row.get('weighted_fee', 0))
+                except (TypeError, ValueError):
+                    site['weighted_fee'] = 0.0
+                    
+                site['tracker_notes'] = str(row.get('tracker_notes', ''))
+                
                 sites[site_id] = site
             
             # Try to get metadata
@@ -207,12 +241,21 @@ def save_database(db: Dict):
             "developer", "land_status", "community_support", "political_support",
             "dev_experience", "capital_status", "financial_status", "last_updated",
             "phases_json", "onsite_gen_json", "schedule_json", "non_power_json",
-            "risks_json", "opps_json", "questions_json"
+            "risks_json", "opps_json", "questions_json",
+            # Program tracker columns
+            "client", "total_fee_potential", "contract_status",
+            "site_control_stage", "power_stage", "marketing_stage", "buyer_stage",
+            "zoning_stage", "water_stage", "incentives_stage",
+            "probability", "weighted_fee", "tracker_notes"
         ]
         sites_ws.append_row(headers)
         
         # Add all sites
         for site_id, site in db['sites'].items():
+            # Recalculate tracker probabilities before saving
+            tracker_data = ProgramTrackerData.from_dict({**site, 'site_id': site_id})
+            tracker_data.update_calculations()
+            
             row = [
                 site_id,
                 site.get('name', ''),
@@ -236,7 +279,21 @@ def save_database(db: Dict):
                 json.dumps(site.get('non_power', {})),
                 json.dumps(site.get('risks', [])),
                 json.dumps(site.get('opps', [])),
-                json.dumps(site.get('questions', []))
+                json.dumps(site.get('questions', [])),
+                # Program tracker columns
+                tracker_data.client,
+                tracker_data.total_fee_potential,
+                tracker_data.contract_status,
+                tracker_data.site_control_stage,
+                tracker_data.power_stage,
+                tracker_data.marketing_stage,
+                tracker_data.buyer_stage,
+                tracker_data.zoning_stage,
+                tracker_data.water_stage,
+                tracker_data.incentives_stage,
+                tracker_data.probability,
+                tracker_data.weighted_fee,
+                tracker_data.tracker_notes
             ]
             sites_ws.append_row(row)
         
@@ -578,7 +635,7 @@ def run():
     page = st.sidebar.radio(
         "Navigation",
         ["📊 Dashboard", "🏭 Site Database", "💬 AI Chat", "📁 VDR Upload", "➕ Add/Edit Site", 
-         "🏆 Rankings", "🗺️ State Analysis", "🔍 Utility Research", "⚙️ Settings"],
+         "🏆 Rankings", "📊 Program Tracker", "🗺️ State Analysis", "🔍 Utility Research", "⚙️ Settings"],
         key="page"
     )
     
@@ -588,6 +645,7 @@ def run():
     elif page == "📁 VDR Upload": show_vdr_upload()
     elif page == "➕ Add/Edit Site": show_add_edit_site()
     elif page == "🏆 Rankings": show_rankings()
+    elif page == "📊 Program Tracker": show_program_tracker()
     elif page == "🗺️ State Analysis": show_state_analysis()
     elif page == "🔍 Utility Research": show_utility_research()
     elif page == "⚙️ Settings": show_settings()
