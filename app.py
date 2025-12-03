@@ -177,8 +177,15 @@ elif app_mode == "Site Profile Builder":
             db_path = os.path.join(os.path.dirname(__file__), 'portfolio_manager', 'site_database.json')
             if os.path.exists(db_path):
                 with open(db_path, 'r') as f:
-                    sites = json.load(f)
-                st.success(f"Loaded {len(sites)} sites from database")
+                    db_data = json.load(f)
+                
+                # Extract sites from nested structure
+                if 'sites' in db_data:
+                    sites = db_data['sites']
+                else:
+                    sites = db_data
+                    
+                st.success(f"✅ Loaded {len(sites)} sites from database")
             else:
                 sites = {}
                 st.info("No sites found. Use Portfolio Manager to add sites first.")
