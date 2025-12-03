@@ -1154,27 +1154,27 @@ def export_site_to_pptx(
         # Title
         p = tf.paragraphs[0]
         p.text = "Critical Path to Power"
-        p.font.size = Pt(18)
+        p.font.size = Pt(20)
         p.font.bold = True
         p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-        p.space_after = Pt(10)
+        p.space_after = Pt(12)
         
         # Add phase information
         for i, phase in enumerate(phases[:2]):  # Show first 2 phases
             # Phase header
             p = tf.add_paragraph()
             p.text = f"Phase {phase.phase_num}: {int(phase.target_mw)} MW @ {phase.voltage_kv} kV"
-            p.font.size = Pt(14)
+            p.font.size = Pt(16)
             p.font.bold = True
             p.font.color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
-            p.space_after = Pt(4)
+            p.space_after = Pt(6)
             
             # Target date
             p = tf.add_paragraph()
             p.text = f"Target: {phase.target_online}"
-            p.font.size = Pt(10)
+            p.font.size = Pt(12)
             p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-            p.space_after = Pt(6)
+            p.space_after = Pt(8)
             
             # Study statuses with symbols
             studies = [
@@ -1207,10 +1207,10 @@ def export_site_to_pptx(
                 # Status text run
                 run = p.add_run()
                 run.text = f"{study_name}: {status}"
-                run.font.size = Pt(10)
+                run.font.size = Pt(12)
                 run.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
                 
-                p.space_after = Pt(3)
+                p.space_after = Pt(5)
             
             p.space_after = Pt(8)
         
@@ -1574,7 +1574,7 @@ def export_site_to_pptx(
         bl_title = slide.shapes.add_textbox(Inches(0.5), Inches(4.0), Inches(6.0), Inches(0.4))
         p = bl_title.text_frame.paragraphs[0]
         p.text = "ISO & Utility Profile"
-        p.font.size = Pt(12)
+        p.font.size = Pt(13)
         p.font.bold = True
         p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
         
@@ -1600,29 +1600,29 @@ def export_site_to_pptx(
                 p = tf.add_paragraph()
             
             p.text = label
-            p.font.size = Pt(9)
+            p.font.size = Pt(10)
             p.font.bold = True
             p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
             
             run = p.add_run()
             run.text = f"  {value}"
-            run.font.size = Pt(10)
+            run.font.size = Pt(11)
             run.font.bold = True
             run.font.color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
-            p.space_after = Pt(3)
+            p.space_after = Pt(4)
         
         # Key Incentives
         p = tf.add_paragraph()
         p.text = "Key Incentives:"
-        p.font.size = Pt(9)
+        p.font.size = Pt(10)
         p.font.bold = True
         p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-        p.space_after = Pt(2)
+        p.space_after = Pt(3)
         
         for incentive in defaults.get('incentives', [])[:2]:
             p = tf.add_paragraph()
             p.text = f"• {incentive}"
-            p.font.size = Pt(8)
+            p.font.size = Pt(9)
             p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
             p.level = 1
         
@@ -1630,7 +1630,7 @@ def export_site_to_pptx(
         br_title = slide.shapes.add_textbox(Inches(6.8), Inches(4.0), Inches(5.8), Inches(0.4))
         p = br_title.text_frame.paragraphs[0]
         p.text = f"{state_name} SWOT Summary"
-        p.font.size = Pt(12)
+        p.font.size = Pt(13)
         p.font.bold = True
         p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
         
@@ -1649,17 +1649,17 @@ def export_site_to_pptx(
             
             p = tf.paragraphs[0]
             p.text = title
-            p.font.size = Pt(10)
+            p.font.size = Pt(11)
             p.font.bold = True
             p.font.color.rgb = RGBColor.from_string(color)
-            p.space_after = Pt(3)
+            p.space_after = Pt(4)
             
             for item in items[:2]:
                 p = tf.add_paragraph()
                 p.text = f"+ {item}" if title in ['Strengths', 'Opportunities'] else f"- {item}"
-                p.font.size = Pt(8)
+                p.font.size = Pt(9)
                 p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-                p.space_after = Pt(1)
+                p.space_after = Pt(2)
         
         add_footer(slide, 8, Inches, Pt, RGBColor)
 
@@ -1810,10 +1810,10 @@ def create_default_template(output_path: str) -> str:
     table.columns[2].width = Inches(0.6)   # Rating
     table.columns[3].width = Inches(4.0)   # Description
     
-    # Set row heights to ensure all fit
+    # Set row heights for professional appearance
     for row in table.rows:
-        row.height = Inches(0.4)
-    table.rows[0].height = Inches(0.35)  # Slightly shorter header
+        row.height = Inches(0.45)
+    table.rows[0].height = Inches(0.4)  # Header
     
     # Header row styling
     header_items = ['Item', 'Preference', 'Rating', 'Description']
@@ -1830,7 +1830,7 @@ def create_default_template(output_path: str) -> str:
         cell.text_frame.margin_right = Inches(0.05)
         
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(9)
+            paragraph.font.size = Pt(10)
             paragraph.font.bold = True
             paragraph.font.color.rgb = RGBColor(255, 255, 255)
             paragraph.alignment = PP_ALIGN.CENTER
@@ -1866,10 +1866,10 @@ def create_default_template(output_path: str) -> str:
         cell.text_frame.word_wrap = True
         
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(8)
+            paragraph.font.size = Pt(10)
             paragraph.font.bold = True
             paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-            paragraph.line_spacing = 0.85
+            paragraph.line_spacing = 1.0
         
         # Preference column
         cell = table.cell(row_idx, 1)
@@ -1881,9 +1881,9 @@ def create_default_template(output_path: str) -> str:
         cell.text_frame.word_wrap = True
         
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(8)
+            paragraph.font.size = Pt(10)
             paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-            paragraph.line_spacing = 0.85
+            paragraph.line_spacing = 1.0
         
         # Rating column (color-coded)
         cell = table.cell(row_idx, 2)
@@ -1910,9 +1910,9 @@ def create_default_template(output_path: str) -> str:
         cell.text_frame.margin_right = Inches(0.05)
         
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(7.5)
+            paragraph.font.size = Pt(9)
             paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-            paragraph.line_spacing = 0.8
+            paragraph.line_spacing = 0.9
     
     # Add map placeholder on right side
     map_placeholder = slide.shapes.add_shape(
