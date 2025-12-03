@@ -55,24 +55,18 @@ except ImportError:
 # =============================================================================
 
 JLL_COLORS = {
-    'dark_blue': '#003f5c',      # Darker header blue
-    'red': '#e31837',            # Fatal flaw red
+    'dark_blue': '#1a2b4a',
+    'red': '#e31837',
     'light_gray': '#f5f5f5',
     'medium_gray': '#666666',
     'dark_gray': '#333333',
-    'teal': '#2b6777',           # Primary teal (infrastructure bars, etc.)
-    'tan': '#c9b89d',            # Generation line contrast
+    'teal': '#2b6777',           # Interconnection line
+    'tan': '#c9b89d',            # Generation line
     'white': '#ffffff',
-    'green': '#4caf50',          # Rating: Desirable
-    'yellow': '#ffc107',         # Rating: Acceptable
-    'orange': '#ff9800',         # Rating: Marginal
-    'rating_gray': '#9e9e9e',    # Rating: N/R (not rated)
-    'amber': '#f9a825',          # Legacy amber (keep for compat)
+    'green': '#2e7d32',
+    'amber': '#f9a825',
     'light_blue': '#4a90d9',
 }
-
-# Template version - increment to force regeneration
-TEMPLATE_VERSION = "2.2"  # Fixed table height calculation
 
 TEMPLATE_SLIDES = {
     'title': 0,
@@ -179,7 +173,300 @@ class RiskOpportunity:
 
 
 @dataclass
-class MarketAnalysis:
+class SiteProfileData:
+    """
+    Structured data for Site Profile slide.
+    Maps directly to the 17 rows in the Site Profile template table.
+    """
+    # Header info
+    name: str = ''
+    state: str = ''
+    coordinates: str = ''
+    
+    # Overview section (left panel)
+    overview: str = ''
+    observation: str = 'to be completed'
+    outstanding: str = 'to be completed'
+    
+    # Row 1: Location
+    nearest_town: str = ''
+    distance_to_town: str = ''
+    distance_to_airport: str = ''
+    airport_name: str = ''
+    
+    # Row 2: Ownership & Asking Price
+    owner_name: str = ''
+    willing_to_sell: str = 'TBD'
+    asking_price: str = 'TBD'
+    
+    # Row 3: Size / Shape / Dimensions
+    total_acres: float = 0
+    phase1_acres: float = 0
+    phase2_acres: float = 0
+    expandable_acres: float = 0
+    shape_description: str = ''
+    
+    # Row 4: Zoning
+    current_zoning: str = 'TBD'
+    permits_proposed_use: str = 'TBD'
+    zoning_timeline: str = ''
+    
+    # Row 5: Timing
+    site_condition: str = 'Greenfield'  # Greenfield, Brownfield, Existing
+    time_to_close: str = 'TBD'
+    phase1_delivery: str = ''
+    
+    # Row 6: Geotechnical and Topography
+    soil_type: str = 'TBD'
+    bearing_capacity: str = 'TBD'
+    topography: str = ''
+    slope: str = ''
+    
+    # Row 7: Environmental, Ecological, Archeological
+    environmental_status: str = 'TBD'
+    phase1_esa: str = ''
+    ecological_concerns: str = ''
+    archeological: str = ''
+    
+    # Row 8: Wetlands and Jurisdictional Water
+    wetlands_present: bool = False
+    wetlands_acres: float = 0
+    wetlands_avoidable: bool = True
+    jurisdictional_water: str = ''
+    
+    # Row 9: Disaster
+    flood_zone: str = 'TBD'
+    seismic_risk: str = 'Low'
+    hurricane_risk: str = 'Low'
+    tornado_risk: str = ''
+    
+    # Row 10: Easements
+    easements: str = ''
+    right_of_way: str = 'TBD'
+    
+    # Row 11: Electricity
+    electric_utility: str = ''
+    voltage_kv: int = 0
+    transmission_line: str = ''
+    estimated_capacity_mw: float = 0
+    distance_to_transmission: str = ''
+    
+    # Row 12: Water
+    water_service: str = ''
+    water_provider: str = ''
+    water_capacity_gpd: str = ''
+    water_line_size: str = ''
+    
+    # Row 13: Wastewater
+    wastewater_solution: str = ''
+    wastewater_capacity_gpd: str = ''
+    wastewater_provider: str = ''
+    
+    # Row 14: Telecom
+    fiber_provider: str = ''
+    fiber_capacity: str = ''
+    fiber_distance: str = ''
+    lit_building_distance: str = ''
+    
+    # Row 15: Gas
+    gas_provider: str = ''
+    gas_capacity: str = ''
+    gas_line_size: str = ''
+    
+    # Row 16: Transportation
+    highway_distance: str = ''
+    highway_name: str = ''
+    airport_distance: str = ''
+    rail_access: str = ''
+    
+    # Row 17: Labor
+    workforce_radius: str = '30-mile'
+    workforce_population: str = ''
+    unemployment_rate: str = ''
+    
+    # Ratings (1=Desirable, 2=Acceptable, 3=Marginal, 4=Fatal Flaw, 0=NR)
+    ratings: Dict[str, int] = field(default_factory=dict)
+    
+    def to_description_dict(self) -> Dict[str, str]:
+        """
+        Convert to dictionary of description texts for each row.
+        Keys match the Item column in the template.
+        """
+        descriptions = {}
+        
+        # Row 1: Location
+        loc_parts = []
+        if self.nearest_town:
+            loc_parts.append(f"Nearest Town: {self.nearest_town}")
+            if self.distance_to_town:
+                loc_parts[-1] += f" – {self.distance_to_town}"
+        if self.airport_name and self.distance_to_airport:
+            loc_parts.append(f"Distance to {self.airport_name}: {self.distance_to_airport}")
+        descriptions['Location'] = ". ".join(loc_parts) if loc_parts else "TBD"
+        
+        # Row 2: Ownership
+        own_parts = []
+        if self.owner_name:
+            own_parts.append(f"Owner(s): {self.owner_name}")
+        own_parts.append(f"Confirmed Willingness to Sell: {self.willing_to_sell}")
+        if self.asking_price and self.asking_price != 'TBD':
+            own_parts.append(f"Asking Price: {self.asking_price}")
+        descriptions['Ownership & Asking Price'] = ". ".join(own_parts)
+        
+        # Row 3: Size
+        size_parts = []
+        if self.total_acres:
+            size_parts.append(f"Total Size: {self.total_acres:,.0f} acres")
+        if self.phase1_acres:
+            size_parts.append(f"Phase I: {self.phase1_acres:,.0f} acres")
+        if self.phase2_acres:
+            size_parts.append(f"Phase II: {self.phase2_acres:,.0f} acres")
+        if self.expandable_acres:
+            size_parts.append(f"expandable to {self.expandable_acres:,.0f} acres")
+        if self.shape_description:
+            size_parts.append(self.shape_description)
+        descriptions['Size / Shape / Dimensions'] = ", ".join(size_parts) if size_parts else "TBD"
+        
+        # Row 4: Zoning
+        zoning_parts = [f"Zoning: {self.current_zoning}"]
+        zoning_parts.append(f"Permits Proposed Use: {self.permits_proposed_use}")
+        if self.zoning_timeline:
+            zoning_parts.append(self.zoning_timeline)
+        descriptions['Zoning'] = ". ".join(zoning_parts)
+        
+        # Row 5: Timing
+        timing_parts = [f"Site condition: {self.site_condition}"]
+        timing_parts.append(f"Time to Close: {self.time_to_close}")
+        if self.phase1_delivery:
+            timing_parts.append(f"Phase 1 Delivery: {self.phase1_delivery}")
+        descriptions['Timing'] = ". ".join(timing_parts)
+        
+        # Row 6: Geotech
+        geo_parts = [f"Soil type and bearing capacity: {self.soil_type}"]
+        if self.topography:
+            geo_parts.append(f"Topography: {self.topography}")
+        if self.slope:
+            geo_parts.append(f"Slope: {self.slope}")
+        descriptions['Geotechnical and Topography'] = ". ".join(geo_parts)
+        
+        # Row 7: Environmental
+        env_parts = [f"Environmental: {self.environmental_status}"]
+        if self.phase1_esa:
+            env_parts.append(f"Phase I ESA: {self.phase1_esa}")
+        if self.ecological_concerns:
+            env_parts.append(f"Ecological: {self.ecological_concerns}")
+        if self.archeological:
+            env_parts.append(f"Archeological: {self.archeological}")
+        descriptions['Environmental, Ecological, Archeological'] = ". ".join(env_parts)
+        
+        # Row 8: Wetlands
+        if self.wetlands_present:
+            wetland_text = f"Wetlands: Present on site ({self.wetlands_acres:.1f} acres)"
+            if self.wetlands_avoidable:
+                wetland_text += " but able to avoid for development"
+        else:
+            wetland_text = "Wetlands: None identified"
+        if self.jurisdictional_water:
+            wetland_text += f". {self.jurisdictional_water}"
+        descriptions['Wetlands and Jurisdictional Water'] = wetland_text
+        
+        # Row 9: Disaster
+        disaster_parts = [f"Flood: {self.flood_zone}"]
+        disaster_parts.append(f"Seismic: {self.seismic_risk}")
+        disaster_parts.append(f"Hurricane/Weather: {self.hurricane_risk}")
+        if self.tornado_risk:
+            disaster_parts.append(f"Tornado: {self.tornado_risk}")
+        descriptions['Disaster'] = ". ".join(disaster_parts)
+        
+        # Row 10: Easements
+        ease_parts = []
+        if self.easements:
+            ease_parts.append(f"Easements: {self.easements}")
+        ease_parts.append(f"Right of Way: {self.right_of_way}")
+        descriptions['Easements'] = ". ".join(ease_parts) if ease_parts else "TBD"
+        
+        # Row 11: Electricity
+        elec_parts = []
+        if self.electric_utility and self.transmission_line:
+            elec_parts.append(f"Electric Service to Site: {self.electric_utility} {self.transmission_line}")
+        elif self.electric_utility:
+            elec_parts.append(f"Electric Service to Site: {self.electric_utility}")
+        if self.estimated_capacity_mw:
+            mw = self.estimated_capacity_mw
+            cap_str = f"{mw/1000:.1f}GW+" if mw >= 1000 else f"{mw:.0f}MW"
+            elec_parts.append(f"Estimated Capacity: {cap_str}")
+        if self.distance_to_transmission:
+            elec_parts.append(f"Distance to transmission: {self.distance_to_transmission}")
+        descriptions['Electricity'] = ". ".join(elec_parts) if elec_parts else "TBD"
+        
+        # Row 12: Water
+        water_parts = []
+        if self.water_service:
+            water_parts.append(f"Current Service to Site: {self.water_service}")
+        if self.water_provider:
+            water_parts.append(f"Provider: {self.water_provider}")
+        if self.water_capacity_gpd:
+            water_parts.append(f"Capacity: {self.water_capacity_gpd}")
+        descriptions['Water'] = ". ".join(water_parts) if water_parts else "TBD"
+        
+        # Row 13: Wastewater
+        ww_parts = []
+        if self.wastewater_solution:
+            ww_parts.append(f"Discharge Solution: {self.wastewater_solution}")
+        if self.wastewater_capacity_gpd:
+            ww_parts.append(f"Capacity: {self.wastewater_capacity_gpd}")
+        if self.wastewater_provider:
+            ww_parts.append(f"Provider: {self.wastewater_provider}")
+        descriptions['Wastewater'] = ". ".join(ww_parts) if ww_parts else "TBD"
+        
+        # Row 14: Telecom
+        fiber_parts = []
+        if self.fiber_provider:
+            fiber_parts.append(f"Current Service to Site: {self.fiber_provider}")
+        if self.fiber_capacity:
+            fiber_parts.append(f"Capacity: {self.fiber_capacity}")
+        if self.lit_building_distance:
+            fiber_parts.append(f"Distance to lit building: {self.lit_building_distance}")
+        descriptions['Telecom'] = ". ".join(fiber_parts) if fiber_parts else "TBD"
+        
+        # Row 15: Gas
+        gas_parts = []
+        if self.gas_provider:
+            gas_parts.append(f"Provider: {self.gas_provider}")
+        if self.gas_capacity:
+            gas_parts.append(f"Capacity: {self.gas_capacity}")
+        if self.gas_line_size:
+            gas_parts.append(f"Line size: {self.gas_line_size}")
+        descriptions['Gas'] = ". ".join(gas_parts) if gas_parts else "TBD"
+        
+        # Row 16: Transportation
+        trans_parts = []
+        if self.highway_name and self.highway_distance:
+            trans_parts.append(f"Hwy: {self.highway_distance} to {self.highway_name}")
+        if self.airport_distance:
+            trans_parts.append(f"Airport: {self.airport_distance}")
+        if self.rail_access:
+            trans_parts.append(f"Rail: {self.rail_access}")
+        descriptions['Transportation'] = ". ".join(trans_parts) if trans_parts else "TBD"
+        
+        # Row 17: Labor
+        labor_parts = []
+        if self.workforce_population:
+            labor_parts.append(f"Workforce Within {self.workforce_radius} Radius: {self.workforce_population}")
+        if self.unemployment_rate:
+            labor_parts.append(f"Unemployment: {self.unemployment_rate}")
+        descriptions['Labor'] = ". ".join(labor_parts) if labor_parts else "TBD"
+        
+        return descriptions
+    
+    @classmethod
+    def from_dict(cls, data: Dict) -> 'SiteProfileData':
+        """Create from a dictionary (e.g., extracted from website)."""
+        profile = cls()
+        for key, value in data.items():
+            if hasattr(profile, key):
+                setattr(profile, key, value)
+        return profile
     """
     Market analysis data based on state analysis framework.
     
@@ -834,6 +1121,78 @@ def find_and_replace_text(shape, replacements: Dict[str, str]) -> bool:
     return replaced
 
 
+def update_overview_textbox(shape, site_data: Dict, profile: Optional['SiteProfileData'] = None):
+    """
+    Update the Overview/Observation/Outstanding text box.
+    This text box has a specific structure with labels and content in separate runs.
+    Also fixes any red coloring to use theme color.
+    """
+    from pptx.enum.dml import MSO_THEME_COLOR
+    
+    if not shape.has_text_frame:
+        return False
+    
+    updated = False
+    
+    for para in shape.text_frame.paragraphs:
+        para_text = para.text.lower()
+        
+        # Find which field this paragraph is for
+        if 'overview' in para_text:
+            new_content = None
+            if profile and profile.overview:
+                new_content = profile.overview
+            elif site_data.get('overview'):
+                new_content = site_data['overview']
+            
+            if new_content and len(para.runs) >= 2:
+                # Run 1 has the content (Run 0 has "Overview:  ")
+                para.runs[1].text = new_content
+                # Fix color - use same tan/brown as label or theme color
+                para.runs[1].font.color.theme_color = MSO_THEME_COLOR.TEXT_1
+                updated = True
+        
+        elif 'observation' in para_text:
+            new_content = None
+            if profile and profile.observation and profile.observation != 'to be completed':
+                new_content = profile.observation
+            elif site_data.get('observation') and site_data['observation'] != 'to be completed':
+                new_content = site_data['observation']
+            
+            if new_content and len(para.runs) >= 2:
+                para.runs[1].text = new_content
+                # Remove red - copy color from label run or use theme
+                if para.runs[0].font.color and para.runs[0].font.color.rgb:
+                    try:
+                        para.runs[1].font.color.rgb = para.runs[0].font.color.rgb
+                    except:
+                        para.runs[1].font.color.theme_color = MSO_THEME_COLOR.TEXT_1
+                else:
+                    para.runs[1].font.color.theme_color = MSO_THEME_COLOR.TEXT_1
+                updated = True
+        
+        elif 'outstanding' in para_text:
+            new_content = None
+            if profile and profile.outstanding and profile.outstanding != 'to be completed':
+                new_content = profile.outstanding
+            elif site_data.get('outstanding') and site_data['outstanding'] != 'to be completed':
+                new_content = site_data['outstanding']
+            
+            if new_content and len(para.runs) >= 2:
+                para.runs[1].text = new_content
+                # Remove red - copy color from label run or use theme
+                if para.runs[0].font.color and para.runs[0].font.color.rgb:
+                    try:
+                        para.runs[1].font.color.rgb = para.runs[0].font.color.rgb
+                    except:
+                        para.runs[1].font.color.theme_color = MSO_THEME_COLOR.TEXT_1
+                else:
+                    para.runs[1].font.color.theme_color = MSO_THEME_COLOR.TEXT_1
+                updated = True
+    
+    return updated
+
+
 def replace_in_table(table, replacements: Dict[str, str]) -> bool:
     """Replace text in table cells."""
     replaced = False
@@ -849,14 +1208,166 @@ def replace_in_table(table, replacements: Dict[str, str]) -> bool:
     return replaced
 
 
+def populate_site_profile_table(table, profile_data: SiteProfileData) -> bool:
+    """
+    Populate the Site Profile table with structured data.
+    The table has 18 rows, 4 columns: Item, Preference, Rating, Description
+    We replace content in the Description column (index 3) based on Item name.
+    
+    Formatting rules:
+    - Text before colon is BOLD
+    - Text after colon is NOT bold
+    - All text uses scheme color (no red)
+    """
+    from pptx.util import Pt
+    from pptx.enum.dml import MSO_THEME_COLOR
+    from pptx.oxml.ns import qn
+    from pptx.oxml import parse_xml
+    from copy import deepcopy
+    
+    descriptions = profile_data.to_description_dict()
+    replaced = False
+    
+    # Create ordered mapping from row item names to description keys
+    row_mapping = [
+        ('wastewater', 'Wastewater'),
+        ('wetlands', 'Wetlands and Jurisdictional Water'),
+        ('location', 'Location'),
+        ('ownership', 'Ownership & Asking Price'),
+        ('size', 'Size / Shape / Dimensions'),
+        ('zoning', 'Zoning'),
+        ('timing', 'Timing'),
+        ('geotechnical', 'Geotechnical and Topography'),
+        ('environmental', 'Environmental, Ecological, Archeological'),
+        ('disaster', 'Disaster'),
+        ('easements', 'Easements'),
+        ('electricity', 'Electricity'),
+        ('water', 'Water'),
+        ('telecom', 'Telecom'),
+        ('gas', 'Gas'),
+        ('transportation', 'Transportation'),
+        ('labor', 'Labor'),
+    ]
+    
+    for row in table.rows:
+        cells = list(row.cells)
+        if len(cells) >= 4:
+            item_text = cells[0].text.strip().lower()
+            
+            # Find matching description
+            description = None
+            for key_fragment, desc_key in row_mapping:
+                if key_fragment in item_text:
+                    description = descriptions.get(desc_key)
+                    break
+            
+            if description:
+                desc_cell = cells[3]
+                if desc_cell.text_frame:
+                    paragraphs = list(desc_cell.text_frame.paragraphs)
+                    
+                    if not paragraphs:
+                        continue
+                    
+                    para = paragraphs[0]
+                    
+                    # Get font properties from first run as template
+                    template_font_size = None
+                    template_font_name = None
+                    if para.runs:
+                        first_run = para.runs[0]
+                        template_font_size = first_run.font.size
+                        template_font_name = first_run.font.name
+                    
+                    # Clear all existing runs from first paragraph
+                    for run in list(para.runs):
+                        run._r.getparent().remove(run._r)
+                    
+                    # Clear any additional paragraphs (they may have red TBD from template)
+                    # We need to access the underlying XML to remove extra paragraphs
+                    txBody = desc_cell.text_frame._txBody
+                    p_elements = txBody.findall(qn('a:p'))
+                    # Keep only the first paragraph, remove the rest
+                    for p_elem in p_elements[1:]:
+                        txBody.remove(p_elem)
+                    
+                    # Parse the description and create properly formatted runs
+                    # Split by periods to handle multiple sentences/fields
+                    segments = description.split('. ')
+                    
+                    for seg_idx, segment in enumerate(segments):
+                        if not segment.strip():
+                            continue
+                        
+                        # Add period separator between segments (except first)
+                        if seg_idx > 0:
+                            sep_run = para.add_run()
+                            sep_run.text = ". "
+                            if template_font_size:
+                                sep_run.font.size = template_font_size
+                            if template_font_name:
+                                sep_run.font.name = template_font_name
+                            sep_run.font.bold = False
+                            # Use theme color (dark text)
+                            sep_run.font.color.theme_color = MSO_THEME_COLOR.TEXT_1
+                        
+                        # Check if segment has a label (contains colon)
+                        if ':' in segment:
+                            parts = segment.split(':', 1)
+                            label = parts[0].strip() + ':'
+                            content = parts[1].strip() if len(parts) > 1 else ''
+                            
+                            # Add bold label
+                            label_run = para.add_run()
+                            label_run.text = label + ' '
+                            label_run.font.bold = True
+                            if template_font_size:
+                                label_run.font.size = template_font_size
+                            if template_font_name:
+                                label_run.font.name = template_font_name
+                            label_run.font.color.theme_color = MSO_THEME_COLOR.TEXT_1
+                            
+                            # Add non-bold content
+                            if content:
+                                content_run = para.add_run()
+                                content_run.text = content
+                                content_run.font.bold = False
+                                if template_font_size:
+                                    content_run.font.size = template_font_size
+                                if template_font_name:
+                                    content_run.font.name = template_font_name
+                                content_run.font.color.theme_color = MSO_THEME_COLOR.TEXT_1
+                        else:
+                            # No colon - just add as regular text
+                            text_run = para.add_run()
+                            text_run.text = segment
+                            text_run.font.bold = False
+                            if template_font_size:
+                                text_run.font.size = template_font_size
+                            if template_font_name:
+                                text_run.font.name = template_font_name
+                            text_run.font.color.theme_color = MSO_THEME_COLOR.TEXT_1
+                    
+                    replaced = True
+    
+    return replaced
+
+
 def build_replacements(site_data: Dict, config: ExportConfig) -> Dict[str, str]:
     """Build replacement dictionary."""
     target_mw = site_data.get('target_mw', 0)
     mw_display = f"{target_mw/1000:.1f}GW" if target_mw >= 1000 else f"{target_mw:.0f}MW"
+    
+    # Get profile if available
+    profile = site_data.get('profile')
+    if isinstance(profile, dict):
+        profile = SiteProfileData.from_dict(profile)
 
     replacements = {
         'SITE NAME': site_data.get('name', 'Site Name'),
+        'Site Name': site_data.get('name', 'Site Name'),  # Also in left panel
         '[STATE]': site_data.get('state', 'State'),
+        'Oklahoma': site_data.get('state', 'State'),  # State name in left panel
         'December 2, 2025': datetime.now().strftime('%B %d, %Y'),
         '[Coordinates linked]': f"{site_data.get('latitude', 'N/A')}, {site_data.get('longitude', 'N/A')}",
         '1GW+': mw_display,
@@ -865,189 +1376,33 @@ def build_replacements(site_data: Dict, config: ExportConfig) -> Dict[str, str]:
         'TITLE': config.contact_title or site_data.get('contact_title', 'Title'),
         'Phone': config.contact_phone or site_data.get('contact_phone', 'Phone'),
         'Email': config.contact_email or site_data.get('contact_email', 'email@jll.com'),
+        # Last Edited date
+        '12.1.2025': datetime.now().strftime('%m.%d.%Y'),
+        'Last Edited: 12.1.2025': f"Last Edited: {datetime.now().strftime('%m.%d.%Y')}",
     }
 
     if site_data.get('utility'):
         replacements['OG&E 345kV line'] = site_data['utility']
-    if site_data.get('total_acres'):
-        replacements['1,250 acres'] = f"{site_data['total_acres']:,.0f} acres"
+    if site_data.get('total_acres') or site_data.get('acreage'):
+        acres = site_data.get('total_acres') or site_data.get('acreage')
+        replacements['1,250 acres'] = f"{acres:,.0f} acres"
     if site_data.get('water_capacity'):
         replacements['3M GDP capacity'] = site_data['water_capacity']
-    if site_data.get('overview'):
+    
+    # Overview, Observation, Outstanding are handled by update_overview_textbox()
+    # But we still need the overview replacement for the find_and_replace fallback
+    if profile and profile.overview:
+        replacements['1,250 acre site with significant growth opportunity located between Tulsa and Oklahoma City.'] = profile.overview
+    elif site_data.get('overview'):
         replacements['1,250 acre site with significant growth opportunity located between Tulsa and Oklahoma City.'] = site_data['overview']
+    
+    # Also handle if overview/observation/outstanding are directly in site_data
+    if site_data.get('observation') and site_data['observation'] != 'to be completed':
+        replacements['Observation:  to be completed'] = f"Observation:  {site_data['observation']}"
+    if site_data.get('outstanding') and site_data['outstanding'] != 'to be completed':
+        replacements['Outstanding:  to be completed'] = f"Outstanding:  {site_data['outstanding']}"
 
     return replacements
-
-
-def get_rating_color(rating: str) -> tuple:
-    """Get RGB color tuple for rating."""
-    from pptx.dml.color import RGBColor
-    
-    rating_upper = rating.upper()
-    if rating_upper in ['DESIRABLE', 'GREEN']:
-        return RGBColor.from_string(JLL_COLORS['green'][1:])
-    elif rating_upper in ['ACCEPTABLE', 'YELLOW']:
-        return RGBColor.from_string(JLL_COLORS['yellow'][1:])
-    elif rating_upper in ['MARGINAL', 'ORANGE']:
-        return RGBColor.from_string(JLL_COLORS['orange'][1:])
-    elif rating_upper in ['FATAL FLAW', 'RED']:
-        return RGBColor.from_string(JLL_COLORS['red'][1:])
-    else:  # N/R or unknown
-        return RGBColor.from_string(JLL_COLORS['rating_gray'][1:])
-
-
-def populate_site_profile_table(presentation, site_data: Dict):
-    """Populate the Site Profile table (slide 1) with actual site data."""
-    from pptx.dml.color import RGBColor
-    from pptx.enum.text import PP_ALIGN
-    
-    # Get Site Profile slide (slide index 1)
-    if len(presentation.slides) < 2:
-        return
-    
-    slide = presentation.slides[1]
-    
-    # Find the table in the slide
-    table = None
-    for shape in slide.shapes:
-        if shape.has_table:
-            table = shape.table
-            break
-    
-    if not table or len(table.rows) < 15:
-        return  # Table not found or wrong format
-    
-    # Extract site data with defaults
-    def safe_get(d, *keys, default='TBD'):
-        """Safely get nested dictionary values."""
-        for key in keys:
-            if isinstance(d, dict):
-                d = d.get(key, {})
-            else:
-                return default
-        return d if d and d != {} else default
-    
-    # Build rating data from site
-    rating_rows = [
-        {
-            'item': 'Location',
-            'preference': 'Proximity and Surroundings',
-            'rating': safe_get(site_data, 'location_rating', default='N/R'),
-            'description': f"• Nearest Town: {safe_get(site_data, 'nearest_town')}\n"
-                          f"• Distance to Large City: {safe_get(site_data, 'distance_to_city')}\n"
-                          f"• Neighboring Uses: {safe_get(site_data, 'neighboring_uses', default='Mostly Agricultural')}"
-        },
-        {
-            'item': 'Ownership &\nAsking Price',
-            'preference': 'Single Owner',
-            'rating': safe_get(site_data, 'ownership_rating', default='N/R'),
-            'description': f"• Owner(s): {safe_get(site_data, 'developer', default='TBD')}\n"
-                          f"• Asking Price: {safe_get(site_data, 'asking_price', default='TBD')}"
-        },
-        {
-            'item': 'Size / Shape /\nDimensions',
-            'preference': f"{site_data.get('acreage', '1000')} acres",
-            'rating': safe_get(site_data, 'size_rating', default='N/R'),
-            'description': f"• Total Size: {site_data.get('acreage', 'TBD')} acres\n"
-                          f"• Dimensions: {safe_get(site_data, 'dimensions', default='TBD')}\n"
-                          f"• Expandable: {safe_get(site_data, 'expandable', default='TBD')}"
-        },
-        {
-            'item': 'Zoning',
-            'preference': 'Data Center Compatible',
-            'rating': safe_get(site_data, 'zoning_rating', default='N/R'),
-            'description': f"• Zoning: {safe_get(site_data, 'non_power', 'zoning_status', default='TBD')}\n"
-                          f"• Site condition: {safe_get(site_data, 'site_condition', default='TBD')}"
-        },
-        {
-            'item': 'Timing',
-            'preference': 'Transfer by Q1 2026',
-            'rating': safe_get(site_data, 'timing_rating', default='N/R'),
-            'description': f"• Transfer timeline: {safe_get(site_data, 'transfer_timeline', default='TBD')}"
-        },
-        {
-            'item': 'Geotechnical\nand Topography',
-            'preference': 'Generally Flat with\nGood Soils',
-            'rating': safe_get(site_data, 'geotech_rating', default='N/R'),
-            'description': f"• Soil type: {safe_get(site_data, 'soil_type', default='TBD')}\n"
-                          f"• Topography: {safe_get(site_data, 'topography', default='TBD')}\n"
-                          f"• Elevation change: {safe_get(site_data, 'elevation_change', default='TBD')}"
-        },
-        {
-            'item': 'Environmental,\nEcological,\nArcheological',
-            'preference': 'No Barriers to\nConstruction',
-            'rating': safe_get(site_data, 'environmental_rating', default='N/R'),
-            'description': f"• Environmental: {safe_get(site_data, 'non_power', 'env_issues', default='TBD')}\n"
-                          f"• Ecological: {safe_get(site_data, 'ecological_concerns', default='TBD')}\n"
-                          f"• Archeological: {safe_get(site_data, 'archeological_concerns', default='TBD')}"
-        },
-        {
-            'item': 'Wetlands and\nJurisdictional\nWater',
-            'preference': 'No Wetlands or\nJurisdictional Water',
-            'rating': safe_get(site_data, 'wetlands_rating', default='N/R'),
-            'description': f"• Wetlands: {safe_get(site_data, 'wetlands_present', default='TBD')}\n"
-                          f"• Water Features: {safe_get(site_data, 'water_features', default='TBD')}"
-        },
-        {
-            'item': 'Disaster',
-            'preference': 'Outside Zone of Risk',
-            'rating': safe_get(site_data, 'disaster_rating', default='N/R'),
-            'description': f"• Flood: {safe_get(site_data, 'flood_risk', default='TBD')}\n"
-                          f"• Seismic: {safe_get(site_data, 'seismic_risk', default='TBD')}"
-        },
-        {
-            'item': 'Easements',
-            'preference': 'No Utility Easements or\nROW',
-            'rating': safe_get(site_data, 'easements_rating', default='N/R'),
-            'description': f"• Utility easements: {safe_get(site_data, 'utility_easements', default='TBD')}\n"
-                          f"• ROW: {safe_get(site_data, 'row_easements', default='TBD')}"
-        },
-        {
-            'item': 'Electricity',
-            'preference': f"{site_data.get('target_mw', '300')} MW+",
-            'rating': safe_get(site_data, 'electricity_rating', default='N/R'),
-            'description': f"• Available capacity: {site_data.get('target_mw', 'TBD')} MW\n"
-                          f"• Service type: {safe_get(site_data, 'phases', 0, 'service_type', default='TBD') if site_data.get('phases') else 'TBD'}"
-        },
-        {
-            'item': 'Water',
-            'preference': '1M GPD+',
-            'rating': safe_get(site_data, 'water_rating', default='N/R'),
-            'description': f"• Water source: {safe_get(site_data, 'non_power', 'water_source', default='TBD')}\n"
-                          f"• Capacity: {safe_get(site_data, 'non_power', 'water_cap', default='TBD')} GPD"
-        },
-        {
-            'item': 'Wastewater',
-            'preference': '300K GPD+',
-            'rating': safe_get(site_data, 'wastewater_rating', default='N/R'),
-            'description': f"• Wastewater solution: {safe_get(site_data, 'wastewater_solution', default='TBD')}"
-        },
-        {
-            'item': 'Telecom',
-            'preference': 'High Bandwidth Fiber',
-            'rating': safe_get(site_data, 'telecom_rating', default='N/R'),
-            'description': f"• Fiber status: {safe_get(site_data, 'non_power', 'fiber_status', default='TBD')}\n"
-                          f"• Provider: {safe_get(site_data, 'non_power', 'fiber_provider', default='TBD')}"
-        },
-    ]
-    
-    # Populate table rows
-    for row_idx, row_data in enumerate(rating_rows, start=1):
-        if row_idx >= len(table.rows):
-            break
-        
-        # Update preference (column 1)
-        table.cell(row_idx, 1).text = row_data['preference']
-        
-        # Update rating (column 2) with color
-        rating_cell = table.cell(row_idx, 2)
-        rating_cell.text = row_data['rating']
-        rating_cell.fill.solid()
-        rating_cell.fill.fore_color.rgb = get_rating_color(row_data['rating'])
-        
-        # Update description (column 3)
-        table.cell(row_idx, 3).text = row_data['description']
-
 
 
 # =============================================================================
@@ -1066,24 +1421,37 @@ def export_site_to_pptx(
         from pptx.util import Inches, Pt
         from pptx.dml.color import RGBColor
         from pptx.enum.shapes import MSO_SHAPE
-        from pptx.enum.text import PP_ALIGN
     except ImportError:
         raise ImportError("python-pptx required")
 
     config = config or ExportConfig()
     prs = Presentation(template_path)
     replacements = build_replacements(site_data, config)
+    
+    # Check if we have structured profile data
+    profile_data = None
+    if 'profile' in site_data and isinstance(site_data['profile'], SiteProfileData):
+        profile_data = site_data['profile']
+    elif 'profile' in site_data and isinstance(site_data['profile'], dict):
+        profile_data = SiteProfileData.from_dict(site_data['profile'])
 
     # Process existing slides
     for slide in prs.slides:
         for shape in slide.shapes:
             if shape.has_table:
-                replace_in_table(shape.table, replacements)
+                # Check if this is the main Site Profile table (18 rows)
+                if len(shape.table.rows) >= 17 and profile_data:
+                    populate_site_profile_table(shape.table, profile_data)
+                else:
+                    replace_in_table(shape.table, replacements)
             elif shape.has_text_frame:
-                find_and_replace_text(shape, replacements)
-    
-    # Populate Site Profile table with actual data
-    populate_site_profile_table(prs, site_data)
+                # Check if this is the Overview/Observation/Outstanding text box
+                shape_text = shape.text_frame.text.lower()
+                if 'overview' in shape_text and 'observation' in shape_text:
+                    # Special handling for this multi-field text box
+                    update_overview_textbox(shape, site_data, profile_data)
+                else:
+                    find_and_replace_text(shape, replacements)
 
     # Find blank layout
     blank_layout = None
@@ -1140,8 +1508,8 @@ def export_site_to_pptx(
         add_footer(slide, 5, Inches, Pt, RGBColor)
         os.unlink(chart_path)
 
-    # ADD SLIDE: Infrastructure & Critical Path (WHITE background) - NATIVE POWERPOINT
-    if config.include_infrastructure:
+    # ADD SLIDE: Infrastructure & Critical Path (WHITE background)
+    if config.include_infrastructure and MATPLOTLIB_AVAILABLE:
         slide = prs.slides.add_slide(blank_layout)
         
         # Set white background explicitly
@@ -1149,166 +1517,30 @@ def export_site_to_pptx(
         
         add_header_bar(slide, "Infrastructure & Critical Path", Inches, Pt, RGBColor)
 
-        # === LEFT PANEL: Critical Path Text ===
-        left_panel = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(6.0), Inches(5.5))
-        tf = left_panel.text_frame
-        tf.word_wrap = True
-        
-        # Title
-        p = tf.paragraphs[0]
-        p.text = "Critical Path to Power"
-        p.font.size = Pt(20)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-        p.space_after = Pt(12)
-        
-        # Add phase information
-        for i, phase in enumerate(phases[:2]):  # Show first 2 phases
-            # Phase header
-            p = tf.add_paragraph()
-            p.text = f"Phase {phase.phase_num}: {int(phase.target_mw)} MW @ {phase.voltage_kv} kV"
-            p.font.size = Pt(16)
-            p.font.bold = True
-            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
-            p.space_after = Pt(6)
-            
-            # Target date
-            p = tf.add_paragraph()
-            p.text = f"Target: {phase.target_online}"
-            p.font.size = Pt(12)
-            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-            p.space_after = Pt(8)
-            
-            # Study statuses with symbols
-            studies = [
-                ('Screening Study', phase.screening_study),
-                ('Contract Study', phase.contract_study),
-                ('Letter of Agreement', phase.letter_of_agreement),
-                ('Energy Contract', phase.energy_contract),
-            ]
-            
-            for study_name, status in studies:
-                p = tf.add_paragraph()
-                # Add status symbol
-                if status.lower() in ['complete', 'executed']:
-                    symbol = '✓ '
-                    color = RGBColor.from_string(JLL_COLORS['green'][1:])
-                elif status.lower() in ['drafted', 'initiated', 'in_progress', 'in progress']:
-                    symbol = '○ '
-                    color = RGBColor.from_string(JLL_COLORS['yellow'][1:])
-                else:
-                    symbol = '□ '
-                    color = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-                
-                # Symbol run
-                run = p.runs[0] if p.runs else p.add_run()
-                run.text = symbol
-                run.font.size = Pt(11)
-                run.font.color.rgb = color
-                run.font.bold = True
-                
-                # Status text run
-                run = p.add_run()
-                run.text = f"{study_name}: {status}"
-                run.font.size = Pt(12)
-                run.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-                
-                p.space_after = Pt(5)
-            
-            p.space_after = Pt(8)
-        
-        # Add key risks at bottom
-        p = tf.add_paragraph()
-        p.text = "Key Risks: "
-        p.font.size = Pt(8)
-        p.font.italic = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-        
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+            infra_path = tmp.name
+        generate_critical_path_chart(phases, site_data, infra_path)
+        slide.shapes.add_picture(infra_path, Inches(0.4), Inches(0.8), width=Inches(12.5))
+
+        # Add risks/opportunities summary at bottom
         risks = site_data.get('risks', [])
-        if risks:
-            run = p.add_run()
-            run.text = ', '.join(risks[:2])
-            run.font.size = Pt(8)
-            run.font.italic = True
-        
-        # === RIGHT PANEL: Infrastructure Readiness Bar Chart (Native) ===
-        right_title = slide.shapes.add_textbox(Inches(7.0), Inches(1.0), Inches(5.5), Inches(0.4))
-        p = right_title.text_frame.paragraphs[0]
-        p.text = "Infrastructure Readiness"
-        p.font.size = Pt(16)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-        
-        # Infrastructure categories and scores
-        categories = [
-            ('Power', site_data.get('power_stage', 1), 4),
-            ('Site Control', site_data.get('site_control_stage', 1), 4),
-            ('Zoning', site_data.get('zoning_stage', 1), 3),
-            ('Water', site_data.get('water_stage', 1), 4),
-            ('Fiber', 3 if site_data.get('fiber_available') else 1, 4),
-            ('Environmental', 4 if site_data.get('environmental_complete') else 2, 4),
-        ]
-        
-        # Draw bars manually with shapes
-        bar_y_start = Inches(1.6)
-        bar_height = Inches(0.5)
-        bar_spacing = Inches(0.7)
-        bar_max_width = Inches(4.5)
-        bar_x_start = Inches(7.8)
-        
-        for i, (name, stage, max_stage) in enumerate(categories):
-            y_pos = bar_y_start + (i * bar_spacing)
-            pct = (stage / max_stage) * 100
-            
-            # Category label
-            label_box = slide.shapes.add_textbox(Inches(7.0), y_pos + Inches(0.1), Inches(0.7), Inches(0.3))
-            p = label_box.text_frame.paragraphs[0]
-            p.text = name
-            p.font.size = Pt(10)
-            p.font.bold = False
-            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-            p.alignment = PP_ALIGN.RIGHT
-            
-            # Background bar (light gray)
-            bg_bar = slide.shapes.add_shape(
-                MSO_SHAPE.RECTANGLE,
-                bar_x_start, y_pos,
-                bar_max_width, bar_height
-            )
-            bg_bar.fill.solid()
-            bg_bar.fill.fore_color.rgb = RGBColor(240, 240, 240)
-            bg_bar.line.fill.background()
-            
-            # Foreground bar (colored by percentage)
-            if pct >= 75:
-                bar_color = RGBColor.from_string(JLL_COLORS['green'][1:])
-            elif pct >= 50:
-                bar_color = RGBColor.from_string(JLL_COLORS['yellow'][1:])
-            else:
-                bar_color = RGBColor.from_string(JLL_COLORS['teal'][1:])
-            
-            fg_bar = slide.shapes.add_shape(
-                MSO_SHAPE.RECTANGLE,
-                bar_x_start, y_pos,
-                bar_max_width * (pct / 100), bar_height
-            )
-            fg_bar.fill.solid()
-            fg_bar.fill.fore_color.rgb = bar_color
-            fg_bar.line.fill.background()
-            
-            # Percentage label
-            pct_label = slide.shapes.add_textbox(
-                bar_x_start + bar_max_width + Inches(0.1), 
-                y_pos + Inches(0.05), 
-                Inches(0.6), Inches(0.4)
-            )
-            p = pct_label.text_frame.paragraphs[0]
-            p.text = f"{int(pct)}%"
-            p.font.size = Pt(11)
-            p.font.bold = True
-            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
+        opportunities = site_data.get('opportunities', [])
+        if risks or opportunities:
+            details_box = slide.shapes.add_textbox(Inches(0.4), Inches(6.3), Inches(12), Inches(0.8))
+            tf = details_box.text_frame
+            tf.word_wrap = True
+            p = tf.paragraphs[0]
+            summary_parts = []
+            if risks:
+                summary_parts.append(f"Key Risks: {', '.join(risks[:3])}")
+            if opportunities:
+                summary_parts.append(f"Opportunities: {', '.join(opportunities[:3])}")
+            p.text = "  |  ".join(summary_parts)
+            p.font.size = Pt(9)
+            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
 
         add_footer(slide, 6, Inches, Pt, RGBColor)
+        os.unlink(infra_path)
 
     # ADD SLIDE: Score Analysis (WHITE background)
     if config.include_score_analysis and MATPLOTLIB_AVAILABLE:
@@ -1331,340 +1563,104 @@ def export_site_to_pptx(
             fiber_score=scores_data.get('fiber', 0),
         )
         
-        # Generate simplified radar chart (matplotlib)
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
             score_path = tmp.name
-        generate_score_radar_chart(scores, site_data.get('name', 'Site'), score_path)
-        
-        # Add radar chart on left side
-        slide.shapes.add_picture(score_path, Inches(0.5), Inches(1.2), width=Inches(5.5))
-        
-        # === RIGHT SIDE: Overall Score + Breakdown Table ===
-        # Overall Score display
-        overall_box = slide.shapes.add_textbox(Inches(7.0), Inches(1.2), Inches(5.5), Inches(1.2))
-        tf = overall_box.text_frame
-        tf.word_wrap = True
-        
-        p = tf.paragraphs[0]
-        p.text = "Overall Score"
-        p.font.size = Pt(16)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
-        p.alignment = PP_ALIGN.CENTER
-        p.space_after = Pt(8)
-        
-        p = tf.add_paragraph()
-        p.text = f"{int(scores.overall_score)}"
-        p.font.size = Pt(48)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['green'][1:])
-        p.alignment = PP_ALIGN.CENTER
-        
-        # Category breakdown table
-        table_top = Inches(2.6)
-        table_data = [
-            ("Category", "Score", "Weight"),
-            ("Power Pathway", f"{int(scores.power_pathway)}", "30%"),
-            ("Site Specific", f"{int(scores.site_specific)}", "10%"),
-            ("Execution", f"{int(scores.execution)}", "20%"),
-            ("Relationships", f"{int(scores.relationship_capital)}", "35%"),
-            ("Financial", f"{int(scores.financial)}", "5%"),
-        ]
-        
-        # Create table
-        rows, cols = len(table_data), 3
-        score_table = slide.shapes.add_table(rows, cols, Inches(7.0), table_top, Inches(5.5), Inches(3.5)).table
-        
-        # Set column widths
-        score_table.columns[0].width = Inches(2.8)
-        score_table.columns[1].width = Inches(1.3)
-        score_table.columns[2].width = Inches(1.4)
-        
-        # Populate table
-        for row_idx, (category, score, weight) in enumerate(table_data):
-            for col_idx, text in enumerate([category, score, weight]):
-                cell = score_table.cell(row_idx, col_idx)
-                cell.text = text
-                
-                # Header row styling
-                if row_idx == 0:
-                    cell.fill.solid()
-                    cell.fill.fore_color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
-                    for paragraph in cell.text_frame.paragraphs:
-                        paragraph.font.size = Pt(11)
-                        paragraph.font.bold = True
-                        paragraph.font.color.rgb = RGBColor(255, 255, 255)
-                        paragraph.alignment = PP_ALIGN.CENTER
-                else:
-                    # Data rows
-                    for paragraph in cell.text_frame.paragraphs:
-                        paragraph.font.size = Pt(10)
-                        paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-                        if col_idx == 0:
-                            paragraph.alignment = PP_ALIGN.LEFT
-                        else:
-                            paragraph.alignment = PP_ALIGN.CENTER
-                            paragraph.font.bold = True
-        
+        generate_score_summary_chart(scores, site_data.get('name', 'Site'), score_path)
+        slide.shapes.add_picture(score_path, Inches(0.4), Inches(0.8), width=Inches(12.5))
         add_footer(slide, 7, Inches, Pt, RGBColor)
         os.unlink(score_path)
 
-    # ADD SLIDE: Market Analysis (WHITE background) - NATIVE 4-QUADRANT LAYOUT
-    if config.include_market_analysis:
+    # ADD SLIDE: Market Analysis (WHITE background)
+    if config.include_market_analysis and MATPLOTLIB_AVAILABLE:
         slide = prs.slides.add_slide(blank_layout)
         set_slide_background_white(slide, Inches, RGBColor)
         add_header_bar(slide, "Market Analysis", Inches, Pt, RGBColor)
         
-        # Build market data from site_data
+        # Build market data from site_data and state analysis
         state_code = site_data.get('state_code', site_data.get('state', 'OK')[:2].upper())
         
-        # State defaults
+        # Get market_analysis if provided, otherwise build from available data
+        market_raw = site_data.get('market_analysis', {})
+        
+        # Build comparison states data
+        comparison_states = market_raw.get('comparison_states', {})
+        if not comparison_states:
+            # Default comparison states based on common alternatives
+            default_comparisons = {
+                'OK': {'TX': {}, 'GA': {}, 'OH': {}},
+                'TX': {'OK': {}, 'GA': {}, 'AZ': {}},
+                'GA': {'TX': {}, 'VA': {}, 'OH': {}},
+                'VA': {'GA': {}, 'OH': {}, 'TX': {}},
+                'OH': {'IN': {}, 'GA': {}, 'TX': {}},
+            }
+            comp_codes = list(default_comparisons.get(state_code, {'TX': {}, 'GA': {}}).keys())[:3]
+            
+            # Default state data (from state_analysis framework)
+            state_defaults = {
+                'OK': {'name': 'Oklahoma', 'queue_months': 30, 'rate': 0.055, 'score': 88, 'tier': 1},
+                'TX': {'name': 'Texas', 'queue_months': 36, 'rate': 0.065, 'score': 80, 'tier': 1},
+                'GA': {'name': 'Georgia', 'queue_months': 42, 'rate': 0.072, 'score': 70, 'tier': 2},
+                'VA': {'name': 'Virginia', 'queue_months': 48, 'rate': 0.078, 'score': 58, 'tier': 3},
+                'OH': {'name': 'Ohio', 'queue_months': 36, 'rate': 0.068, 'score': 70, 'tier': 2},
+                'IN': {'name': 'Indiana', 'queue_months': 32, 'rate': 0.062, 'score': 72, 'tier': 2},
+                'WY': {'name': 'Wyoming', 'queue_months': 28, 'rate': 0.048, 'score': 82, 'tier': 1},
+                'AZ': {'name': 'Arizona', 'queue_months': 38, 'rate': 0.070, 'score': 52, 'tier': 3},
+            }
+            for code in comp_codes:
+                if code in state_defaults:
+                    comparison_states[code] = state_defaults[code]
+        
+        # Get state defaults for site's state
         site_state_defaults = {
-            'OK': {'iso': 'SPP', 'reg': 'Regulated', 'utility': 'OG&E', 'queue': 30, 'rate': 5.5, 'renew': 42,
-                   'score': 84.5, 'tier': 1, 'dc_mw': 500, 'fiber': 'Medium',
+            'OK': {'iso': 'SPP', 'reg': 'regulated', 'queue': 30, 'rate': 0.055, 'renew': 42,
+                   'score': 88, 'tier': 1, 'dc_mw': 500, 'fiber': 'medium',
                    'hyperscalers': ['Google (Pryor)', 'Meta (announced)'],
-                   'strengths': ['Pro-business PSC', 'Low power costs'],
+                   'strengths': ['Pro-business PSC', 'Low power costs', 'SPP wholesale market'],
                    'weaknesses': ['Limited DC ecosystem', 'Water constraints'],
                    'opportunities': ['Hyperscaler expansion', 'Tulsa hub growth'],
                    'threats': ['Grid congestion', 'Water rights competition'],
-                   'incentives': ['Sales tax exemption', 'Property tax abatement']},
-            'TX': {'iso': 'ERCOT', 'reg': 'Deregulated', 'utility': 'Oncor', 'queue': 36, 'rate': 6.5, 'renew': 35,
-                   'score': 77.2, 'tier': 1, 'dc_mw': 3000, 'fiber': 'High',
+                   'incentives': ['Sales tax exemption', 'Property tax abatement', 'Quality Jobs Program']},
+            'TX': {'iso': 'ERCOT', 'reg': 'deregulated', 'queue': 36, 'rate': 0.065, 'renew': 35,
+                   'score': 80, 'tier': 1, 'dc_mw': 3000, 'fiber': 'high',
                    'hyperscalers': ['Google', 'Microsoft', 'Meta', 'AWS', 'Oracle'],
-                   'strengths': ['No state income tax', 'Massive ecosystem'],
-                   'weaknesses': ['Grid reliability', 'Water stress'],
+                   'strengths': ['No state income tax', 'Massive ecosystem', 'ERCOT flexibility'],
+                   'weaknesses': ['Grid reliability', 'Water stress', 'Queue backlog'],
                    'opportunities': ['Continued growth', 'West Texas expansion'],
                    'threats': ['Grid instability', 'Water availability'],
                    'incentives': ['Chapter 313 replacement', 'Property tax limits']},
         }
         
         defaults = site_state_defaults.get(state_code, site_state_defaults.get('OK'))
-        state_name = site_data.get('state', defaults.get('name', 'State'))
         
+        market_data = {
+            'state_code': state_code,
+            'state_name': market_raw.get('state_name', site_data.get('state', defaults.get('name', 'State'))),
+            'primary_iso': market_raw.get('primary_iso', site_data.get('iso', defaults.get('iso', 'SPP'))),
+            'regulatory_structure': market_raw.get('regulatory_structure', defaults.get('reg', 'regulated')),
+            'utility_name': market_raw.get('utility_name', site_data.get('utility', 'Utility')),
+            'avg_queue_time_months': market_raw.get('avg_queue_time_months', defaults.get('queue', 36)),
+            'avg_industrial_rate': market_raw.get('avg_industrial_rate', defaults.get('rate', 0.06)),
+            'renewable_percentage': market_raw.get('renewable_percentage', defaults.get('renew', 30)),
+            'overall_score': market_raw.get('overall_score', defaults.get('score', 70)),
+            'tier': market_raw.get('tier', defaults.get('tier', 2)),
+            'existing_dc_mw': market_raw.get('existing_dc_mw', defaults.get('dc_mw', 500)),
+            'hyperscaler_presence': market_raw.get('hyperscaler_presence', defaults.get('hyperscalers', [])),
+            'fiber_density': market_raw.get('fiber_density', defaults.get('fiber', 'medium')),
+            'strengths': market_raw.get('strengths', defaults.get('strengths', [])),
+            'weaknesses': market_raw.get('weaknesses', defaults.get('weaknesses', [])),
+            'opportunities': market_raw.get('opportunities', defaults.get('opportunities', [])),
+            'threats': market_raw.get('threats', defaults.get('threats', [])),
+            'comparison_states': comparison_states,
+            'incentives': market_raw.get('incentives', defaults.get('incentives', [])),
+        }
         
-        # === TOP-LEFT QUADRANT: State Comparison Chart ===
-        if MATPLOTLIB_AVAILABLE:
-            import matplotlib.pyplot as plt
-            import matplotlib
-            matplotlib.use('Agg')
-            
-            # State comparison data
-            states_data = [
-                (state_code, defaults.get('queue', 30), defaults.get('rate', 5.5)),
-                ('TX', 36, 6.5),
-                ('GA', 42, 7.2),
-                ('OH', 36, 6.8),
-            ]
-            
-            states = [s[0] for s in states_data[:4]]
-            queue_months = [s[1] for s in states_data[:4]]
-            power_rates = [s[2] for s in states_data[:4]]
-            
-            # Create bar chart
-            fig, ax1 = plt.subplots(figsize=(5.5, 2.8))
-            
-            x = range(len(states))
-            width = 0.35
-            
-            # Queue months bars
-            bars1 = ax1.bar([i - width/2 for i in x], queue_months, width, 
-                           color=JLL_COLORS['teal'], label='Gen. Queue (months)', alpha=0.8)
-            ax1.set_ylabel('Gen. Interconnection (months)', fontsize=9, color=JLL_COLORS['teal'])
-            ax1.tick_params(axis='y', labelcolor=JLL_COLORS['teal'], labelsize=8)
-            ax1.set_ylim(0, max(queue_months) * 1.2)
-            
-            # Add values on bars
-            for bar, val in zip(bars1, queue_months):
-                height = bar.get_height()
-                ax1.text(bar.get_x() + bar.get_width()/2., height,
-                        f'{int(val)}', ha='center', va='bottom', fontsize=8, color=JLL_COLORS['dark_gray'])
-            
-            # Power cost bars (second axis)
-            ax2 = ax1.twinx()
-            bars2 = ax2.bar([i + width/2 for i in x], power_rates, width,
-                           color='#d4af37', label='Power Cost (¢/kWh)', alpha=0.8)
-            ax2.set_ylabel('Power Cost (¢/kWh)', fontsize=9, color='#d4af37')
-            ax2.tick_params(axis='y', labelcolor='#d4af37', labelsize=8)
-            ax2.set_ylim(0, max(power_rates) * 1.3)
-            
-            # Add values on bars
-            for bar, val in zip(bars2, power_rates):
-                height = bar.get_height()
-                ax2.text(bar.get_x() + bar.get_width()/2., height,
-                        f'{val:.1f}¢', ha='center', va='bottom', fontsize=8, color=JLL_COLORS['dark_gray'])
-            
-            # Set x-axis
-            ax1.set_xticks(x)
-            ax1.set_xticklabels(states, fontsize=10, fontweight='bold')
-            ax1.set_xlabel('')
-            
-            # Title
-            ax1.set_title('New Generation Capacity: State Comparison', 
-                         fontsize=11, fontweight='bold', pad=10, color=JLL_COLORS['dark_blue'])
-            
-            # Remove top/right spines
-            ax1.spines['top'].set_visible(False)
-            ax2.spines['top'].set_visible(False)
-            
-            plt.tight_layout()
-            
-            # Save chart
-            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-                state_chart_path = tmp.name
-            plt.savefig(state_chart_path, dpi=150, bbox_inches='tight', facecolor='white')
-            plt.close()
-            
-            # Add chart to slide
-            slide.shapes.add_picture(state_chart_path, Inches(0.5), Inches(1.0), width=Inches(5.8))
-            os.unlink(state_chart_path)
-        
-        # === TOP-RIGHT QUADRANT: Competitive Landscape ===
-        tr_title = slide.shapes.add_textbox(Inches(6.8), Inches(1.0), Inches(5.8), Inches(0.4))
-        p = tr_title.text_frame.paragraphs[0]
-        p.text = "Competitive Landscape"
-        p.font.size = Pt(12)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-        
-        comp_land = slide.shapes.add_textbox(Inches(6.8), Inches(1.5), Inches(5.8), Inches(2.3))
-        tf = comp_land.text_frame
-        tf.word_wrap = True
-        
-        p = tf.paragraphs[0]
-        p.text = f"Existing DC Capacity:"
-        p.font.size = Pt(11)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-        
-        run = p.add_run()
-        run.text = f"  {defaults.get('dc_mw', 500)} MW"
-        run.font.size = Pt(14)
-        run.font.bold = True
-        run.font.color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
-        p.space_after = Pt(8)
-        
-        p = tf.add_paragraph()
-        p.text = f"Fiber Density:"
-        p.font.size = Pt(11)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-        
-        run = p.add_run()
-        fiber = defaults.get('fiber', 'Medium')
-        fiber_color = JLL_COLORS['yellow'][1:] if fiber == 'Medium' else JLL_COLORS['green'][1:]
-        run.text = f"  {fiber}"
-        run.font.size = Pt(14)
-        run.font.bold = True
-        run.font.color.rgb = RGBColor.from_string(fiber_color)
-        p.space_after = Pt(8)
-        
-        p = tf.add_paragraph()
-        p.text = "Hyperscaler Presence:"
-        p.font.size = Pt(11)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-        p.space_after = Pt(4)
-        
-        for hyperscaler in defaults.get('hyperscalers', [])[:5]:
-            p = tf.add_paragraph()
-            p.text = f"• {hyperscaler}"
-            p.font.size = Pt(9)
-            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-            p.level = 1
-            p.space_after = Pt(2)
-        
-        # === BOTTOM-LEFT QUADRANT: ISO & Utility Profile ===
-        bl_title = slide.shapes.add_textbox(Inches(0.5), Inches(4.0), Inches(6.0), Inches(0.4))
-        p = bl_title.text_frame.paragraphs[0]
-        p.text = "ISO & Utility Profile"
-        p.font.size = Pt(13)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-        
-        iso_box = slide.shapes.add_textbox(Inches(0.5), Inches(4.5), Inches(6.0), Inches(2.2))
-        tf = iso_box.text_frame
-        tf.word_wrap = True
-        
-        iso_data = [
-            ('Primary ISO:', defaults.get('iso', 'SPP')),
-            ('Regulatory Structure:', defaults.get('reg', 'Regulated')),
-            ('Utility:', defaults.get('utility', site_data.get('utility', 'Utility'))),
-            ('Gen. Queue Time:', f"{defaults.get('queue', 36)} months"),
-            ('Industrial Rate:', f"{defaults.get('rate', 5.5)} ¢/kWh"),
-            ('Renewable Mix:', f"{defaults.get('renew', 30)}%"),
-            ('State Tier:', f"Tier {defaults.get('tier', 1)}"),
-            ('Overall Score:', f"{defaults.get('score', 70)}/100"),
-        ]
-        
-        for i, (label, value) in enumerate(iso_data):
-            if i == 0:
-                p = tf.paragraphs[0]
-            else:
-                p = tf.add_paragraph()
-            
-            p.text = label
-            p.font.size = Pt(10)
-            p.font.bold = True
-            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-            
-            run = p.add_run()
-            run.text = f"  {value}"
-            run.font.size = Pt(11)
-            run.font.bold = True
-            run.font.color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
-            p.space_after = Pt(4)
-        
-        # Key Incentives
-        p = tf.add_paragraph()
-        p.text = "Key Incentives:"
-        p.font.size = Pt(10)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-        p.space_after = Pt(3)
-        
-        for incentive in defaults.get('incentives', [])[:2]:
-            p = tf.add_paragraph()
-            p.text = f"• {incentive}"
-            p.font.size = Pt(9)
-            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-            p.level = 1
-        
-        # === BOTTOM-RIGHT QUADRANT: SWOT Summary ===
-        br_title = slide.shapes.add_textbox(Inches(6.8), Inches(4.0), Inches(5.8), Inches(0.4))
-        p = br_title.text_frame.paragraphs[0]
-        p.text = f"{state_name} SWOT Summary"
-        p.font.size = Pt(13)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-        
-        # SWOT in 2x2 grid
-        swot_data = [
-            ("Strengths", defaults.get('strengths', []), JLL_COLORS['green'][1:], Inches(6.8), Inches(4.5)),
-            ("Opportunities", defaults.get('opportunities', []), JLL_COLORS['teal'][1:], Inches(9.8), Inches(4.5)),
-            ("Weaknesses", defaults.get('weaknesses', []), JLL_COLORS['red'][1:], Inches(6.8), Inches(5.6)),
-            ("Threats", defaults.get('threats', []), JLL_COLORS['orange'][1:], Inches(9.8), Inches(5.6)),
-        ]
-        
-        for title, items, color, x, y in swot_data:
-            swot_box = slide.shapes.add_textbox(x, y, Inches(2.8), Inches(1.0))
-            tf = swot_box.text_frame
-            tf.word_wrap = True
-            
-            p = tf.paragraphs[0]
-            p.text = title
-            p.font.size = Pt(11)
-            p.font.bold = True
-            p.font.color.rgb = RGBColor.from_string(color)
-            p.space_after = Pt(4)
-            
-            for item in items[:2]:
-                p = tf.add_paragraph()
-                p.text = f"+ {item}" if title in ['Strengths', 'Opportunities'] else f"- {item}"
-                p.font.size = Pt(9)
-                p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-                p.space_after = Pt(2)
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+            market_path = tmp.name
+        generate_market_analysis_chart(market_data, site_data.get('name', 'Site'), market_path)
+        slide.shapes.add_picture(market_path, Inches(0.4), Inches(0.8), width=Inches(12.5))
         
         add_footer(slide, 8, Inches, Pt, RGBColor)
+        os.unlink(market_path)
 
     # REORDER: Move Thank You to end
     def move_slide_to_end(prs, slide_index):
@@ -1720,400 +1716,12 @@ def analyze_template(template_path: str) -> Dict:
     return analysis
 
 
-def create_default_template(output_path: str) -> str:
-    """
-    Create a default PowerPoint template with JLL branding.
-    This template follows the structure expected by export_site_to_pptx().
-    
-    Slide Order:
-    0. Title (dark blue background)
-    1. Site Profile
-    2. Site Boundary
-    3. Topography
-    4. Thank You (dark blue background)
-    """
-    try:
-        from pptx import Presentation
-        from pptx.util import Inches, Pt
-        from pptx.dml.color import RGBColor
-        from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
-        from pptx.enum.shapes import MSO_SHAPE
-    except ImportError:
-        raise ImportError("python-pptx required")
-    
-    prs = Presentation()
-    prs.slide_width = Inches(13.33)  # Widescreen 16:9
-    prs.slide_height = Inches(7.5)
-    
-    # === SLIDE 0: Title Slide (Dark Blue Background) ===
-    slide = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
-    
-    # Dark blue background
-    background = slide.background
-    fill = background.fill
-    fill.solid()
-    fill.fore_color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-    
-    # Title text
-    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(2.5), Inches(12), Inches(2))
-    tf = title_box.text_frame
-    tf.word_wrap = True
-    p = tf.paragraphs[0]
-    p.text = "SITE NAME"
-    p.font.size = Pt(54)
-    p.font.bold = True
-    p.font.color.rgb = RGBColor(255, 255, 255)
-    p.alignment = PP_ALIGN.CENTER
-    
-    # Subtitle
-    subtitle_box = slide.shapes.add_textbox(Inches(0.5), Inches(4.5), Inches(12), Inches(1))
-    tf2 = subtitle_box.text_frame
-    p2 = tf2.paragraphs[0]
-    p2.text = "[STATE] | Power Site Profile"
-    p2.font.size = Pt(24)
-    p2.font.color.rgb = RGBColor(200, 200, 200)
-    p2.alignment = PP_ALIGN.CENTER
-    
-    # Date
-    date_box = slide.shapes.add_textbox(Inches(0.5), Inches(6.5), Inches(12), Inches(0.5))
-    tf3 = date_box.text_frame
-    p3 = tf3.paragraphs[0]
-    p3.text = f"December 2, 2025"
-    p3.font.size = Pt(14)
-    p3.font.color.rgb = RGBColor(180, 180, 180)
-    p3.alignment = PP_ALIGN.CENTER
-    
-    # === SLIDE 1: Site Profile (White Background with Rating Table) ===
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    
-    # Header bar
-    header = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0),
-                                     Inches(13.33), Inches(0.6))
-    header.fill.solid()
-    header.fill.fore_color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-    header.line.fill.background()
-    
-    header_text = slide.shapes.add_textbox(Inches(0.4), Inches(0.12), Inches(10), Inches(0.4))
-    p = header_text.text_frame.paragraphs[0]
-    p.text = "Site Profile"
-    p.font.size = Pt(24)
-    p.font.bold = True
-    p.font.color.rgb = RGBColor(255, 255, 255)
-    
-    # Create rating table (15 rows: 1 header + 14 data rows)
-    # EXACT specifications from reference template
-    rows, cols = 15, 4
-    left, top = Inches(0.4), Inches(0.75)
-    width = Inches(7.25)
-    # Height calculated from row heights: 0.31 + (14 × 0.32) = 4.79
-    height = Inches(4.8)  # Matches sum of row heights
-    
-    table = slide.shapes.add_table(rows, cols, left, top, width, height).table
-    
-    # Set column widths (from reference template)
-    table.columns[0].width = Inches(0.93)   # Item
-    table.columns[1].width = Inches(1.23)   # Preference
-    table.columns[2].width = Inches(0.64)   # Rating
-    table.columns[3].width = Inches(4.46)   # Description
-    
-    # Set row heights (from reference template)
-    for row in table.rows:
-        row.height = Inches(0.32)
-    table.rows[0].height = Inches(0.31)  # Header slightly shorter
-    
-    # Header row styling
-    header_items = ['Item', 'Preference', 'Rating', 'Description']
-    for col_idx, header_text in enumerate(header_items):
-        cell = table.cell(0, col_idx)
-        cell.text = header_text
-        cell.fill.solid()
-        cell.fill.fore_color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-        
-        # Style header text
-        cell.text_frame.margin_top = Inches(0.05)
-        cell.text_frame.margin_bottom = Inches(0.05)
-        cell.text_frame.margin_left = Inches(0.05)
-        cell.text_frame.margin_right = Inches(0.05)
-        
-        for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(10)
-            paragraph.font.bold = True
-            paragraph.font.color.rgb = RGBColor(255, 255, 255)
-            paragraph.alignment = PP_ALIGN.CENTER
-    
-    # Data rows (populate with placeholders)
-    rating_data = [
-        ('Location', 'Proximity and Surroundings', 'N/R', '• Nearest Town: TBD\\n• Distance to Large City: TBD\\n• Neighboring Uses: TBD'),
-        ('Ownership &\\nAsking Price', 'Single Owner', 'N/R', '• Owner(s): TBD\\n• Asking Price: TBD'),
-        ('Size / Shape /\\nDimensions', '1000 acres', 'N/R', '• Total Size: TBD acres\\n• Dimensions: TBD'),
-        ('Zoning', 'Data Center Compatible', 'N/R', '• Zoning: TBD\\n• Site condition: TBD'),
-        ('Timing', 'Transfer by Q1 2026', 'N/R', '• Transfer timeline: TBD'),
-        ('Geotechnical\\nand Topography', 'Generally Flat with\\nGood Soils', 'N/R', '• Soil type: TBD\\n• Topography: TBD\\n• Elevation change: TBD'),
-        ('Environmental,\\nEcological,\\nArcheological', 'No Barriers to\\nConstruction', 'N/R', '• Environmental: TBD\\n• Ecological: TBD\\n• Archeological: TBD'),
-        ('Wetlands and\\nJurisdictional\\nWater', 'No Wetlands or\\nJurisdictional Water', 'N/R', '• Wetlands: TBD\\n• Water Features: TBD'),
-        ('Disaster', 'Outside Zone of Risk', 'N/R', '• Flood: TBD\\n• Seismic: TBD'),
-        ('Easements', 'No Utility Easements or\\nROW', 'N/R', '• Utility easements: TBD\\n• ROW: TBD'),
-        ('Electricity', '300 MW+', 'N/R', '• Available capacity: TBD MW\\n• Service type: TBD'),
-        ('Water', '1M GPD+', 'N/R', '• Water source: TBD\\n• Capacity: TBD GPD'),
-        ('Wastewater', '300K GPD+', 'N/R', '• Wastewater solution: TBD'),
-        ('Telecom', 'High Bandwidth Fiber', 'N/R', '• Fiber status: TBD\\n• Provider: TBD'),
-    ]
-    
-    for row_idx, (item, preference, rating, description) in enumerate(rating_data, start=1):
-        # Item column
-        cell = table.cell(row_idx, 0)
-        cell.text = item
-        cell.fill.solid()
-        cell.fill.fore_color.rgb = RGBColor(250, 250, 250)
-        cell.text_frame.margin_top = Inches(0.03)
-        cell.text_frame.margin_bottom = Inches(0.03)
-        cell.text_frame.margin_left = Inches(0.05)
-        cell.text_frame.margin_right = Inches(0.05)
-        cell.text_frame.word_wrap = True
-        
-        for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(9)
-            paragraph.font.bold = False
-            paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-            paragraph.line_spacing = 1.0
-        
-        # Preference column
-        cell = table.cell(row_idx, 1)
-        cell.text = preference
-        cell.text_frame.margin_top = Inches(0.03)
-        cell.text_frame.margin_bottom = Inches(0.03)
-        cell.text_frame.margin_left = Inches(0.05)
-        cell.text_frame.margin_right = Inches(0.05)
-        cell.text_frame.word_wrap = True
-        
-        for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(8)
-            paragraph.font.bold = True
-            paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-            paragraph.line_spacing = 1.0
-        
-        # Rating column (color-coded)
-        cell = table.cell(row_idx, 2)
-        cell.text = rating
-        cell.fill.solid()
-        # Default to gray for N/R
-        cell.fill.fore_color.rgb = RGBColor.from_string(JLL_COLORS['rating_gray'][1:])
-        cell.text_frame.margin_top = Inches(0.03)
-        cell.text_frame.margin_bottom = Inches(0.03)
-        
-        for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(7)
-            paragraph.font.bold = True
-            paragraph.font.color.rgb = RGBColor(255, 255, 255)
-            paragraph.alignment = PP_ALIGN.CENTER
-        
-        # Description column
-        cell = table.cell(row_idx, 3)
-        cell.text = description
-        cell.text_frame.word_wrap = True
-        cell.text_frame.margin_top = Inches(0.03)
-        cell.text_frame.margin_bottom = Inches(0.03)
-        cell.text_frame.margin_left = Inches(0.05)
-        cell.text_frame.margin_right = Inches(0.05)
-        
-        for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(8)
-            paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-            paragraph.line_spacing = 1.0
-    
-    # Add map placeholder on right side
-    map_placeholder = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE,
-        Inches(8.3), Inches(0.8),
-        Inches(4.8), Inches(3.0)
-    )
-    map_placeholder.fill.solid()
-    map_placeholder.fill.fore_color.rgb = RGBColor(240, 240, 240)
-    map_placeholder.line.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-    map_placeholder.line.width = Pt(1)
-    
-    # Map label
-    map_label = slide.shapes.add_textbox(Inches(8.3), Inches(2.0), Inches(4.8), Inches(0.5))
-    p = map_label.text_frame.paragraphs[0]
-    p.text = "[Location Map]"
-    p.font.size = Pt(12)
-    p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-    p.alignment = PP_ALIGN.CENTER
-    
-    # Add site image placeholders below map
-    site_placeholder = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE,
-        Inches(8.3), Inches(4.0),
-        Inches(4.8), Inches(2.8)
-    )
-    site_placeholder.fill.solid()
-    site_placeholder.fill.fore_color.rgb = RGBColor(240, 240, 240)
-    site_placeholder.line.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-    site_placeholder.line.width = Pt(1)
-    
-    site_label = slide.shapes.add_textbox(Inches(8.3), Inches(5.2), Inches(4.8), Inches(0.5))
-    p = site_label.text_frame.paragraphs[0]
-    p.text = "[Site Image]"
-    p.font.size = Pt(12)
-    p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-    p.alignment = PP_ALIGN.CENTER
-    
-    # Footer
-    footer = slide.shapes.add_textbox(Inches(0.4), Inches(7.2), Inches(12), Inches(0.25))
-    p = footer.text_frame.paragraphs[0]
-    p.text = f"© {datetime.now().year} Jones Lang LaSalle IP, Inc. All rights reserved  |  2"
-    p.font.size = Pt(8)
-    p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-    
-    # === SLIDE 2: Site Boundary (White Background w/ placeholder) ===
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    
-    # Header bar
-    header = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0),
-                                     Inches(13.33), Inches(0.6))
-    header.fill.solid()
-    header.fill.fore_color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-    header.line.fill.background()
-    
-    header_text = slide.shapes.add_textbox(Inches(0.4), Inches(0.12), Inches(10), Inches(0.4))
-    p = header_text.text_frame.paragraphs[0]
-    p.text = "Site Boundary"
-    p.font.size = Pt(24)
-    p.font.bold = True
-    p.font.color.rgb = RGBColor(255, 255, 255)
-    
-    # Placeholder for map
-    placeholder = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE,
-        Inches(1.5), Inches(1.5),
-        Inches(10), Inches(5)
-    )
-    placeholder.fill.solid()
-    placeholder.fill.fore_color.rgb = RGBColor(240, 240, 240)
-    placeholder.line.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-    placeholder.line.width = Pt(1)
-    
-    # Placeholder text
-    text_box = slide.shapes.add_textbox(Inches(1.5), Inches(3.5), Inches(10), Inches(1))
-    p = text_box.text_frame.paragraphs[0]
-    p.text = "[Site Boundary Map]"
-    p.font.size = Pt(18)
-    p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-    p.alignment = PP_ALIGN.CENTER
-    
-    # Footer
-    footer = slide.shapes.add_textbox(Inches(0.4), Inches(7.2), Inches(12), Inches(0.25))
-    p = footer.text_frame.paragraphs[0]
-    p.text = f"© {datetime.now().year} Jones Lang LaSalle IP, Inc. All rights reserved  |  3"
-    p.font.size = Pt(8)
-    p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-    
-    # === SLIDE 3: Topography (White Background w/ placeholder) ===
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    
-    # Header bar
-    header = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0),
-                                     Inches(13.33), Inches(0.6))
-    header.fill.solid()
-    header.fill.fore_color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-    header.line.fill.background()
-    
-    header_text = slide.shapes.add_textbox(Inches(0.4), Inches(0.12), Inches(10), Inches(0.4))
-    p = header_text.text_frame.paragraphs[0]
-    p.text = "Topography"
-    p.font.size = Pt(24)
-    p.font.bold = True
-    p.font.color.rgb = RGBColor(255, 255, 255)
-    
-    # Placeholder for map
-    placeholder = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE,
-        Inches(1.5), Inches(1.5),
-        Inches(10), Inches(5)
-    )
-    placeholder.fill.solid()
-    placeholder.fill.fore_color.rgb = RGBColor(240, 240, 240)
-    placeholder.line.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:]) 
-    placeholder.line.width = Pt(1)
-    
-    # Placeholder text
-    text_box = slide.shapes.add_textbox(Inches(1.5), Inches(3.5), Inches(10), Inches(1))
-    p = text_box.text_frame.paragraphs[0]
-    p.text = "[Topography Map]"
-    p.font.size = Pt(18)
-    p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-    p.alignment = PP_ALIGN.CENTER
-    
-    # Footer
-    footer = slide.shapes.add_textbox(Inches(0.4), Inches(7.2), Inches(12), Inches(0.25))
-    p = footer.text_frame.paragraphs[0]
-    p.text = f"© {datetime.now().year} Jones Lang LaSalle IP, Inc. All rights reserved  |  4"
-    p.font.size = Pt(8)
-    p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-    
-    # === SLIDE 4: Thank You (Dark Blue Background) ===
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    
-    # Dark blue background
-    background = slide.background
-    fill = background.fill
-    fill.solid()
-    fill.fore_color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-    
-    # Thank you text
-    thank_you_box = slide.shapes.add_textbox(Inches(0.5), Inches(2), Inches(12), Inches(1.5))
-    tf = thank_you_box.text_frame
-    p = tf.paragraphs[0]
-    p.text = "Thank You"
-    p.font.size = Pt(48)
-    p.font.bold = True
-    p.font.color.rgb = RGBColor(255, 255, 255)
-    p.alignment = PP_ALIGN.CENTER
-    
-    # Contact info
-    contact_box = slide.shapes.add_textbox(Inches(0.5), Inches(4.5), Inches(12), Inches(2))
-    tf = contact_box.text_frame
-    tf.word_wrap = True
-    
-    # Name
-    p = tf.paragraphs[0]
-    p.text = "NAME"
-    p.font.size = Pt(20)
-    p.font.bold = True
-    p.font.color.rgb = RGBColor(255, 255, 255)
-    p.alignment = PP_ALIGN.CENTER
-    p.space_after = Pt(6)
-    
-    # Title
-    p = tf.add_paragraph()
-    p.text = "TITLE"
-    p.font.size = Pt(14)
-    p.font.color.rgb = RGBColor(200, 200, 200)
-    p.alignment = PP_ALIGN.CENTER
-    p.space_after = Pt(12)
-    
-    # Contact details
-    p = tf.add_paragraph()
-    p.text = "Phone  |  Email"
-    p.font.size = Pt(12)
-    p.font.color.rgb = RGBColor(180, 180, 180)
-    p.alignment = PP_ALIGN.CENTER
-    
-    # Save template
-    os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
-    prs.save(output_path)
-    return output_path
-
-
-
-
-
 __all__ = [
-    'CapacityTrajectory', 'PhaseData', 'ScoreAnalysis', 'RiskOpportunity', 'MarketAnalysis',
+    'CapacityTrajectory', 'PhaseData', 'ScoreAnalysis', 'RiskOpportunity', 
+    'SiteProfileData', 'MarketAnalysis',
     'ExportConfig', 'export_site_to_pptx', 'export_multiple_sites',
     'generate_capacity_trajectory_chart', 'generate_critical_path_chart',
     'generate_score_radar_chart', 'generate_score_summary_chart',
-    'generate_market_analysis_chart', 'analyze_template', 'create_default_template',
-    'JLL_COLORS', 'MATPLOTLIB_AVAILABLE',
+    'generate_market_analysis_chart', 'analyze_template', 'JLL_COLORS',
+    'MATPLOTLIB_AVAILABLE',
 ]
-

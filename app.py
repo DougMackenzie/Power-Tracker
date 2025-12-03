@@ -38,7 +38,7 @@ sh = get_data()
 
 # Navigation
 st.sidebar.title("Antigravity")
-app_mode = st.sidebar.radio("Select Module", ["Live Tracker", "Forecast Framework", "Portfolio Manager"])
+app_mode = st.sidebar.radio("Select Module", ["Live Tracker", "Forecast Framework", "Portfolio Manager", "Site Profile Builder"])
 st.sidebar.markdown("---")
 
 if app_mode == "Live Tracker":
@@ -157,3 +157,42 @@ elif app_mode == "Forecast Framework":
 
 elif app_mode == "Portfolio Manager":
     pm.run()
+
+elif app_mode == "Site Profile Builder":
+    from portfolio_manager.site_profile_page import show_site_profile_builder
+    
+    st.title("📋 Site Profile Builder")
+    
+    try:
+        # Load sites from portfolio manager
+        # The portfolio manager stores sites in session state or can load them
+        if hasattr(pm, 'load_sites'):
+            sites = pm.load_sites()
+        elif 'sites' in st.session_state:
+            sites = st.session_state.sites
+        else:
+            # Try to load from site_database.json
+            import json
+            import os
+            db_path = os.path.join(os.path.dirname(__file__), 'portfolio_manager', 'site_database.json')
+            if os.path.exists(db_path):
+                with open(db_path, 'r') as f:
+                    sites = json.load(f)
+                st.success(f"Loaded {len(sites)} sites from database")
+            else:
+                sites = {}
+                st.info("No sites found. Use Portfolio Manager to add sites first.")
+        
+        if sites:
+            show_site_profile_builder(sites)
+        else:
+            st.warning("No sites available. Use Portfolio Manager to add sites first.")
+            if st.button("Go to Portfolio Manager"):
+                st.session_state.app_mode = "Portfolio Manager"
+                st.rerun()
+    
+    except Exception as e:
+        st.error(f"Error loading Site Profile Builder: {e}")
+        import traceback
+        with st.expander("Error Details"):
+            st.code(traceback.format_exc())
