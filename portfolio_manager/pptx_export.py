@@ -1327,104 +1327,301 @@ def export_site_to_pptx(
             fiber_score=scores_data.get('fiber', 0),
         )
         
+        # Generate simplified radar chart (matplotlib)
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
             score_path = tmp.name
-        generate_score_summary_chart(scores, site_data.get('name', 'Site'), score_path)
-        slide.shapes.add_picture(score_path, Inches(0.4), Inches(0.8), width=Inches(12.5))
+        generate_score_radar_chart(scores, site_data.get('name', 'Site'), score_path)
+        
+        # Add radar chart on left side
+        slide.shapes.add_picture(score_path, Inches(0.5), Inches(1.2), width=Inches(5.5))
+        
+        # === RIGHT SIDE: Overall Score + Breakdown Table ===
+        # Overall Score display
+        overall_box = slide.shapes.add_textbox(Inches(7.0), Inches(1.2), Inches(5.5), Inches(1.2))
+        tf = overall_box.text_frame
+        tf.word_wrap = True
+        
+        p = tf.paragraphs[0]
+        p.text = "Overall Score"
+        p.font.size = Pt(16)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
+        p.alignment = PP_ALIGN.CENTER
+        p.space_after = Pt(8)
+        
+        p = tf.add_paragraph()
+        p.text = f"{int(scores.overall_score)}"
+        p.font.size = Pt(48)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['green'][1:])
+        p.alignment = PP_ALIGN.CENTER
+        
+        # Category breakdown table
+        table_top = Inches(2.6)
+        table_data = [
+            ("Category", "Score", "Weight"),
+            ("Power Pathway", f"{int(scores.power_pathway)}", "30%"),
+            ("Site Specific", f"{int(scores.site_specific)}", "10%"),
+            ("Execution", f"{int(scores.execution)}", "20%"),
+            ("Relationships", f"{int(scores.relationship_capital)}", "35%"),
+            ("Financial", f"{int(scores.financial)}", "5%"),
+        ]
+        
+        # Create table
+        rows, cols = len(table_data), 3
+        score_table = slide.shapes.add_table(rows, cols, Inches(7.0), table_top, Inches(5.5), Inches(3.5)).table
+        
+        # Set column widths
+        score_table.columns[0].width = Inches(2.8)
+        score_table.columns[1].width = Inches(1.3)
+        score_table.columns[2].width = Inches(1.4)
+        
+        # Populate table
+        for row_idx, (category, score, weight) in enumerate(table_data):
+            for col_idx, text in enumerate([category, score, weight]):
+                cell = score_table.cell(row_idx, col_idx)
+                cell.text = text
+                
+                # Header row styling
+                if row_idx == 0:
+                    cell.fill.solid()
+                    cell.fill.fore_color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
+                    for paragraph in cell.text_frame.paragraphs:
+                        paragraph.font.size = Pt(11)
+                        paragraph.font.bold = True
+                        paragraph.font.color.rgb = RGBColor(255, 255, 255)
+                        paragraph.alignment = PP_ALIGN.CENTER
+                else:
+                    # Data rows
+                    for paragraph in cell.text_frame.paragraphs:
+                        paragraph.font.size = Pt(10)
+                        paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+                        if col_idx == 0:
+                            paragraph.alignment = PP_ALIGN.LEFT
+                        else:
+                            paragraph.alignment = PP_ALIGN.CENTER
+                            paragraph.font.bold = True
+        
         add_footer(slide, 7, Inches, Pt, RGBColor)
         os.unlink(score_path)
 
-    # ADD SLIDE: Market Analysis (WHITE background)
-    if config.include_market_analysis and MATPLOTLIB_AVAILABLE:
+    # ADD SLIDE: Market Analysis (WHITE background) - NATIVE 4-QUADRANT LAYOUT
+    if config.include_market_analysis:
         slide = prs.slides.add_slide(blank_layout)
         set_slide_background_white(slide, Inches, RGBColor)
         add_header_bar(slide, "Market Analysis", Inches, Pt, RGBColor)
         
-        # Build market data from site_data and state analysis
+        # Build market data from site_data
         state_code = site_data.get('state_code', site_data.get('state', 'OK')[:2].upper())
         
-        # Get market_analysis if provided, otherwise build from available data
-        market_raw = site_data.get('market_analysis', {})
-        
-        # Build comparison states data
-        comparison_states = market_raw.get('comparison_states', {})
-        if not comparison_states:
-            # Default comparison states based on common alternatives
-            default_comparisons = {
-                'OK': {'TX': {}, 'GA': {}, 'OH': {}},
-                'TX': {'OK': {}, 'GA': {}, 'AZ': {}},
-                'GA': {'TX': {}, 'VA': {}, 'OH': {}},
-                'VA': {'GA': {}, 'OH': {}, 'TX': {}},
-                'OH': {'IN': {}, 'GA': {}, 'TX': {}},
-            }
-            comp_codes = list(default_comparisons.get(state_code, {'TX': {}, 'GA': {}}).keys())[:3]
-            
-            # Default state data (from state_analysis framework)
-            state_defaults = {
-                'OK': {'name': 'Oklahoma', 'queue_months': 30, 'rate': 0.055, 'score': 88, 'tier': 1},
-                'TX': {'name': 'Texas', 'queue_months': 36, 'rate': 0.065, 'score': 80, 'tier': 1},
-                'GA': {'name': 'Georgia', 'queue_months': 42, 'rate': 0.072, 'score': 70, 'tier': 2},
-                'VA': {'name': 'Virginia', 'queue_months': 48, 'rate': 0.078, 'score': 58, 'tier': 3},
-                'OH': {'name': 'Ohio', 'queue_months': 36, 'rate': 0.068, 'score': 70, 'tier': 2},
-                'IN': {'name': 'Indiana', 'queue_months': 32, 'rate': 0.062, 'score': 72, 'tier': 2},
-                'WY': {'name': 'Wyoming', 'queue_months': 28, 'rate': 0.048, 'score': 82, 'tier': 1},
-                'AZ': {'name': 'Arizona', 'queue_months': 38, 'rate': 0.070, 'score': 52, 'tier': 3},
-            }
-            for code in comp_codes:
-                if code in state_defaults:
-                    comparison_states[code] = state_defaults[code]
-        
-        # Get state defaults for site's state
+        # State defaults
         site_state_defaults = {
-            'OK': {'iso': 'SPP', 'reg': 'regulated', 'queue': 30, 'rate': 0.055, 'renew': 42,
-                   'score': 88, 'tier': 1, 'dc_mw': 500, 'fiber': 'medium',
+            'OK': {'iso': 'SPP', 'reg': 'Regulated', 'utility': 'OG&E', 'queue': 30, 'rate': 5.5, 'renew': 42,
+                   'score': 84.5, 'tier': 1, 'dc_mw': 500, 'fiber': 'Medium',
                    'hyperscalers': ['Google (Pryor)', 'Meta (announced)'],
-                   'strengths': ['Pro-business PSC', 'Low power costs', 'SPP wholesale market'],
+                   'strengths': ['Pro-business PSC', 'Low power costs'],
                    'weaknesses': ['Limited DC ecosystem', 'Water constraints'],
                    'opportunities': ['Hyperscaler expansion', 'Tulsa hub growth'],
                    'threats': ['Grid congestion', 'Water rights competition'],
-                   'incentives': ['Sales tax exemption', 'Property tax abatement', 'Quality Jobs Program']},
-            'TX': {'iso': 'ERCOT', 'reg': 'deregulated', 'queue': 36, 'rate': 0.065, 'renew': 35,
-                   'score': 80, 'tier': 1, 'dc_mw': 3000, 'fiber': 'high',
+                   'incentives': ['Sales tax exemption', 'Property tax abatement']},
+            'TX': {'iso': 'ERCOT', 'reg': 'Deregulated', 'utility': 'Oncor', 'queue': 36, 'rate': 6.5, 'renew': 35,
+                   'score': 77.2, 'tier': 1, 'dc_mw': 3000, 'fiber': 'High',
                    'hyperscalers': ['Google', 'Microsoft', 'Meta', 'AWS', 'Oracle'],
-                   'strengths': ['No state income tax', 'Massive ecosystem', 'ERCOT flexibility'],
-                   'weaknesses': ['Grid reliability', 'Water stress', 'Queue backlog'],
+                   'strengths': ['No state income tax', 'Massive ecosystem'],
+                   'weaknesses': ['Grid reliability', 'Water stress'],
                    'opportunities': ['Continued growth', 'West Texas expansion'],
                    'threats': ['Grid instability', 'Water availability'],
                    'incentives': ['Chapter 313 replacement', 'Property tax limits']},
         }
         
         defaults = site_state_defaults.get(state_code, site_state_defaults.get('OK'))
+        state_name = site_data.get('state', defaults.get('name', 'State'))
         
-        market_data = {
-            'state_code': state_code,
-            'state_name': market_raw.get('state_name', site_data.get('state', defaults.get('name', 'State'))),
-            'primary_iso': market_raw.get('primary_iso', site_data.get('iso', defaults.get('iso', 'SPP'))),
-            'regulatory_structure': market_raw.get('regulatory_structure', defaults.get('reg', 'regulated')),
-            'utility_name': market_raw.get('utility_name', site_data.get('utility', 'Utility')),
-            'avg_queue_time_months': market_raw.get('avg_queue_time_months', defaults.get('queue', 36)),
-            'avg_industrial_rate': market_raw.get('avg_industrial_rate', defaults.get('rate', 0.06)),
-            'renewable_percentage': market_raw.get('renewable_percentage', defaults.get('renew', 30)),
-            'overall_score': market_raw.get('overall_score', defaults.get('score', 70)),
-            'tier': market_raw.get('tier', defaults.get('tier', 2)),
-            'existing_dc_mw': market_raw.get('existing_dc_mw', defaults.get('dc_mw', 500)),
-            'hyperscaler_presence': market_raw.get('hyperscaler_presence', defaults.get('hyperscalers', [])),
-            'fiber_density': market_raw.get('fiber_density', defaults.get('fiber', 'medium')),
-            'strengths': market_raw.get('strengths', defaults.get('strengths', [])),
-            'weaknesses': market_raw.get('weaknesses', defaults.get('weaknesses', [])),
-            'opportunities': market_raw.get('opportunities', defaults.get('opportunities', [])),
-            'threats': market_raw.get('threats', defaults.get('threats', [])),
-            'comparison_states': comparison_states,
-            'incentives': market_raw.get('incentives', defaults.get('incentives', [])),
-        }
+        # === TOP-LEFT QUADRANT: State Comparison (Simplified) ===
+        tl_title = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(6.0), Inches(0.4))
+        p = tl_title.text_frame.paragraphs[0]
+        p.text = "New Generation Capacity: State Comparison"
+        p.font.size = Pt(12)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
         
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-            market_path = tmp.name
-        generate_market_analysis_chart(market_data, site_data.get('name', 'Site'), market_path)
-        slide.shapes.add_picture(market_path, Inches(0.4), Inches(0.8), width=Inches(12.5))
+        # Simplified state comparison text
+        comp_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.5), Inches(6.0), Inches(2.3))
+        tf = comp_box.text_frame
+        tf.word_wrap = True
+        
+        # Add state comparisons as text
+        states_data = [
+            (state_code, defaults.get('queue', 30), defaults.get('rate', 5.5)),
+            ('TX', 36, 6.5),
+            ('GA', 42, 7.2),
+            ('OH', 36, 6.8),
+        ]
+        
+        for i, (code, queue, rate) in enumerate(states_data[:4]):
+            if i == 0:
+                p = tf.paragraphs[0]
+            else:
+                p = tf.add_paragraph()
+            
+            p.text = f"{code}:"
+            p.font.size = Pt(11)
+            p.font.bold = True
+            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
+            
+            run = p.add_run()
+            run.text = f"  Gen. Queue: {queue} months  |  Power Cost: {rate} ¢/kWh"
+            run.font.size = Pt(9)
+            run.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+            p.space_after = Pt(6)
+        
+        # === TOP-RIGHT QUADRANT: Competitive Landscape ===
+        tr_title = slide.shapes.add_textbox(Inches(6.8), Inches(1.0), Inches(5.8), Inches(0.4))
+        p = tr_title.text_frame.paragraphs[0]
+        p.text = "Competitive Landscape"
+        p.font.size = Pt(12)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
+        
+        comp_land = slide.shapes.add_textbox(Inches(6.8), Inches(1.5), Inches(5.8), Inches(2.3))
+        tf = comp_land.text_frame
+        tf.word_wrap = True
+        
+        p = tf.paragraphs[0]
+        p.text = f"Existing DC Capacity:"
+        p.font.size = Pt(11)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+        
+        run = p.add_run()
+        run.text = f"  {defaults.get('dc_mw', 500)} MW"
+        run.font.size = Pt(14)
+        run.font.bold = True
+        run.font.color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
+        p.space_after = Pt(8)
+        
+        p = tf.add_paragraph()
+        p.text = f"Fiber Density:"
+        p.font.size = Pt(11)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+        
+        run = p.add_run()
+        fiber = defaults.get('fiber', 'Medium')
+        fiber_color = JLL_COLORS['yellow'][1:] if fiber == 'Medium' else JLL_COLORS['green'][1:]
+        run.text = f"  {fiber}"
+        run.font.size = Pt(14)
+        run.font.bold = True
+        run.font.color.rgb = RGBColor.from_string(fiber_color)
+        p.space_after = Pt(8)
+        
+        p = tf.add_paragraph()
+        p.text = "Hyperscaler Presence:"
+        p.font.size = Pt(11)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+        p.space_after = Pt(4)
+        
+        for hyperscaler in defaults.get('hyperscalers', [])[:5]:
+            p = tf.add_paragraph()
+            p.text = f"• {hyperscaler}"
+            p.font.size = Pt(9)
+            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+            p.level = 1
+            p.space_after = Pt(2)
+        
+        # === BOTTOM-LEFT QUADRANT: ISO & Utility Profile ===
+        bl_title = slide.shapes.add_textbox(Inches(0.5), Inches(4.0), Inches(6.0), Inches(0.4))
+        p = bl_title.text_frame.paragraphs[0]
+        p.text = "ISO & Utility Profile"
+        p.font.size = Pt(12)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
+        
+        iso_box = slide.shapes.add_textbox(Inches(0.5), Inches(4.5), Inches(6.0), Inches(2.2))
+        tf = iso_box.text_frame
+        tf.word_wrap = True
+        
+        iso_data = [
+            ('Primary ISO:', defaults.get('iso', 'SPP')),
+            ('Regulatory Structure:', defaults.get('reg', 'Regulated')),
+            ('Utility:', defaults.get('utility', site_data.get('utility', 'Utility'))),
+            ('Gen. Queue Time:', f"{defaults.get('queue', 36)} months"),
+            ('Industrial Rate:', f"{defaults.get('rate', 5.5)} ¢/kWh"),
+            ('Renewable Mix:', f"{defaults.get('renew', 30)}%"),
+            ('State Tier:', f"Tier {defaults.get('tier', 1)}"),
+            ('Overall Score:', f"{defaults.get('score', 70)}/100"),
+        ]
+        
+        for i, (label, value) in enumerate(iso_data):
+            if i == 0:
+                p = tf.paragraphs[0]
+            else:
+                p = tf.add_paragraph()
+            
+            p.text = label
+            p.font.size = Pt(9)
+            p.font.bold = True
+            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
+            
+            run = p.add_run()
+            run.text = f"  {value}"
+            run.font.size = Pt(10)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
+            p.space_after = Pt(3)
+        
+        # Key Incentives
+        p = tf.add_paragraph()
+        p.text = "Key Incentives:"
+        p.font.size = Pt(9)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
+        p.space_after = Pt(2)
+        
+        for incentive in defaults.get('incentives', [])[:2]:
+            p = tf.add_paragraph()
+            p.text = f"• {incentive}"
+            p.font.size = Pt(8)
+            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+            p.level = 1
+        
+        # === BOTTOM-RIGHT QUADRANT: SWOT Summary ===
+        br_title = slide.shapes.add_textbox(Inches(6.8), Inches(4.0), Inches(5.8), Inches(0.4))
+        p = br_title.text_frame.paragraphs[0]
+        p.text = f"{state_name} SWOT Summary"
+        p.font.size = Pt(12)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
+        
+        # SWOT in 2x2 grid
+        swot_data = [
+            ("Strengths", defaults.get('strengths', []), JLL_COLORS['green'][1:], Inches(6.8), Inches(4.5)),
+            ("Opportunities", defaults.get('opportunities', []), JLL_COLORS['teal'][1:], Inches(9.8), Inches(4.5)),
+            ("Weaknesses", defaults.get('weaknesses', []), JLL_COLORS['red'][1:], Inches(6.8), Inches(5.6)),
+            ("Threats", defaults.get('threats', []), JLL_COLORS['orange'][1:], Inches(9.8), Inches(5.6)),
+        ]
+        
+        for title, items, color, x, y in swot_data:
+            swot_box = slide.shapes.add_textbox(x, y, Inches(2.8), Inches(1.0))
+            tf = swot_box.text_frame
+            tf.word_wrap = True
+            
+            p = tf.paragraphs[0]
+            p.text = title
+            p.font.size = Pt(10)
+            p.font.bold = True
+            p.font.color.rgb = RGBColor.from_string(color)
+            p.space_after = Pt(3)
+            
+            for item in items[:2]:
+                p = tf.add_paragraph()
+                p.text = f"+ {item}" if title in ['Strengths', 'Opportunities'] else f"- {item}"
+                p.font.size = Pt(8)
+                p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+                p.space_after = Pt(1)
         
         add_footer(slide, 8, Inches, Pt, RGBColor)
-        os.unlink(market_path)
 
     # REORDER: Move Thank You to end
     def move_slide_to_end(prs, slide_index):
