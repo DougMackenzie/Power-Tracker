@@ -1136,8 +1136,8 @@ def export_site_to_pptx(
         add_footer(slide, 5, Inches, Pt, RGBColor)
         os.unlink(chart_path)
 
-    # ADD SLIDE: Infrastructure & Critical Path (WHITE background)
-    if config.include_infrastructure and MATPLOTLIB_AVAILABLE:
+    # ADD SLIDE: Infrastructure & Critical Path (WHITE background) - NATIVE POWERPOINT
+    if config.include_infrastructure:
         slide = prs.slides.add_slide(blank_layout)
         
         # Set white background explicitly
@@ -1145,30 +1145,166 @@ def export_site_to_pptx(
         
         add_header_bar(slide, "Infrastructure & Critical Path", Inches, Pt, RGBColor)
 
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-            infra_path = tmp.name
-        generate_critical_path_chart(phases, site_data, infra_path)
-        slide.shapes.add_picture(infra_path, Inches(0.4), Inches(0.8), width=Inches(12.5))
-
-        # Add risks/opportunities summary at bottom
-        risks = site_data.get('risks', [])
-        opportunities = site_data.get('opportunities', [])
-        if risks or opportunities:
-            details_box = slide.shapes.add_textbox(Inches(0.4), Inches(6.3), Inches(12), Inches(0.8))
-            tf = details_box.text_frame
-            tf.word_wrap = True
-            p = tf.paragraphs[0]
-            summary_parts = []
-            if risks:
-                summary_parts.append(f"Key Risks: {', '.join(risks[:3])}")
-            if opportunities:
-                summary_parts.append(f"Opportunities: {', '.join(opportunities[:3])}")
-            p.text = "  |  ".join(summary_parts)
+        # === LEFT PANEL: Critical Path Text ===
+        left_panel = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(6.0), Inches(5.5))
+        tf = left_panel.text_frame
+        tf.word_wrap = True
+        
+        # Title
+        p = tf.paragraphs[0]
+        p.text = "Critical Path to Power"
+        p.font.size = Pt(16)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
+        p.space_after = Pt(10)
+        
+        # Add phase information
+        for i, phase in enumerate(phases[:2]):  # Show first 2 phases
+            # Phase header
+            p = tf.add_paragraph()
+            p.text = f"Phase {phase.phase_num}: {int(phase.target_mw)} MW @ {phase.voltage_kv} kV"
+            p.font.size = Pt(13)
+            p.font.bold = True
+            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['teal'][1:])
+            p.space_after = Pt(4)
+            
+            # Target date
+            p = tf.add_paragraph()
+            p.text = f"Target: {phase.target_online}"
             p.font.size = Pt(9)
             p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
+            p.space_after = Pt(6)
+            
+            # Study statuses with symbols
+            studies = [
+                ('Screening Study', phase.screening_study),
+                ('Contract Study', phase.contract_study),
+                ('Letter of Agreement', phase.letter_of_agreement),
+                ('Energy Contract', phase.energy_contract),
+            ]
+            
+            for study_name, status in studies:
+                p = tf.add_paragraph()
+                # Add status symbol
+                if status.lower() in ['complete', 'executed']:
+                    symbol = '✓ '
+                    color = RGBColor.from_string(JLL_COLORS['green'][1:])
+                elif status.lower() in ['drafted', 'initiated', 'in_progress', 'in progress']:
+                    symbol = '○ '
+                    color = RGBColor.from_string(JLL_COLORS['yellow'][1:])
+                else:
+                    symbol = '□ '
+                    color = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
+                
+                # Symbol run
+                run = p.runs[0] if p.runs else p.add_run()
+                run.text = symbol
+                run.font.size = Pt(11)
+                run.font.color.rgb = color
+                run.font.bold = True
+                
+                # Status text run
+                run = p.add_run()
+                run.text = f"{study_name}: {status}"
+                run.font.size = Pt(9)
+                run.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+                
+                p.space_after = Pt(3)
+            
+            p.space_after = Pt(8)
+        
+        # Add key risks at bottom
+        p = tf.add_paragraph()
+        p.text = "Key Risks: "
+        p.font.size = Pt(8)
+        p.font.italic = True
+        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
+        
+        risks = site_data.get('risks', [])
+        if risks:
+            run = p.add_run()
+            run.text = ', '.join(risks[:2])
+            run.font.size = Pt(8)
+            run.font.italic = True
+        
+        # === RIGHT PANEL: Infrastructure Readiness Bar Chart (Native) ===
+        right_title = slide.shapes.add_textbox(Inches(7.0), Inches(1.0), Inches(5.5), Inches(0.4))
+        p = right_title.text_frame.paragraphs[0]
+        p.text = "Infrastructure Readiness"
+        p.font.size = Pt(16)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
+        
+        # Infrastructure categories and scores
+        categories = [
+            ('Power', site_data.get('power_stage', 1), 4),
+            ('Site Control', site_data.get('site_control_stage', 1), 4),
+            ('Zoning', site_data.get('zoning_stage', 1), 3),
+            ('Water', site_data.get('water_stage', 1), 4),
+            ('Fiber', 3 if site_data.get('fiber_available') else 1, 4),
+            ('Environmental', 4 if site_data.get('environmental_complete') else 2, 4),
+        ]
+        
+        # Draw bars manually with shapes
+        bar_y_start = Inches(1.6)
+        bar_height = Inches(0.5)
+        bar_spacing = Inches(0.7)
+        bar_max_width = Inches(4.5)
+        bar_x_start = Inches(7.8)
+        
+        for i, (name, stage, max_stage) in enumerate(categories):
+            y_pos = bar_y_start + (i * bar_spacing)
+            pct = (stage / max_stage) * 100
+            
+            # Category label
+            label_box = slide.shapes.add_textbox(Inches(7.0), y_pos + Inches(0.1), Inches(0.7), Inches(0.3))
+            p = label_box.text_frame.paragraphs[0]
+            p.text = name
+            p.font.size = Pt(10)
+            p.font.bold = False
+            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+            p.alignment = PP_ALIGN.RIGHT
+            
+            # Background bar (light gray)
+            bg_bar = slide.shapes.add_shape(
+                MSO_SHAPE.RECTANGLE,
+                bar_x_start, y_pos,
+                bar_max_width, bar_height
+            )
+            bg_bar.fill.solid()
+            bg_bar.fill.fore_color.rgb = RGBColor(240, 240, 240)
+            bg_bar.line.fill.background()
+            
+            # Foreground bar (colored by percentage)
+            if pct >= 75:
+                bar_color = RGBColor.from_string(JLL_COLORS['green'][1:])
+            elif pct >= 50:
+                bar_color = RGBColor.from_string(JLL_COLORS['yellow'][1:])
+            else:
+                bar_color = RGBColor.from_string(JLL_COLORS['teal'][1:])
+            
+            fg_bar = slide.shapes.add_shape(
+                MSO_SHAPE.RECTANGLE,
+                bar_x_start, y_pos,
+                bar_max_width * (pct / 100), bar_height
+            )
+            fg_bar.fill.solid()
+            fg_bar.fill.fore_color.rgb = bar_color
+            fg_bar.line.fill.background()
+            
+            # Percentage label
+            pct_label = slide.shapes.add_textbox(
+                bar_x_start + bar_max_width + Inches(0.1), 
+                y_pos + Inches(0.05), 
+                Inches(0.6), Inches(0.4)
+            )
+            p = pct_label.text_frame.paragraphs[0]
+            p.text = f"{int(pct)}%"
+            p.font.size = Pt(11)
+            p.font.bold = True
+            p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
 
         add_footer(slide, 6, Inches, Pt, RGBColor)
-        os.unlink(infra_path)
 
     # ADD SLIDE: Score Analysis (WHITE background)
     if config.include_score_analysis and MATPLOTLIB_AVAILABLE:
@@ -1426,16 +1562,21 @@ def create_default_template(output_path: str) -> str:
     
     # Create rating table (15 rows: 1 header + 14 data rows)
     rows, cols = 15, 4
-    left, top = Inches(0.3), Inches(0.8)
-    width, height = Inches(7.8), Inches(6.2)
+    left, top = Inches(0.25), Inches(0.75)
+    width, height = Inches(7.9), Inches(6.3)
     
     table = slide.shapes.add_table(rows, cols, left, top, width, height).table
     
     # Set column widths
-    table.columns[0].width = Inches(1.4)   # Item
-    table.columns[1].width = Inches(2.2)   # Preference
-    table.columns[2].width = Inches(0.7)   # Rating
-    table.columns[3].width = Inches(3.5)   # Description
+    table.columns[0].width = Inches(1.3)   # Item
+    table.columns[1].width = Inches(2.0)   # Preference
+    table.columns[2].width = Inches(0.6)   # Rating
+    table.columns[3].width = Inches(4.0)   # Description
+    
+    # Set row heights to ensure all fit
+    for row in table.rows:
+        row.height = Inches(0.4)
+    table.rows[0].height = Inches(0.35)  # Slightly shorter header
     
     # Header row styling
     header_items = ['Item', 'Preference', 'Rating', 'Description']
@@ -1446,28 +1587,33 @@ def create_default_template(output_path: str) -> str:
         cell.fill.fore_color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
         
         # Style header text
+        cell.text_frame.margin_top = Inches(0.05)
+        cell.text_frame.margin_bottom = Inches(0.05)
+        cell.text_frame.margin_left = Inches(0.05)
+        cell.text_frame.margin_right = Inches(0.05)
+        
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(9)
+            paragraph.font.size = Pt(8)
             paragraph.font.bold = True
             paragraph.font.color.rgb = RGBColor(255, 255, 255)
             paragraph.alignment = PP_ALIGN.CENTER
     
     # Data rows (populate with placeholders)
     rating_data = [
-        ('Location', 'Proximity and Surroundings', 'N/R', '• Nearest Town: TBD\n• Distance to Large City: TBD\n• Neighboring Uses: TBD'),
-        ('Ownership &\nAsking Price', 'Single Owner', 'N/R', '• Owner(s): TBD\n• Asking Price: TBD'),
-        ('Size / Shape /\nDimensions', '1000 acres', 'N/R', '• Total Size: TBD acres\n• Dimensions: TBD'),
-        ('Zoning', 'Data Center Compatible', 'N/R', '• Zoning: TBD\n• Site condition: TBD'),
+        ('Location', 'Proximity and Surroundings', 'N/R', '• Nearest Town: TBD\\n• Distance to Large City: TBD\\n• Neighboring Uses: TBD'),
+        ('Ownership &\\nAsking Price', 'Single Owner', 'N/R', '• Owner(s): TBD\\n• Asking Price: TBD'),
+        ('Size / Shape /\\nDimensions', '1000 acres', 'N/R', '• Total Size: TBD acres\\n• Dimensions: TBD'),
+        ('Zoning', 'Data Center Compatible', 'N/R', '• Zoning: TBD\\n• Site condition: TBD'),
         ('Timing', 'Transfer by Q1 2026', 'N/R', '• Transfer timeline: TBD'),
-        ('Geotechnical\nand Topography', 'Generally Flat with\nGood Soils', 'N/R', '• Soil type: TBD\n• Topography: TBD\n• Elevation change: TBD'),
-        ('Environmental,\nEcological,\nArcheological', 'No Barriers to\nConstruction', 'N/R', '• Environmental: TBD\n• Ecological: TBD\n• Archeological: TBD'),
-        ('Wetlands and\nJurisdictional\nWater', 'No Wetlands or\nJurisdictional Water', 'N/R', '• Wetlands: TBD\n• Water Features: TBD'),
-        ('Disaster', 'Outside Zone of Risk', 'N/R', '• Flood: TBD\n• Seismic: TBD'),
-        ('Easements', 'No Utility Easements or\nROW', 'N/R', '• Utility easements: TBD\n• ROW: TBD'),
-        ('Electricity', '300 MW+', 'N/R', '• Available capacity: TBD MW\n• Service type: TBD'),
-        ('Water', '1M GPD+', 'N/R', '• Water source: TBD\n• Capacity: TBD GPD'),
+        ('Geotechnical\\nand Topography', 'Generally Flat with\\nGood Soils', 'N/R', '• Soil type: TBD\\n• Topography: TBD\\n• Elevation change: TBD'),
+        ('Environmental,\\nEcological,\\nArcheological', 'No Barriers to\\nConstruction', 'N/R', '• Environmental: TBD\\n• Ecological: TBD\\n• Archeological: TBD'),
+        ('Wetlands and\\nJurisdictional\\nWater', 'No Wetlands or\\nJurisdictional Water', 'N/R', '• Wetlands: TBD\\n• Water Features: TBD'),
+        ('Disaster', 'Outside Zone of Risk', 'N/R', '• Flood: TBD\\n• Seismic: TBD'),
+        ('Easements', 'No Utility Easements or\\nROW', 'N/R', '• Utility easements: TBD\\n• ROW: TBD'),
+        ('Electricity', '300 MW+', 'N/R', '• Available capacity: TBD MW\\n• Service type: TBD'),
+        ('Water', '1M GPD+', 'N/R', '• Water source: TBD\\n• Capacity: TBD GPD'),
         ('Wastewater', '300K GPD+', 'N/R', '• Wastewater solution: TBD'),
-        ('Telecom', 'High Bandwidth Fiber', 'N/R', '• Fiber status: TBD\n• Provider: TBD'),
+        ('Telecom', 'High Bandwidth Fiber', 'N/R', '• Fiber status: TBD\\n• Provider: TBD'),
     ]
     
     for row_idx, (item, preference, rating, description) in enumerate(rating_data, start=1):
@@ -1476,17 +1622,31 @@ def create_default_template(output_path: str) -> str:
         cell.text = item
         cell.fill.solid()
         cell.fill.fore_color.rgb = RGBColor(250, 250, 250)
+        cell.text_frame.margin_top = Inches(0.03)
+        cell.text_frame.margin_bottom = Inches(0.03)
+        cell.text_frame.margin_left = Inches(0.05)
+        cell.text_frame.margin_right = Inches(0.05)
+        cell.text_frame.word_wrap = True
+        
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(8)
+            paragraph.font.size = Pt(7)
             paragraph.font.bold = True
             paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+            paragraph.line_spacing = 0.85
         
         # Preference column
         cell = table.cell(row_idx, 1)
         cell.text = preference
+        cell.text_frame.margin_top = Inches(0.03)
+        cell.text_frame.margin_bottom = Inches(0.03)
+        cell.text_frame.margin_left = Inches(0.05)
+        cell.text_frame.margin_right = Inches(0.05)
+        cell.text_frame.word_wrap = True
+        
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(8)
+            paragraph.font.size = Pt(7)
             paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+            paragraph.line_spacing = 0.85
         
         # Rating column (color-coded)
         cell = table.cell(row_idx, 2)
@@ -1494,6 +1654,9 @@ def create_default_template(output_path: str) -> str:
         cell.fill.solid()
         # Default to gray for N/R
         cell.fill.fore_color.rgb = RGBColor.from_string(JLL_COLORS['rating_gray'][1:])
+        cell.text_frame.margin_top = Inches(0.03)
+        cell.text_frame.margin_bottom = Inches(0.03)
+        
         for paragraph in cell.text_frame.paragraphs:
             paragraph.font.size = Pt(7)
             paragraph.font.bold = True
@@ -1504,10 +1667,15 @@ def create_default_template(output_path: str) -> str:
         cell = table.cell(row_idx, 3)
         cell.text = description
         cell.text_frame.word_wrap = True
+        cell.text_frame.margin_top = Inches(0.03)
+        cell.text_frame.margin_bottom = Inches(0.03)
+        cell.text_frame.margin_left = Inches(0.05)
+        cell.text_frame.margin_right = Inches(0.05)
+        
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(7)
+            paragraph.font.size = Pt(6.5)
             paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-            paragraph.line_spacing = 0.9
+            paragraph.line_spacing = 0.8
     
     # Add map placeholder on right side
     map_placeholder = slide.shapes.add_shape(
