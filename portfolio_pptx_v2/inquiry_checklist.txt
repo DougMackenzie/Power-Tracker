@@ -1,0 +1,320 @@
+
+================================================================================
+SITE DIAGNOSTIC INQUIRY CHECKLIST
+================================================================================
+Site: [Site Name]
+Utility: [Utility Name]
+Target Capacity: 2000MW
+
+Date: 2025-11-30
+
+--------------------------------------------------------------------------------
+POWER SYSTEM STUDIES & APPROVALS
+--------------------------------------------------------------------------------
+
+What is the stage of power system studies and approvals with [Utility Name] for each phase?
+
+For each phase, provide status of:
+[ ] System Impact Study (SIS) - Status, start date, completion date
+[ ] Facilities Study (FS) - Status, start date, completion date, cost estimate
+[ ] Facilities Agreement (FA) - Status, execution date, required deposits
+[ ] Interconnection Agreement (IA) - Status, execution date
+
+
+Phase 1:
+  - SIS Status: _________________ Completion Date: _____________
+  - FS Status: __________________ Completion Date: _____________
+  - FA Status: __________________ Execution Date: ______________
+  - IA Status: __________________ Execution Date: ______________
+
+
+Phase 2:
+  - SIS Status: _________________ Completion Date: _____________
+  - FS Status: __________________ Completion Date: _____________
+  - FA Status: __________________ Execution Date: ______________
+  - IA Status: __________________ Execution Date: ______________
+
+
+Phase 3:
+  - SIS Status: _________________ Completion Date: _____________
+  - FS Status: __________________ Completion Date: _____________
+  - FA Status: __________________ Execution Date: ______________
+  - IA Status: __________________ Execution Date: ______________
+
+
+Phase 4:
+  - SIS Status: _________________ Completion Date: _____________
+  - FS Status: __________________ Completion Date: _____________
+  - FA Status: __________________ Execution Date: ______________
+  - IA Status: __________________ Execution Date: ______________
+
+
+--------------------------------------------------------------------------------
+POWER CAPACITY & PHASING
+--------------------------------------------------------------------------------
+
+Confirm the total power capacity and phasing for the site:
+
+Phase 1:
+  - Interconnection Capacity: _________ MW
+  - Generation Capacity: _________ MW  
+  - IT Load Capacity: _________ MW
+  - Target Online Date: _____________
+  - Power Sources: [ ] Utility Grid  [ ] Nat Gas  [ ] Solar  [ ] Battery  [ ] Other: _____
+  - Is this permanent or temporary/bridge? _____________
+
+Phase 2:
+  - Interconnection Capacity: _________ MW
+  - Generation Capacity: _________ MW  
+  - IT Load Capacity: _________ MW
+  - Target Online Date: _____________
+  - Power Sources: [ ] Utility Grid  [ ] Nat Gas  [ ] Solar  [ ] Battery  [ ] Other: _____
+  - Is this permanent or temporary/bridge? _____________
+
+Phase 3:
+  - Interconnection Capacity: _________ MW
+  - Generation Capacity: _________ MW  
+  - IT Load Capacity: _________ MW
+  - Target Online Date: _____________
+  - Power Sources: [ ] Utility Grid  [ ] Nat Gas  [ ] Solar  [ ] Battery  [ ] Other: _____
+  - Is this permanent or temporary/bridge? _____________
+
+Phase 4:
+  - Interconnection Capacity: _________ MW
+  - Generation Capacity: _________ MW  
+  - IT Load Capacity: _________ MW
+  - Target Online Date: _____________
+  - Power Sources: [ ] Utility Grid  [ ] Nat Gas  [ ] Solar  [ ] Battery  [ ] Other: _____
+  - Is this permanent or temporary/bridge? _____________
+
+
+--------------------------------------------------------------------------------
+INTERCONNECTION DETAILS (Per Phase)
+--------------------------------------------------------------------------------
+
+For each phase, describe the scope of interconnection:
+
+Phase 1:
+  - Voltage: _________ kV
+  - Service Type: [ ] Switching Station  [ ] Radial  [ ] Loop  [ ] Network
+  - Transmission extension required? [ ] Yes  [ ] No
+    If yes, distance: _________ miles
+  - New substation required? [ ] Yes  [ ] No
+  - Substation upgrade required? [ ] Yes  [ ] No
+  - Nearest existing transmission voltage: _________ kV, distance: _________ miles
+  - Interface point: _________________________________
+
+Phase 2:
+  - Voltage: _________ kV
+  - Service Type: [ ] Switching Station  [ ] Radial  [ ] Loop  [ ] Network
+  - Transmission extension required? [ ] Yes  [ ] No
+    If yes, distance: _________ miles
+  - New substation required? [ ] Yes  [ ] No
+  - Substation upgrade required? [ ] Yes  [ ] No
+  - Nearest existing transmission voltage: _________ kV, distance: _________ miles
+  - Interface point: _________________________________
+
+Phase 3:
+  - Voltage: _________ kV
+  - Service Type: [ ] Switching Station  [ ] Radial  [ ] Loop  [ ] Network
+  - Transmission extension required? [ ] Yes  [ ] No
+    If yes, distance: _________ miles
+  - New substation required? [ ] Yes  [ ] No
+  - Substation upgrade required? [ ] Yes  [ ] No
+  - Nearest existing transmission voltage: _________ kV, distance: _________ miles
+  - Interface point: _________________________________
+
+Phase 4:
+  - Voltage: _________ kV
+  - Service Type: [ ] Switching Station  [ ] Radial  [ ] Loop  [ ] Network
+  - Transmission extension required? [ ] Yes  [ ] No
+    If yes, distance: _________ miles
+  - New substation required? [ ] Yes  [ ] No
+  - Substation upgrade required? [ ] Yes  [ ] No
+  - Nearest existing transmission voltage: _________ kV, distance: _________ miles
+  - Interface point: _________________________________
+
+
+--------------------------------------------------------------------------------
+ONSITE GENERATION
+--------------------------------------------------------------------------------
+
+For each onsite/BTM generation source:
+
+Natural Gas:
+  - Capacity: _________ MW
+  - Contract Structure: [ ] Utility-owned  [ ] PPA (3rd party)  [ ] Self-owned
+  - Operator: _________________________________
+  - Target COD: _____________
+  - Gas pipeline required? [ ] Yes  [ ] No
+    If yes, distance: _________ miles
+  - Gas pipeline upgrade scope: _________________________________
+  - Gas study status: _________________________________
+
+Solar:
+  - Capacity: _________ MW
+  - Contract Structure: [ ] Utility-owned  [ ] PPA (3rd party)  [ ] Self-owned
+  - Land required: _________ acres
+  - Target COD: _____________
+
+Battery Storage:
+  - Capacity: _________ MW / _________ MWh
+  - Contract Structure: [ ] Utility-owned  [ ] PPA (3rd party)  [ ] Self-owned
+  - Target COD: _____________
+
+SMR/Nuclear (if applicable):
+  - Capacity: _________ MW
+  - Vendor: _________________________________
+  - NRC licensing status: _________________________________
+  - Site characterization complete? [ ] Yes  [ ] No
+  - Target COD: _____________
+  - Study scope/status: _________________________________
+
+--------------------------------------------------------------------------------
+YEAR-BY-YEAR CAPACITY BREAKDOWN
+--------------------------------------------------------------------------------
+
+Provide interconnection capacity AND generation capacity for each year.
+These may differ (e.g., 300MW interconnect but only 200MW generation available).
+
+2025:
+  Interconnection: _________ MW (cumulative: _________ MW)
+  Generation: _________ MW (cumulative: _________ MW)
+  Sources: _________________________________
+
+2026:
+  Interconnection: _________ MW (cumulative: _________ MW)
+  Generation: _________ MW (cumulative: _________ MW)
+  Sources: _________________________________
+
+2027:
+  Interconnection: _________ MW (cumulative: _________ MW)
+  Generation: _________ MW (cumulative: _________ MW)
+  Sources: _________________________________
+
+2028:
+  Interconnection: _________ MW (cumulative: _________ MW)
+  Generation: _________ MW (cumulative: _________ MW)
+  Sources: _________________________________
+
+2029:
+  Interconnection: _________ MW (cumulative: _________ MW)
+  Generation: _________ MW (cumulative: _________ MW)
+  Sources: _________________________________
+
+2030:
+  Interconnection: _________ MW (cumulative: _________ MW)
+  Generation: _________ MW (cumulative: _________ MW)
+  Sources: _________________________________
+
+2031:
+  Interconnection: _________ MW (cumulative: _________ MW)
+  Generation: _________ MW (cumulative: _________ MW)
+  Sources: _________________________________
+
+2032:
+  Interconnection: _________ MW (cumulative: _________ MW)
+  Generation: _________ MW (cumulative: _________ MW)
+  Sources: _________________________________
+
+2033:
+  Interconnection: _________ MW (cumulative: _________ MW)
+  Generation: _________ MW (cumulative: _________ MW)
+  Sources: _________________________________
+
+2034:
+  Interconnection: _________ MW (cumulative: _________ MW)
+  Generation: _________ MW (cumulative: _________ MW)
+  Sources: _________________________________
+
+2035:
+  Interconnection: _________ MW (cumulative: _________ MW)
+  Generation: _________ MW (cumulative: _________ MW)
+  Sources: _________________________________
+
+
+--------------------------------------------------------------------------------
+TIMELINE ACCELERATION
+--------------------------------------------------------------------------------
+
+[ ] What is driving the timeline for the first phase and has there been 
+    exploration of ways to compress? Consider:
+    - Generation capacity additions
+    - Customer-provided breakers
+    - Early transformer procurement
+    - Temporary/bridge solutions
+    - Alternative interconnection points
+
+[ ] What equipment is on critical path?
+    - Transformers: Lead time _________ months
+    - Breakers: Lead time _________ months
+    - Switchgear: Lead time _________ months
+
+[ ] Are there customer-provided equipment options that could accelerate?
+    _________________________________________________________________
+
+--------------------------------------------------------------------------------
+NON-POWER ITEMS
+--------------------------------------------------------------------------------
+
+Zoning:
+  - Current status: [ ] Not started  [ ] Pre-application  [ ] Submitted  [ ] Approved
+  - Expected duration: _________ months
+  - Key conditions/requirements: _________________________________
+
+Water:
+  - Consumption (GPD): _________
+  - Source: _________________________________
+  - Capacity available (GPD): _________
+  - Rights secured? [ ] Yes  [ ] No
+
+Wastewater:
+  - Discharge (GPD): _________
+  - Treatment: [ ] Municipal  [ ] Onsite  [ ] Zero discharge
+  - Capacity available (GPD): _________
+
+Environmental:
+  - Phase 1 complete? [ ] Yes  [ ] No
+  - Phase 2 required? [ ] Yes  [ ] No
+  - Known issues: _________________________________
+
+Fiber:
+  - Lit building? [ ] Yes  [ ] No
+  - Providers: _________________________________
+  - Extension required: _________ miles
+
+--------------------------------------------------------------------------------
+OPEN QUESTIONS / ISSUES
+--------------------------------------------------------------------------------
+
+1. _________________________________________________________________
+
+2. _________________________________________________________________
+
+3. _________________________________________________________________
+
+4. _________________________________________________________________
+
+5. _________________________________________________________________
+
+--------------------------------------------------------------------------------
+KEY RISKS
+--------------------------------------------------------------------------------
+
+1. _________________________________________________________________
+
+2. _________________________________________________________________
+
+3. _________________________________________________________________
+
+--------------------------------------------------------------------------------
+ACCELERATION OPPORTUNITIES
+--------------------------------------------------------------------------------
+
+1. _________________________________________________________________
+
+2. _________________________________________________________________
+
+3. _________________________________________________________________
+
+================================================================================

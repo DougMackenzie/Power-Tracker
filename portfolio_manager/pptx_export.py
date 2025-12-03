@@ -72,7 +72,7 @@ JLL_COLORS = {
 }
 
 # Template version - increment to force regeneration
-TEMPLATE_VERSION = "2.0"  # Updated with professional formatting
+TEMPLATE_VERSION = "2.1"  # Matched formatting from reference template
 
 TEMPLATE_SLIDES = {
     'title': 0,
@@ -1801,22 +1801,23 @@ def create_default_template(output_path: str) -> str:
     p.font.color.rgb = RGBColor(255, 255, 255)
     
     # Create rating table (15 rows: 1 header + 14 data rows)
+    # EXACT specifications from reference template
     rows, cols = 15, 4
-    left, top = Inches(0.25), Inches(0.75)
-    width, height = Inches(7.9), Inches(6.3)
+    left, top = Inches(0.4), Inches(0.75)
+    width, height = Inches(7.25), Inches(6.4)
     
     table = slide.shapes.add_table(rows, cols, left, top, width, height).table
     
-    # Set column widths
-    table.columns[0].width = Inches(1.3)   # Item
-    table.columns[1].width = Inches(2.0)   # Preference
-    table.columns[2].width = Inches(0.6)   # Rating
-    table.columns[3].width = Inches(4.0)   # Description
+    # Set column widths (from reference template)
+    table.columns[0].width = Inches(0.93)   # Item
+    table.columns[1].width = Inches(1.23)   # Preference
+    table.columns[2].width = Inches(0.64)   # Rating
+    table.columns[3].width = Inches(4.46)   # Description
     
-    # Set row heights for professional appearance
+    # Set row heights (from reference template)
     for row in table.rows:
-        row.height = Inches(0.45)
-    table.rows[0].height = Inches(0.4)  # Header
+        row.height = Inches(0.32)
+    table.rows[0].height = Inches(0.31)  # Header slightly shorter
     
     # Header row styling
     header_items = ['Item', 'Preference', 'Rating', 'Description']
@@ -1869,8 +1870,8 @@ def create_default_template(output_path: str) -> str:
         cell.text_frame.word_wrap = True
         
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(10)
-            paragraph.font.bold = True
+            paragraph.font.size = Pt(9)
+            paragraph.font.bold = False
             paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
             paragraph.line_spacing = 1.0
         
@@ -1884,7 +1885,8 @@ def create_default_template(output_path: str) -> str:
         cell.text_frame.word_wrap = True
         
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(10)
+            paragraph.font.size = Pt(8)
+            paragraph.font.bold = True
             paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
             paragraph.line_spacing = 1.0
         
@@ -1913,9 +1915,9 @@ def create_default_template(output_path: str) -> str:
         cell.text_frame.margin_right = Inches(0.05)
         
         for paragraph in cell.text_frame.paragraphs:
-            paragraph.font.size = Pt(9)
+            paragraph.font.size = Pt(8)
             paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-            paragraph.line_spacing = 0.9
+            paragraph.line_spacing = 1.0
     
     # Add map placeholder on right side
     map_placeholder = slide.shapes.add_shape(
