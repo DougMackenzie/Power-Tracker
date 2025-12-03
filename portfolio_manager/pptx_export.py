@@ -55,16 +55,19 @@ except ImportError:
 # =============================================================================
 
 JLL_COLORS = {
-    'dark_blue': '#1a2b4a',
-    'red': '#e31837',
+    'dark_blue': '#003f5c',      # Darker header blue
+    'red': '#e31837',            # Fatal flaw red
     'light_gray': '#f5f5f5',
     'medium_gray': '#666666',
     'dark_gray': '#333333',
-    'teal': '#2b6777',           # Interconnection line
-    'tan': '#c9b89d',            # Generation line
+    'teal': '#2b6777',           # Primary teal (infrastructure bars, etc.)
+    'tan': '#c9b89d',            # Generation line contrast
     'white': '#ffffff',
-    'green': '#2e7d32',
-    'amber': '#f9a825',
+    'green': '#4caf50',          # Rating: Desirable
+    'yellow': '#ffc107',         # Rating: Acceptable
+    'orange': '#ff9800',         # Rating: Marginal
+    'rating_gray': '#9e9e9e',    # Rating: N/R (not rated)
+    'amber': '#f9a825',          # Legacy amber (keep for compat)
     'light_blue': '#4a90d9',
 }
 
@@ -873,6 +876,177 @@ def build_replacements(site_data: Dict, config: ExportConfig) -> Dict[str, str]:
     return replacements
 
 
+def get_rating_color(rating: str) -> tuple:
+    """Get RGB color tuple for rating."""
+    from pptx.dml.color import RGBColor
+    
+    rating_upper = rating.upper()
+    if rating_upper in ['DESIRABLE', 'GREEN']:
+        return RGBColor.from_string(JLL_COLORS['green'][1:])
+    elif rating_upper in ['ACCEPTABLE', 'YELLOW']:
+        return RGBColor.from_string(JLL_COLORS['yellow'][1:])
+    elif rating_upper in ['MARGINAL', 'ORANGE']:
+        return RGBColor.from_string(JLL_COLORS['orange'][1:])
+    elif rating_upper in ['FATAL FLAW', 'RED']:
+        return RGBColor.from_string(JLL_COLORS['red'][1:])
+    else:  # N/R or unknown
+        return RGBColor.from_string(JLL_COLORS['rating_gray'][1:])
+
+
+def populate_site_profile_table(presentation, site_data: Dict):
+    """Populate the Site Profile table (slide 1) with actual site data."""
+    from pptx.dml.color import RGBColor
+    from pptx.enum.text import PP_ALIGN
+    
+    # Get Site Profile slide (slide index 1)
+    if len(presentation.slides) < 2:
+        return
+    
+    slide = presentation.slides[1]
+    
+    # Find the table in the slide
+    table = None
+    for shape in slide.shapes:
+        if shape.has_table:
+            table = shape.table
+            break
+    
+    if not table or len(table.rows) < 15:
+        return  # Table not found or wrong format
+    
+    # Extract site data with defaults
+    def safe_get(d, *keys, default='TBD'):
+        """Safely get nested dictionary values."""
+        for key in keys:
+            if isinstance(d, dict):
+                d = d.get(key, {})
+            else:
+                return default
+        return d if d and d != {} else default
+    
+    # Build rating data from site
+    rating_rows = [
+        {
+            'item': 'Location',
+            'preference': 'Proximity and Surroundings',
+            'rating': safe_get(site_data, 'location_rating', default='N/R'),
+            'description': f"• Nearest Town: {safe_get(site_data, 'nearest_town')}\n"
+                          f"• Distance to Large City: {safe_get(site_data, 'distance_to_city')}\n"
+                          f"• Neighboring Uses: {safe_get(site_data, 'neighboring_uses', default='Mostly Agricultural')}"
+        },
+        {
+            'item': 'Ownership &\nAsking Price',
+            'preference': 'Single Owner',
+            'rating': safe_get(site_data, 'ownership_rating', default='N/R'),
+            'description': f"• Owner(s): {safe_get(site_data, 'developer', default='TBD')}\n"
+                          f"• Asking Price: {safe_get(site_data, 'asking_price', default='TBD')}"
+        },
+        {
+            'item': 'Size / Shape /\nDimensions',
+            'preference': f"{site_data.get('acreage', '1000')} acres",
+            'rating': safe_get(site_data, 'size_rating', default='N/R'),
+            'description': f"• Total Size: {site_data.get('acreage', 'TBD')} acres\n"
+                          f"• Dimensions: {safe_get(site_data, 'dimensions', default='TBD')}\n"
+                          f"• Expandable: {safe_get(site_data, 'expandable', default='TBD')}"
+        },
+        {
+            'item': 'Zoning',
+            'preference': 'Data Center Compatible',
+            'rating': safe_get(site_data, 'zoning_rating', default='N/R'),
+            'description': f"• Zoning: {safe_get(site_data, 'non_power', 'zoning_status', default='TBD')}\n"
+                          f"• Site condition: {safe_get(site_data, 'site_condition', default='TBD')}"
+        },
+        {
+            'item': 'Timing',
+            'preference': 'Transfer by Q1 2026',
+            'rating': safe_get(site_data, 'timing_rating', default='N/R'),
+            'description': f"• Transfer timeline: {safe_get(site_data, 'transfer_timeline', default='TBD')}"
+        },
+        {
+            'item': 'Geotechnical\nand Topography',
+            'preference': 'Generally Flat with\nGood Soils',
+            'rating': safe_get(site_data, 'geotech_rating', default='N/R'),
+            'description': f"• Soil type: {safe_get(site_data, 'soil_type', default='TBD')}\n"
+                          f"• Topography: {safe_get(site_data, 'topography', default='TBD')}\n"
+                          f"• Elevation change: {safe_get(site_data, 'elevation_change', default='TBD')}"
+        },
+        {
+            'item': 'Environmental,\nEcological,\nArcheological',
+            'preference': 'No Barriers to\nConstruction',
+            'rating': safe_get(site_data, 'environmental_rating', default='N/R'),
+            'description': f"• Environmental: {safe_get(site_data, 'non_power', 'env_issues', default='TBD')}\n"
+                          f"• Ecological: {safe_get(site_data, 'ecological_concerns', default='TBD')}\n"
+                          f"• Archeological: {safe_get(site_data, 'archeological_concerns', default='TBD')}"
+        },
+        {
+            'item': 'Wetlands and\nJurisdictional\nWater',
+            'preference': 'No Wetlands or\nJurisdictional Water',
+            'rating': safe_get(site_data, 'wetlands_rating', default='N/R'),
+            'description': f"• Wetlands: {safe_get(site_data, 'wetlands_present', default='TBD')}\n"
+                          f"• Water Features: {safe_get(site_data, 'water_features', default='TBD')}"
+        },
+        {
+            'item': 'Disaster',
+            'preference': 'Outside Zone of Risk',
+            'rating': safe_get(site_data, 'disaster_rating', default='N/R'),
+            'description': f"• Flood: {safe_get(site_data, 'flood_risk', default='TBD')}\n"
+                          f"• Seismic: {safe_get(site_data, 'seismic_risk', default='TBD')}"
+        },
+        {
+            'item': 'Easements',
+            'preference': 'No Utility Easements or\nROW',
+            'rating': safe_get(site_data, 'easements_rating', default='N/R'),
+            'description': f"• Utility easements: {safe_get(site_data, 'utility_easements', default='TBD')}\n"
+                          f"• ROW: {safe_get(site_data, 'row_easements', default='TBD')}"
+        },
+        {
+            'item': 'Electricity',
+            'preference': f"{site_data.get('target_mw', '300')} MW+",
+            'rating': safe_get(site_data, 'electricity_rating', default='N/R'),
+            'description': f"• Available capacity: {site_data.get('target_mw', 'TBD')} MW\n"
+                          f"• Service type: {safe_get(site_data, 'phases', 0, 'service_type', default='TBD') if site_data.get('phases') else 'TBD'}"
+        },
+        {
+            'item': 'Water',
+            'preference': '1M GPD+',
+            'rating': safe_get(site_data, 'water_rating', default='N/R'),
+            'description': f"• Water source: {safe_get(site_data, 'non_power', 'water_source', default='TBD')}\n"
+                          f"• Capacity: {safe_get(site_data, 'non_power', 'water_cap', default='TBD')} GPD"
+        },
+        {
+            'item': 'Wastewater',
+            'preference': '300K GPD+',
+            'rating': safe_get(site_data, 'wastewater_rating', default='N/R'),
+            'description': f"• Wastewater solution: {safe_get(site_data, 'wastewater_solution', default='TBD')}"
+        },
+        {
+            'item': 'Telecom',
+            'preference': 'High Bandwidth Fiber',
+            'rating': safe_get(site_data, 'telecom_rating', default='N/R'),
+            'description': f"• Fiber status: {safe_get(site_data, 'non_power', 'fiber_status', default='TBD')}\n"
+                          f"• Provider: {safe_get(site_data, 'non_power', 'fiber_provider', default='TBD')}"
+        },
+    ]
+    
+    # Populate table rows
+    for row_idx, row_data in enumerate(rating_rows, start=1):
+        if row_idx >= len(table.rows):
+            break
+        
+        # Update preference (column 1)
+        table.cell(row_idx, 1).text = row_data['preference']
+        
+        # Update rating (column 2) with color
+        rating_cell = table.cell(row_idx, 2)
+        rating_cell.text = row_data['rating']
+        rating_cell.fill.solid()
+        rating_cell.fill.fore_color.rgb = get_rating_color(row_data['rating'])
+        
+        # Update description (column 3)
+        table.cell(row_idx, 3).text = row_data['description']
+
+
+
 # =============================================================================
 # MAIN EXPORT
 # =============================================================================
@@ -903,6 +1077,9 @@ def export_site_to_pptx(
                 replace_in_table(shape.table, replacements)
             elif shape.has_text_frame:
                 find_and_replace_text(shape, replacements)
+    
+    # Populate Site Profile table with actual data
+    populate_site_profile_table(prs, site_data)
 
     # Find blank layout
     blank_layout = None
@@ -1230,7 +1407,7 @@ def create_default_template(output_path: str) -> str:
     p3.font.color.rgb = RGBColor(180, 180, 180)
     p3.alignment = PP_ALIGN.CENTER
     
-    # === SLIDE 1: Site Profile (White Background) ===
+    # === SLIDE 1: Site Profile (White Background with Rating Table) ===
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     
     # Header bar
@@ -1247,75 +1424,127 @@ def create_default_template(output_path: str) -> str:
     p.font.bold = True
     p.font.color.rgb = RGBColor(255, 255, 255)
     
-    # Content - Two columns
-    # Left column: Key metrics
-    left_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.2), Inches(6), Inches(5))
-    tf = left_box.text_frame
-    tf.word_wrap = True
+    # Create rating table (15 rows: 1 header + 14 data rows)
+    rows, cols = 15, 4
+    left, top = Inches(0.3), Inches(0.8)
+    width, height = Inches(7.8), Inches(6.2)
     
-    # Title
-    p = tf.paragraphs[0]
-    p.text = "Site Overview"
-    p.font.size = Pt(20)
-    p.font.bold = True
-    p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-    p.space_after = Pt(12)
+    table = slide.shapes.add_table(rows, cols, left, top, width, height).table
     
-    # Key details
-    details = [
-        ("Location:", "[STATE]"),
-        ("Target Capacity:", "1GW+"),
-        ("Utility Connection:", "OG&E 345kV line"),
-        ("Total Acres:", "1,250 acres"),
-        ("Coordinates:", "[Coordinates linked]"),
+    # Set column widths
+    table.columns[0].width = Inches(1.4)   # Item
+    table.columns[1].width = Inches(2.2)   # Preference
+    table.columns[2].width = Inches(0.7)   # Rating
+    table.columns[3].width = Inches(3.5)   # Description
+    
+    # Header row styling
+    header_items = ['Item', 'Preference', 'Rating', 'Description']
+    for col_idx, header_text in enumerate(header_items):
+        cell = table.cell(0, col_idx)
+        cell.text = header_text
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
+        
+        # Style header text
+        for paragraph in cell.text_frame.paragraphs:
+            paragraph.font.size = Pt(9)
+            paragraph.font.bold = True
+            paragraph.font.color.rgb = RGBColor(255, 255, 255)
+            paragraph.alignment = PP_ALIGN.CENTER
+    
+    # Data rows (populate with placeholders)
+    rating_data = [
+        ('Location', 'Proximity and Surroundings', 'N/R', '• Nearest Town: TBD\n• Distance to Large City: TBD\n• Neighboring Uses: TBD'),
+        ('Ownership &\nAsking Price', 'Single Owner', 'N/R', '• Owner(s): TBD\n• Asking Price: TBD'),
+        ('Size / Shape /\nDimensions', '1000 acres', 'N/R', '• Total Size: TBD acres\n• Dimensions: TBD'),
+        ('Zoning', 'Data Center Compatible', 'N/R', '• Zoning: TBD\n• Site condition: TBD'),
+        ('Timing', 'Transfer by Q1 2026', 'N/R', '• Transfer timeline: TBD'),
+        ('Geotechnical\nand Topography', 'Generally Flat with\nGood Soils', 'N/R', '• Soil type: TBD\n• Topography: TBD\n• Elevation change: TBD'),
+        ('Environmental,\nEcological,\nArcheological', 'No Barriers to\nConstruction', 'N/R', '• Environmental: TBD\n• Ecological: TBD\n• Archeological: TBD'),
+        ('Wetlands and\nJurisdictional\nWater', 'No Wetlands or\nJurisdictional Water', 'N/R', '• Wetlands: TBD\n• Water Features: TBD'),
+        ('Disaster', 'Outside Zone of Risk', 'N/R', '• Flood: TBD\n• Seismic: TBD'),
+        ('Easements', 'No Utility Easements or\nROW', 'N/R', '• Utility easements: TBD\n• ROW: TBD'),
+        ('Electricity', '300 MW+', 'N/R', '• Available capacity: TBD MW\n• Service type: TBD'),
+        ('Water', '1M GPD+', 'N/R', '• Water source: TBD\n• Capacity: TBD GPD'),
+        ('Wastewater', '300K GPD+', 'N/R', '• Wastewater solution: TBD'),
+        ('Telecom', 'High Bandwidth Fiber', 'N/R', '• Fiber status: TBD\n• Provider: TBD'),
     ]
     
-    for label, value in details:
-        p = tf.add_paragraph()
-        p.text = f"{label}"
-        p.font.size = Pt(12)
-        p.font.bold = True
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
-        p.space_after = Pt(2)
+    for row_idx, (item, preference, rating, description) in enumerate(rating_data, start=1):
+        # Item column
+        cell = table.cell(row_idx, 0)
+        cell.text = item
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = RGBColor(250, 250, 250)
+        for paragraph in cell.text_frame.paragraphs:
+            paragraph.font.size = Pt(8)
+            paragraph.font.bold = True
+            paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
         
-        p = tf.add_paragraph()
-        p.text = f"  {value}"
-        p.font.size = Pt(14)
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-        p.space_after = Pt(8)
+        # Preference column
+        cell = table.cell(row_idx, 1)
+        cell.text = preference
+        for paragraph in cell.text_frame.paragraphs:
+            paragraph.font.size = Pt(8)
+            paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+        
+        # Rating column (color-coded)
+        cell = table.cell(row_idx, 2)
+        cell.text = rating
+        cell.fill.solid()
+        # Default to gray for N/R
+        cell.fill.fore_color.rgb = RGBColor.from_string(JLL_COLORS['rating_gray'][1:])
+        for paragraph in cell.text_frame.paragraphs:
+            paragraph.font.size = Pt(7)
+            paragraph.font.bold = True
+            paragraph.font.color.rgb = RGBColor(255, 255, 255)
+            paragraph.alignment = PP_ALIGN.CENTER
+        
+        # Description column
+        cell = table.cell(row_idx, 3)
+        cell.text = description
+        cell.text_frame.word_wrap = True
+        for paragraph in cell.text_frame.paragraphs:
+            paragraph.font.size = Pt(7)
+            paragraph.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
+            paragraph.line_spacing = 0.9
     
-    # Right column: Description
-    right_box = slide.shapes.add_textbox(Inches(7), Inches(1.2), Inches(6), Inches(5))
-    tf = right_box.text_frame
-    tf.word_wrap = True
+    # Add map placeholder on right side
+    map_placeholder = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(8.3), Inches(0.8),
+        Inches(4.8), Inches(3.0)
+    )
+    map_placeholder.fill.solid()
+    map_placeholder.fill.fore_color.rgb = RGBColor(240, 240, 240)
+    map_placeholder.line.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
+    map_placeholder.line.width = Pt(1)
     
-    p = tf.paragraphs[0]
-    p.text = "Site Description"
-    p.font.size = Pt(20)
-    p.font.bold = True
-    p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-    p.space_after = Pt(12)
-    
-    p = tf.add_paragraph()
-    p.text = "1,250 acre site with significant growth opportunity located between Tulsa and Oklahoma City."
+    # Map label
+    map_label = slide.shapes.add_textbox(Inches(8.3), Inches(2.0), Inches(4.8), Inches(0.5))
+    p = map_label.text_frame.paragraphs[0]
+    p.text = "[Location Map]"
     p.font.size = Pt(12)
-    p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-    p.space_after = Pt(12)
+    p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
+    p.alignment = PP_ALIGN.CENTER
     
-    p = tf.add_paragraph()
-    p.text = "Key Features:"
-    p.font.size = Pt(14)
-    p.font.bold = True
-    p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_blue'][1:])
-    p.space_after = Pt(6)
+    # Add site image placeholders below map
+    site_placeholder = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(8.3), Inches(4.0),
+        Inches(4.8), Inches(2.8)
+    )
+    site_placeholder.fill.solid()
+    site_placeholder.fill.fore_color.rgb = RGBColor(240, 240, 240)
+    site_placeholder.line.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
+    site_placeholder.line.width = Pt(1)
     
-    features = ["Estimated 1GW+", "3M GDP capacity", "Favorable utility relationship"]
-    for feature in features:
-        p = tf.add_paragraph()
-        p.text = f"• {feature}"
-        p.font.size = Pt(11)
-        p.font.color.rgb = RGBColor.from_string(JLL_COLORS['dark_gray'][1:])
-        p.space_after = Pt(4)
+    site_label = slide.shapes.add_textbox(Inches(8.3), Inches(5.2), Inches(4.8), Inches(0.5))
+    p = site_label.text_frame.paragraphs[0]
+    p.text = "[Site Image]"
+    p.font.size = Pt(12)
+    p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
+    p.alignment = PP_ALIGN.CENTER
     
     # Footer
     footer = slide.shapes.add_textbox(Inches(0.4), Inches(7.2), Inches(12), Inches(0.25))
