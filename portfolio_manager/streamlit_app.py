@@ -34,6 +34,22 @@ from .program_tracker import (
 )
 from .program_management_page import show_program_tracker
 
+# Import PPTX export module
+try:
+    from .pptx_export import (
+        export_site_to_pptx,
+        create_default_template,
+        CapacityTrajectory,
+        PhaseData,
+        ScoreAnalysis,
+        ExportConfig,
+    )
+    PPTX_AVAILABLE = True
+except ImportError as e:
+    PPTX_AVAILABLE = False
+    PPTX_IMPORT_ERROR = str(e)
+
+
 # =============================================================================
 # DATABASE MANAGEMENT - Google Sheets Integration
 # =============================================================================
@@ -1061,6 +1077,130 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     return bytes(pdf.output())
 
 
+def get_or_create_template(template_dir: str = "/tmp/pptx_templates") -> str:
+    """Get existing template or create a new one."""
+    os.makedirs(template_dir, exist_ok=True)
+    template_path = os.path.join(template_dir, "default_site_profile_template.pptx")
+    
+    if not os.path.exists(template_path):
+        create_default_template(template_path)
+    
+    return template_path
+
+
+def generate_site_report_pptx(site: Dict, scores: Dict, stage: str, state_context: Dict, site_id: str) -> bytes:
+    """Generate PowerPoint report for a site."""
+    import tempfile
+    
+    # Get or create template
+    template_path = get_or_create_template()
+    
+    # Prepare site data for PPTX export
+    site_data = prepare_site_for_pptx_export(site, scores, state_context)
+    
+    # Create output file
+    with tempfile.NamedTemporaryFile(suffix='.pptx', delete=False) as tmp:
+        output_path = tmp.name
+    
+    try:
+        # Export to PPTX
+        config = ExportConfig(
+            include_capacity_trajectory=True,
+            include_infrastructure=True,
+            include_score_analysis=True,
+            include_market_analysis=True,
+        )
+        
+        export_site_to_pptx(site_data, template_path, output_path, config)
+        
+        # Read the generated file
+        with open(output_path, 'rb') as f:
+            pptx_bytes = f.read()
+        
+        return pptx_bytes
+    finally:
+        # Clean up temp file
+        if os.path.exists(output_path):
+            os.unlink(output_path)
+
+
+def prepare_site_for_pptx_export(site: Dict, scores: Dict, state_context: Dict) -> Dict:
+    """Transform site data into format expected by pptx_export module."""
+    
+    # Build capacity trajectory from schedule
+    capacity_trajectory = {}
+    schedule = site.get('schedule', {})
+    if schedule:
+        for year_str, year_data in schedule.items():
+            try:
+                year = int(year_str)
+                # Handle different schedule formats
+                ic_mw = year_data.get('ic_mw', year_data.get('interconnection_mw', year_data.get('capacity', 0)))
+                gen_mw = year_data.get('gen_mw', year_data.get('generation_mw', year_data.get('ramp', ic_mw)))
+                
+                capacity_trajectory[year_str] = {
+                    'interconnection_mw': ic_mw,
+                    'generation_mw': gen_mw,
+                    'available_mw': min(ic_mw, gen_mw) if ic_mw and gen_mw else 0
+                }
+            except (ValueError, TypeError):
+                continue
+    
+    # Transform phases to include study statuses
+    phases = []
+    phase_data = site.get('phases', [])
+    for i, p in enumerate(phase_data):
+        if isinstance(p, dict):
+            phases.append({
+                'phase_num': p.get('phase_num', i + 1),
+                'target_mw': p.get('mw', p.get('target_mw', 0)),
+                'voltage_kv': p.get('voltage', p.get('voltage_kv', 138)),
+                'target_online': p.get('target_date', p.get('target_online', 'TBD')),
+                'screening_study': p.get('screening_status', p.get('screening_study', 'Not Started')),
+                'contract_study': p.get('contract_study_status', p.get('contract_study', 'Not Started')),
+                'letter_of_agreement': p.get('loa_status', p.get('letter_of_agreement', 'Not Started')),
+                'energy_contract': p.get('energy_contract_status', p.get('energy_contract', 'Not Started')),
+                'transmission_type': p.get('service_type', p.get('transmission_type', '')),
+                'substation_type': p.get('substation_status', p.get('substation_type', '')),
+                'distance_to_transmission': p.get('trans_dist', p.get('distance_to_transmission', 0)),
+            })
+    
+    # Build comprehensive site data dictionary
+    enhanced_site = {
+        **site,  # Include all existing site data
+        'capacity_trajectory': capacity_trajectory,
+        'phases': phases,
+        'scores': {
+            'overall': scores.get('overall_score', 0),
+            'power_pathway': scores.get('power_score', 0),
+            'site_specific': scores.get('fundamentals_score', 0),
+            'execution': scores.get('execution_score', 0),
+            'relationship_capital': scores.get('relationship_score', 0),
+            'financial': scores.get('financial_score', 0),
+        },
+        # Add state/market data
+        'state_code': site.get('state', '')[:2].upper() if site.get('state') else 'OK',
+        'market_analysis': {
+            'state_name': state_context.get('summary', {}).get('state', site.get('state', '')),
+            'tier': state_context.get('summary', {}).get('tier', 3),
+            'overall_score': state_context.get('summary', {}).get('overall_score', 70),
+            'primary_iso': state_context.get('summary', {}).get('primary_iso', ''),
+            'regulatory_structure': state_context.get('summary', {}).get('regulatory_structure', ''),
+        },
+        # Infrastructure stages for charts
+        'power_stage': site.get('power_stage', 2),
+        'site_control_stage': site.get('site_control_stage', 2),
+        'zoning_stage': site.get('zoning_stage', 1),
+        'water_stage': site.get('water_stage', 1),
+        'fiber_available': site.get('non_power', {}).get('fiber_status') not in ['Unknown', 'None', ''],
+        'environmental_complete': site.get('non_power', {}).get('env_issues', '') == 'None identified',
+    }
+    
+    return enhanced_site
+
+
+
+
 def show_dashboard():
     """Main dashboard with portfolio overview."""
     st.title("📊 Portfolio Dashboard")
@@ -2028,7 +2168,7 @@ def show_site_details(site_id: str):
 
     # Actions
     st.markdown("---")
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         if st.button("✏️ Edit Site", key=f"edit_{site_id}"):
             st.session_state.edit_site_id = site_id
@@ -2037,16 +2177,32 @@ def show_site_details(site_id: str):
     with col2:
         pdf_bytes = generate_site_report_pdf(site, scores, stage, state_context)
         st.download_button(
-            label="📄 Download PDF Report",
+            label="📄 PDF Report",
             data=pdf_bytes,
             file_name=f"{site.get('name', 'site').replace(' ', '_')}_Report.pdf",
             mime="application/pdf",
-            key=f"download_{site_id}"
+            key=f"download_pdf_{site_id}"
         )
     with col3:
+        if PPTX_AVAILABLE:
+            try:
+                pptx_bytes = generate_site_report_pptx(site, scores, stage, state_context, site_id)
+                st.download_button(
+                    label="📊 PowerPoint",
+                    data=pptx_bytes,
+                    file_name=f"{site.get('name', 'site').replace(' ', '_')}_Profile.pptx",
+                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    key=f"download_pptx_{site_id}"
+                )
+            except Exception as e:
+                st.error(f"PPTX export failed: {str(e)}")
+        else:
+            st.info("PowerPoint export unavailable")
+    with col4:
         if st.button("🗑️ Delete Site", type="secondary", key=f"delete_{site_id}"):
             delete_site(st.session_state.db, site_id)
             st.rerun()
+
     
 
 
