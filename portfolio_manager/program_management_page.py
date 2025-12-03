@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 
 # Import program tracker
-from program_tracker import (
+from .program_tracker import (
     ProgramTrackerData,
     CONTRACT_MULTIPLIERS,
     PROBABILITY_DRIVERS,
