@@ -11,6 +11,9 @@ import plotly.graph_objects as go
 from typing import Dict, List, Optional
 from datetime import datetime
 
+# Import save function from streamlit_app
+from . import streamlit_app
+
 # Import program tracker
 from .program_tracker import (
     ProgramTrackerData,
@@ -406,9 +409,8 @@ def show_tracker_editor(sites: Dict):
             db = st.session_state.db
             db['sites'][site_id] = updated_site
             
-            # Import the add_site function
-            from . import add_site
-            add_site(db, site_id, updated_site)
+            # Save to Google Sheets
+            streamlit_app.add_site(db, site_id, updated_site)
             
             st.success("✅ Tracker updated successfully!")
             st.rerun()
@@ -510,9 +512,6 @@ def show_fee_settings(sites: Dict):
             # Save using session state
             db = st.session_state.db
             
-            # Import the add_site function
-            from . import add_site
-            
             success_count = 0
             for site_id, site in sites.items():
                 target_mw = site.get('target_mw', 0) or 0
@@ -538,7 +537,7 @@ def show_fee_settings(sites: Dict):
                 updated_site['probability'] = tracker.probability
                 updated_site['weighted_fee'] = tracker.weighted_fee
                 
-                add_site(db, site_id, updated_site)
+                streamlit_app.add_site(db, site_id, updated_site)
                 success_count += 1
             
             st.success(f"✅ Updated {success_count} sites")
