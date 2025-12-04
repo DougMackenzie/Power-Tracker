@@ -881,50 +881,6 @@ def generate_market_analysis_chart(market_data: Dict, site_name: str, output_pat
     ax1.legend(loc='upper left', fontsize=8, frameon=False)
     ax1_twin.legend(loc='upper right', fontsize=8, frameon=False)
 
-    threats = market_data.get('threats', [])
-    
-    # Two columns
-    y_pos = 0.88
-    
-    # Strengths
-    ax4.text(0.02, y_pos, 'Strengths', fontsize=9, fontweight='bold',
-            color=JLL_COLORS['green'], transform=ax4.transAxes)
-    y_pos -= 0.08
-    for s in strengths[:2]:
-        ax4.text(0.02, y_pos, f'+ {s[:25]}', fontsize=8, color=JLL_COLORS['dark_gray'],
-                transform=ax4.transAxes)
-        y_pos -= 0.07
-    
-    # Weaknesses
-    y_pos -= 0.03
-    ax4.text(0.02, y_pos, 'Weaknesses', fontsize=9, fontweight='bold',
-            color=JLL_COLORS['red'], transform=ax4.transAxes)
-    y_pos -= 0.08
-    for w in weaknesses[:2]:
-        ax4.text(0.02, y_pos, f'- {w[:25]}', fontsize=8, color=JLL_COLORS['dark_gray'],
-                transform=ax4.transAxes)
-        y_pos -= 0.07
-    
-    # Opportunities (right column)
-    y_pos = 0.88
-    ax4.text(0.52, y_pos, 'Opportunities', fontsize=9, fontweight='bold',
-            color=JLL_COLORS['teal'], transform=ax4.transAxes)
-    y_pos -= 0.08
-    for o in opportunities[:2]:
-        ax4.text(0.52, y_pos, f'↑ {o[:23]}', fontsize=8, color=JLL_COLORS['dark_gray'],
-                transform=ax4.transAxes)
-        y_pos -= 0.07
-    
-    # Threats
-    y_pos -= 0.03
-    ax4.text(0.52, y_pos, 'Threats', fontsize=9, fontweight='bold',
-            color=JLL_COLORS['amber'], transform=ax4.transAxes)
-    y_pos -= 0.08
-    for t in threats[:2]:
-        ax4.text(0.52, y_pos, f'! {t[:23]}', fontsize=8, color=JLL_COLORS['dark_gray'],
-                transform=ax4.transAxes)
-        y_pos -= 0.07
-
     plt.tight_layout()
     plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
