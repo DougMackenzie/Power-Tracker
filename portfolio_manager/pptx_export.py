@@ -1426,10 +1426,13 @@ def export_site_to_pptx(
     
     # Check if we have structured profile data
     profile_data = None
-    if 'profile' in site_data and isinstance(site_data['profile'], SiteProfileData):
-        profile_data = site_data['profile']
-    elif 'profile' in site_data and isinstance(site_data['profile'], dict):
-        profile_data = SiteProfileData.from_dict(site_data['profile'])
+    if 'profile' in site_data:
+        p = site_data['profile']
+        # Use duck typing instead of isinstance to handle module reloads
+        if hasattr(p, 'overview') and hasattr(p, 'to_dict'):
+            profile_data = p
+        elif isinstance(p, dict):
+            profile_data = SiteProfileData.from_dict(p)
 
     # Process existing slides
     for slide in prs.slides:
