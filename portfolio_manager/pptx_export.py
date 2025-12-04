@@ -625,8 +625,7 @@ def generate_capacity_trajectory_chart(
     ax.set_ylabel('Capacity (MW)', fontsize=12, fontweight='bold', color=JLL_COLORS['dark_blue'])
     ax.set_title('Capacity Trajectory', fontsize=16, fontweight='bold',
                  color=JLL_COLORS['dark_blue'], pad=20, loc='left')
-    ax.text(0.0, 1.02, subtitle, transform=ax.transAxes, fontsize=10,
-            ha='left', color=JLL_COLORS['medium_gray'])
+
 
     ax.xaxis.set_major_locator(mdates.YearLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
