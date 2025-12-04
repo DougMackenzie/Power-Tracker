@@ -212,7 +212,12 @@ def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict, site_
     
     if research_clicked:
         with st.spinner("Researching location data..."):
-            prompt = builder.get_research_prompt()
+            # Get fresh site_data with latest coordinates from database
+            fresh_site_data = st.session_state.db['sites'][site_id] if hasattr(st.session_state, 'db') else site_data
+            
+            # Build prompt with fresh data (includes updated coordinates)
+            from .site_profile_builder import build_research_prompt
+            prompt = build_research_prompt(fresh_site_data, builder.profile)
             
             # Try to use LLM integration
             if LLM_AVAILABLE:
