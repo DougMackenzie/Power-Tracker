@@ -1431,7 +1431,7 @@ def export_site_to_pptx(
         p = site_data['profile']
         print(f"[DEBUG] Found 'profile' in site_data. Type: {type(p)}")
         # Use duck typing instead of isinstance to handle module reloads
-        if hasattr(p, 'overview') and hasattr(p, 'to_dict'):
+        if hasattr(p, 'overview') and hasattr(p, 'to_description_dict'):
             print("[DEBUG] Profile has required attributes (duck typing passed)")
             profile_data = p
         elif isinstance(p, dict):
