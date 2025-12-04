@@ -492,11 +492,17 @@ def show_human_input_section(builder: SiteProfileBuilder):
                                 else:
                                     st.success(f"Saved {len(filtered_inputs)} fields! (Google Sheets save failed - site not found)")
                             else:
-                                st.success(f"Saved {len(filtered_inputs)} fields! (Google Sheets save failed - no database)")
+                                # Debug why it failed
+                                reason = []
+                                if not hasattr(st.session_state, 'db'): reason.append("No 'db' in session_state")
+                                elif 'sites' not in st.session_state.db: reason.append("No 'sites' in db")
+                                
+                                st.success(f"Saved {len(filtered_inputs)} fields! (Session only - {', '.join(reason)})")
+                                print(f"[DEBUG] Session State Keys: {list(st.session_state.keys())}")
                         else:
-                            st.success(f"Saved {len(filtered_inputs)} fields! (Session only)")
+                            st.success(f"Saved {len(filtered_inputs)} fields! (Session only - No site options)")
                     else:
-                        st.success(f"Saved {len(filtered_inputs)} fields! (Session only)")
+                        st.success(f"Saved {len(filtered_inputs)} fields! (Session only - No site options)")
             except Exception as e:
                 st.warning(f"Saved {len(filtered_inputs)} fields but Google Sheets save failed: {e}")
             
