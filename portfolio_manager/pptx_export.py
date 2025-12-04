@@ -1205,22 +1205,32 @@ def replace_in_table(table, replacements: Dict[str, str]) -> bool:
 
 def populate_site_profile_table(table, profile_data: SiteProfileData) -> bool:
     """
-    Populate the Site Profile table with structured data.
-    The table has 18 rows, 4 columns: Item, Preference, Rating, Description
-    We replace content in the Description column (index 3) based on Item name.
-    
-    Formatting rules:
-    - Text before colon is BOLD
-    - Text after colon is NOT bold
-    - All text uses scheme color (no red)
+def populate_site_profile_table(table, profile_data) -> bool:
+    """
+    Populate the Site Profile table with data from SiteProfileData.
     """
     from pptx.util import Pt
     from pptx.enum.dml import MSO_THEME_COLOR
+    from pptx.dml.color import RGBColor
     from pptx.oxml.ns import qn
     from pptx.oxml import parse_xml
     from copy import deepcopy
     
-    descriptions = profile_data.to_description_dict()
+    print("[DEBUG] populate_site_profile_table STARTED")
+    
+    # Handle duck typing or dict
+    if isinstance(profile_data, dict):
+        print("[DEBUG] profile_data is dict, converting")
+        profile_data = SiteProfileData.from_dict(profile_data)
+    
+    try:
+        descriptions = profile_data.to_description_dict()
+        print(f"[DEBUG] Generated {len(descriptions)} descriptions")
+        print(f"[DEBUG] Description keys: {list(descriptions.keys())}")
+    except Exception as e:
+        print(f"[DEBUG] Failed to generate descriptions: {e}")
+        return False
+
     replaced = False
     
     # Create ordered mapping from row item names to description keys
@@ -1244,16 +1254,19 @@ def populate_site_profile_table(table, profile_data: SiteProfileData) -> bool:
         ('labor', 'Labor'),
     ]
     
-    for row in table.rows:
+    for row_idx, row in enumerate(table.rows):
         cells = list(row.cells)
         if len(cells) >= 4:
             item_text = cells[0].text.strip().lower()
+            print(f"[DEBUG] Row {row_idx}: '{item_text}'")
             
             # Find matching description
             description = None
             for key_fragment, desc_key in row_mapping:
                 if key_fragment in item_text:
                     description = descriptions.get(desc_key)
+                    print(f"[DEBUG]   Matched '{key_fragment}' -> '{desc_key}'")
+                    print(f"[DEBUG]   Description: {description[:50]}..." if description else "   Description: None")
                     break
             
             if description:
