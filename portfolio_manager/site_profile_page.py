@@ -224,16 +224,32 @@ def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict, site_
                             "IMPORTANT: Return ONLY valid JSON, no markdown or explanation."
                         )
                         
+                        
                         # Parse JSON from response
                         try:
-                            # Try to extract JSON from response
-                            json_str = response
-                            if "```json" in response:
-                                json_str = response.split("```json")[1].split("```")[0]
-                            elif "```" in response:
-                                json_str = response.split("```")[1].split("```")[0]
+                            # Multiple strategies to extract JSON
+                            json_str = response.strip()
                             
-                            results = json.loads(json_str.strip())
+                            # Strategy 1: Look for ```json blocks
+                            if "```json" in response:
+                                json_str = response.split("```json")[1].split("```")[0].strip()
+                            # Strategy 2: Look for generic ``` blocks
+                            elif "```" in response:
+                                json_str = response.split("```")[1].split("```")[0].strip()
+                            # Strategy 3: Look for { } braces
+                            elif "{" in response and "}" in response:
+                                import re
+                                match = re.search(r'\{.*\}', response, re.DOTALL)
+                                if match:
+                                    json_str = match.group(0)
+                            
+                            # Try to parse
+                            results = json.loads(json_str)
+                            
+                            # Validate it's a dict
+                            if not isinstance(results, dict):
+                                raise ValueError("Parsed JSON is not a dictionary")
+                            
                             st.session_state.ai_research_results = results
                             builder.apply_ai_research(results)
                             
@@ -261,10 +277,25 @@ def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict, site_
                                 st.warning(f"Research complete but auto-save failed: {save_err}")
                             
                             st.rerun()
-                        except json.JSONDecodeError as e:
+                        except (json.JSONDecodeError, ValueError) as e:
                             st.error(f"Could not parse AI response as JSON: {e}")
-                            with st.expander("Raw Response"):
-                                st.code(response)
+                            st.info("The AI might have returned text instead of JSON. Try the manual paste option below.")
+                            with st.expander("Raw Response (click to see what AI returned)", expanded=True):
+                                st.code(response if response else "Empty response")
+                                
+                            # Show manual input option
+                            st.markdown("---")
+                            st.markdown("**Manual Fix: Paste Valid JSON**")
+                            manual_json = st.text_area("Paste corrected JSON here:", height=200, key="fix_ai_json")
+                            if st.button("Apply Manual JSON"):
+                                try:
+                                    results = json.loads(manual_json)
+                                    st.session_state.ai_research_results = results
+                                    builder.apply_ai_research(results)
+                                    st.success("Research applied!")
+                                    st.rerun()
+                                except json.JSONDecodeError as e2:
+                                    st.error(f"Invalid JSON: {e2}")
                     else:
                         st.error("LLM client not configured")
                 except Exception as e:
