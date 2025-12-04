@@ -446,8 +446,8 @@ def show_human_input_section(builder: SiteProfileBuilder):
         submitted = st.form_submit_button("💾 Save Site Information", type="primary", use_container_width=True)
         
         if submitted:
-            # Filter out empty values
-            filtered_inputs = {k: v for k, v in inputs.items() if v and str(v) not in ['', 'TBD', '0', '0.0', 'Unknown']}
+            # Filter out empty values but keep 0, False, Unknown
+            filtered_inputs = {k: v for k, v in inputs.items() if v is not None and str(v) != '' and str(v) != 'TBD'}
             st.session_state.human_inputs = filtered_inputs
             builder.apply_human_inputs(filtered_inputs)
             
@@ -478,7 +478,10 @@ def show_human_input_section(builder: SiteProfileBuilder):
                                     db['sites'][site_id]['profile_json'] = json.dumps(profile_dict)
                                     from .streamlit_app import save_database
                                     save_database(db)
-                                    st.success(f"✅ Saved {len(filtered_inputs)} fields to Google Sheets!")
+                                    
+                                    # Show exactly what was saved
+                                    saved_fields = list(filtered_inputs.keys())
+                                    st.success(f"✅ Saved {len(saved_fields)} fields to Google Sheets!\n\nFields: {', '.join(saved_fields)}")
                                 else:
                                     st.success(f"Saved {len(filtered_inputs)} fields! (Google Sheets save failed - site not found)")
                             else:

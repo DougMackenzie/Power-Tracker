@@ -548,7 +548,8 @@ class SiteProfileBuilder:
         self.human_inputs = inputs
         
         for field, value in inputs.items():
-            if hasattr(self.profile, field) and value:
+            # Allow False and 0 values, just filter out None and empty strings
+            if hasattr(self.profile, field) and value is not None and value != '':
                 # Handle boolean fields
                 if field in ['wetlands_present', 'wetlands_avoidable']:
                     value = value if isinstance(value, bool) else value.lower() in ['true', 'yes', '1']
