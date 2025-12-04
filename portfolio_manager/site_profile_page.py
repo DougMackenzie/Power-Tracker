@@ -118,7 +118,7 @@ def show_field_status(builder: SiteProfileBuilder):
 # AI RESEARCH SECTION
 # =============================================================================
 
-def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict):
+def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict, site_id: str):
     """Section for AI-powered location research."""
     st.markdown("---")
     st.subheader("🔍 AI Location Research")
@@ -150,10 +150,10 @@ def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict):
                     if hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
                         db = st.session_state.db
                         
-                        if site_data.get('site_id') in db['sites']:
+                        if site_id in db['sites']:
                             # Update coordinates in database
-                            db['sites'][site_data['site_id']]['latitude'] = new_lat
-                            db['sites'][site_data['site_id']]['longitude'] = new_lon
+                            db['sites'][site_id]['latitude'] = new_lat
+                            db['sites'][site_id]['longitude'] = new_lon
                             
                             # Save to Google Sheets
                             from .streamlit_app import save_database
@@ -162,7 +162,7 @@ def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict):
                             st.success(f"✅ Coordinates saved to Google Sheets! Latitude: {new_lat}, Longitude: {new_lon}")
                             st.info("🔄 Click the Refresh button above to reload with coordinates and enable AI research.")
                         else:
-                            st.error(f"Site {site_data.get('site_id')} not found in database")
+                            st.error(f"Site {site_id} not found in database")
                     else:
                         st.error("No database connection available. Please visit Portfolio Manager first.")
                 except Exception as e:
@@ -664,7 +664,7 @@ def show_site_profile_builder(sites: Dict, data_layer=None):
         show_field_status(builder)
     
     with tabs[1]:
-        show_ai_research_section(builder, site_data)
+        show_ai_research_section(builder, site_data, site_id)
     
     with tabs[2]:
         show_human_input_section(builder)
