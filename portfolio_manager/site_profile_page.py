@@ -236,7 +236,30 @@ def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict, site_
                             results = json.loads(json_str.strip())
                             st.session_state.ai_research_results = results
                             builder.apply_ai_research(results)
-                            st.success("Research complete!")
+                            
+                            # Auto-save to Google Sheets
+                            try:
+                                profile = builder.profile
+                                profile_dict = {
+                                    field: getattr(profile, field) 
+                                    for field in SiteProfileData.__dataclass_fields__
+                                    if getattr(profile, field) and str(getattr(profile, field)) not in ['', 'TBD', '0', '0.0']
+                                }
+                                
+                                if hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
+                                    db = st.session_state.db
+                                    if site_id in db['sites']:
+                                        db['sites'][site_id]['profile_json'] = json.dumps(profile_dict)
+                                        from .streamlit_app import save_database
+                                        save_database(db)
+                                        st.success(f"✅ Research complete! {len(results)} fields populated and saved to Google Sheets.")
+                                    else:
+                                        st.success("Research complete!")
+                                else:
+                                    st.success("Research complete!")
+                            except Exception as save_err:
+                                st.warning(f"Research complete but auto-save failed: {save_err}")
+                            
                             st.rerun()
                         except json.JSONDecodeError as e:
                             st.error(f"Could not parse AI response as JSON: {e}")
