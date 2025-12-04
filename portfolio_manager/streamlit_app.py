@@ -1164,6 +1164,15 @@ def get_or_create_template(template_dir: str = "/tmp/pptx_templates") -> str:
     """Get existing template or create a new one."""
     from portfolio_manager.pptx_export import TEMPLATE_VERSION
     
+    # Check for project-level template first (same as Site Profile Builder)
+    project_root = os.path.dirname(os.path.dirname(__file__))
+    project_template = os.path.join(project_root, 'Sample Site Profile Template.pptx')
+    
+    if os.path.exists(project_template):
+        print(f"Using project template: {project_template}")
+        return project_template
+    
+    # Fallback to generated default
     os.makedirs(template_dir, exist_ok=True)
     template_path = os.path.join(template_dir, f"default_site_profile_template_v{TEMPLATE_VERSION}.pptx")
     

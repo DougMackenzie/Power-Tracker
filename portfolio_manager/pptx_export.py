@@ -68,6 +68,8 @@ JLL_COLORS = {
     'light_blue': '#4a90d9',
 }
 
+TEMPLATE_VERSION = "1.0"
+
 TEMPLATE_SLIDES = {
     'title': 0,
     'site_profile': 1,
@@ -2037,6 +2039,48 @@ def analyze_template(template_path: str) -> Dict:
     return analysis
 
 
+def create_default_template(output_path: str):
+    """Create a default PowerPoint template."""
+    try:
+        from pptx import Presentation
+        from pptx.dml.color import RGBColor
+    except ImportError:
+        raise ImportError("python-pptx required")
+    
+    prs = Presentation()
+    
+    # Slide 0: Title Slide (Dark Blue)
+    slide = prs.slides.add_slide(prs.slide_layouts[6]) # Blank
+    background = slide.background
+    fill = background.fill
+    fill.solid()
+    fill.fore_color.rgb = RGBColor(26, 43, 74) # Dark Blue
+    
+    # Slide 1: Site Profile (White)
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    
+    # Slide 2: Site Boundary (White)
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    
+    # Slide 3: Topography (White)
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    
+    # Slide 4: Capacity Trajectory (White)
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    
+    # Slide 5: Infrastructure & Critical Path (White)
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    
+    # Slide 6: Thank You (Dark Blue)
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    background = slide.background
+    fill = background.fill
+    fill.solid()
+    fill.fore_color.rgb = RGBColor(26, 43, 74)
+    
+    prs.save(output_path)
+
+
 __all__ = [
     'CapacityTrajectory', 'PhaseData', 'ScoreAnalysis', 'RiskOpportunity', 
     'SiteProfileData', 'MarketAnalysis',
@@ -2044,5 +2088,5 @@ __all__ = [
     'generate_capacity_trajectory_chart', 'generate_critical_path_chart',
     'generate_score_radar_chart', 'generate_score_summary_chart',
     'generate_market_analysis_chart', 'analyze_template', 'JLL_COLORS',
-    'MATPLOTLIB_AVAILABLE',
+    'MATPLOTLIB_AVAILABLE', 'TEMPLATE_VERSION', 'create_default_template',
 ]
