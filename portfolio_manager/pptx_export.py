@@ -1290,6 +1290,13 @@ def export_site_to_pptx(
     config: ExportConfig = None,
 ) -> str:
     """Export site data to PowerPoint."""
+    print(f"[DEBUG] export_site_to_pptx called with template_path='{template_path}', output_path='{output_path}'")
+    
+    if not template_path:
+        raise ValueError("template_path is required and cannot be None or empty")
+    if not output_path:
+        raise ValueError("output_path is required and cannot be None or empty")
+        
     try:
         from pptx import Presentation
         from pptx.util import Inches, Pt
