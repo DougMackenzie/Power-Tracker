@@ -110,6 +110,7 @@ class CapacityTrajectory:
 
     @classmethod
     def from_dict(cls, data: Dict) -> 'CapacityTrajectory':
+        print(f"[DEBUG] CapacityTrajectory.from_dict called with {len(data)} items")
         years, interconnection, generation, available = [], [], [], []
         for year_str, values in sorted(data.items()):
             try:
@@ -125,6 +126,8 @@ class CapacityTrajectory:
                 available.append(values.get('available_mw', min(ic, gen) if ic and gen else 0))
             except (ValueError, TypeError):
                 continue
+        print(f"[DEBUG] Parsed years: {years}")
+        print(f"[DEBUG] Parsed gen: {generation}")
         return cls(years=years, interconnection_mw=interconnection,
                    generation_mw=generation, available_mw=available)
 
@@ -1744,6 +1747,9 @@ def export_site_to_pptx(
     if config.include_capacity_trajectory and MATPLOTLIB_AVAILABLE:
         # Try 'capacity_trajectory' first, then 'schedule'
         traj_data = site_data.get('capacity_trajectory', site_data.get('schedule', {}))
+        print(f"[DEBUG] Trajectory data found: {bool(traj_data)}")
+        if traj_data:
+            print(f"[DEBUG] Trajectory data keys: {list(traj_data.keys())}")
         
         trajectory = (CapacityTrajectory.from_dict(traj_data) if traj_data else
                       CapacityTrajectory.generate_default(

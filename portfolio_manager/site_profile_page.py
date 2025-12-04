@@ -605,6 +605,7 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                     
                     try:
                         scores = calculate_site_score(site_data, weights)
+                        print(f"[DEBUG] Calculated scores: {scores}")
                         export_data['scores'] = scores
                         # Also populate top-level score keys that pptx_export might look for as fallback
                         export_data['overall_score'] = scores['overall_score']
@@ -614,8 +615,14 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                         export_data['relationship_score'] = scores['relationship_score']
                         export_data['financial_score'] = scores['financial_score']
                     except Exception as e:
-                        print(f"Error calculating scores for export: {e}")
+                        print(f"[ERROR] Error calculating scores for export: {e}")
 
+                print(f"[DEBUG] Exporting site: {site_data.get('name')}")
+                print(f"[DEBUG] Has schedule? {'schedule' in site_data}")
+                if 'schedule' in site_data:
+                    print(f"[DEBUG] Schedule keys: {list(site_data['schedule'].keys())}")
+                    print(f"[DEBUG] Sample schedule data: {list(site_data['schedule'].values())[0] if site_data['schedule'] else 'Empty'}")
+                print(f"[DEBUG] Has capacity_trajectory? {'capacity_trajectory' in site_data}")
                 
                 config = ExportConfig(
                     include_capacity_trajectory=inc_trajectory,
