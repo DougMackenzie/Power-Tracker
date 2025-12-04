@@ -38,7 +38,7 @@ sh = get_data()
 
 # Navigation
 st.sidebar.title("Antigravity")
-app_mode = st.sidebar.radio("Select Module", ["Live Tracker", "Forecast Framework", "Portfolio Manager", "Site Profile Builder"])
+app_mode = st.sidebar.radio("Select Module", ["Live Tracker", "Forecast Framework", "Portfolio Manager"])
 st.sidebar.markdown("---")
 
 if app_mode == "Live Tracker":
@@ -158,67 +158,4 @@ elif app_mode == "Forecast Framework":
 elif app_mode == "Portfolio Manager":
     pm.run()
 
-elif app_mode == "Site Profile Builder":
-    from portfolio_manager.site_profile_page import show_site_profile_builder
-    
-    st.title("📋 Site Profile Builder")
-    
-    try:
-        # Load sites from portfolio manager
-        # Priority 1: Portfolio Manager's Google Sheets database (session state)
-        if hasattr(st, 'session_state') and hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
-            sites = st.session_state.db['sites']
-            st.success(f"✅ Loaded {len(sites)} sites from Portfolio Manager database")
-        else:
-            # Try to initialize database connection directly
-            try:
-                from portfolio_manager.streamlit_app import load_database
-                with st.spinner("Connecting to Google Sheets database..."):
-                    db = load_database()
-                    if db and 'sites' in db:
-                        st.session_state.db = db
-                        sites = db['sites']
-                        st.success(f"✅ Connected to Google Sheets: Loaded {len(sites)} sites")
-                    else:
-                        sites = {}
-            except Exception as e:
-                st.warning(f"Could not connect to Google Sheets: {e}")
-                # Fallback to session state or JSON
-                if 'sites' in st.session_state:
-                    sites = st.session_state.sites
-                    st.success(f"✅ Loaded {len(sites)} sites from session (Offline)")
-                else:
-                    sites = {}
-            # Priority 3: Try to load from site_database.json as fallback
-            import json
-            import os
-            db_path = os.path.join(os.path.dirname(__file__), 'portfolio_manager', 'site_database.json')
-            if os.path.exists(db_path):
-                with open(db_path, 'r') as f:
-                    db_data = json.load(f)
-                
-                # Extract sites from nested structure
-                if 'sites' in db_data:
-                    sites = db_data['sites']
-                else:
-                    sites = db_data
-                    
-                st.info(f"📁 Loaded {len(sites)} sites from JSON file (visit Portfolio Manager to load all sites from Google Sheets)")
-            else:
-                sites = {}
-                st.warning("⚠️ No sites found. Please visit Portfolio Manager first to load your sites from Google Sheets.")
-        
-        if sites:
-            show_site_profile_builder(sites)
-        else:
-            st.warning("No sites available.")
-            st.info("👉 Visit **Portfolio Manager** first to load your sites, then return here to build profiles.")
-            if st.button("Go to Portfolio Manager"):
-                st.session_state.app_mode = "Portfolio Manager"
-                st.rerun()
-    
-    except Exception as e:
-        st.error(f"Error loading Site Profile Builder: {e}")
-        import traceback
-        with st.expander("Error Details"):
-            st.code(traceback.format_exc())
+

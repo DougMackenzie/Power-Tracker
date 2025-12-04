@@ -49,6 +49,22 @@ except ImportError as e:
     PPTX_AVAILABLE = False
     PPTX_IMPORT_ERROR = str(e)
 
+# Import Site Profile Builder
+try:
+    from .site_profile_builder import (
+        SiteProfileBuilder, 
+        SiteProfileData,
+        get_human_input_form_fields,
+        map_app_to_profile,
+        build_research_prompt,
+        AI_RESEARCHABLE_FIELDS,
+        HUMAN_INPUT_FIELDS,
+    )
+    PROFILE_BUILDER_AVAILABLE = True
+except ImportError as e:
+    PROFILE_BUILDER_AVAILABLE = False
+    print(f"Profile builder not available: {e}")
+
 
 # =============================================================================
 # DATABASE MANAGEMENT - Google Sheets Integration
@@ -1234,9 +1250,18 @@ def prepare_site_for_pptx_export(site: Dict, scores: Dict, state_context: Dict) 
                 'distance_to_transmission': p.get('trans_dist', p.get('distance_to_transmission', 0)),
             })
     
+    # Parse profile_json if needed
+    profile_data = site.get('profile_json', {})
+    if isinstance(profile_data, str):
+        try:
+            profile_data = json.loads(profile_data)
+        except:
+            profile_data = {}
+
     # Build comprehensive site data dictionary
     enhanced_site = {
         **site,  # Include all existing site data
+        'profile': profile_data,  # Map profile_json to 'profile' for pptx_export
         'capacity_trajectory': capacity_trajectory,
         'phases': phases,
         'scores': {
@@ -2276,6 +2301,90 @@ def show_site_details(site_id: str):
 
 
 
+def run_ai_site_research(site_id: str, site_data: Dict):
+    """Run AI research for a site."""
+    st.subheader("🤖 AI Location Research")
+    
+    lat = site_data.get('latitude')
+    lon = site_data.get('longitude')
+    
+    if not (lat and lon):
+        st.warning("⚠️ Latitude and Longitude required for AI research. Please add them in 'Basic Info' below and save.")
+        return
+
+    # Initialize builder for this site
+    builder = SiteProfileBuilder(site_data)
+    
+    # Show current status
+    missing = builder.get_missing_fields()['ai_research']
+    if not missing:
+        st.success("✅ AI Research Complete! All researchable fields are populated.")
+        if st.button("Re-run Research"):
+            pass # Just to show the button
+        else:
+            return
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        if st.button("🚀 Run AI Research", type="primary", key="run_research_btn"):
+            with st.spinner("Researching location data..."):
+                # Build prompt
+                prompt = build_research_prompt(site_data, builder.profile)
+                
+                # Call LLM
+                try:
+                    import google.generativeai as genai
+                    api_key = st.secrets.get("GEMINI_API_KEY")
+                    if api_key:
+                        genai.configure(api_key=api_key)
+                        model = genai.GenerativeModel("models/gemini-2.0-flash-exp")
+                        
+                        research_prompt = f"""You are a location research assistant. Research this data center site location and return ONLY a JSON object with the following fields:
+
+{prompt}
+
+CRITICAL: Return ONLY valid JSON with no explanation. Just the JSON object."""
+                        
+                        response = model.generate_content(research_prompt)
+                        
+                        # Parse JSON
+                        import re
+                        json_str = response.text.strip()
+                        if "```json" in json_str:
+                            json_str = json_str.split("```json")[1].split("```")[0].strip()
+                        elif "```" in json_str:
+                            json_str = json_str.split("```")[1].split("```")[0].strip()
+                        elif "{" in json_str:
+                            match = re.search(r'\{.*\}', json_str, re.DOTALL)
+                            if match: json_str = match.group(0)
+                        
+                        results = json.loads(json_str)
+                        
+                        # Apply results
+                        builder.apply_ai_research(results)
+                        
+                        # Save back to database
+                        profile = builder.profile
+                        profile_dict = {}
+                        for field in SiteProfileData.__dataclass_fields__:
+                            value = getattr(profile, field)
+                            if value is not None and value != '' and value != 'TBD':
+                                profile_dict[field] = value
+                        
+                        # Update site in DB
+                        if 'db' in st.session_state and 'sites' in st.session_state.db:
+                            st.session_state.db['sites'][site_id]['profile_json'] = json.dumps(profile_dict)
+                            save_database(st.session_state.db)
+                            st.success(f"✅ Research complete! {len(results)} fields updated.")
+                            st.rerun()
+                            
+                except Exception as e:
+                    st.error(f"Research failed: {e}")
+    
+    with col2:
+        st.info(f"Ready to research {len(missing)} missing fields based on coordinates {lat}, {lon}")
+
+
 def show_add_edit_site():
     """Form for adding or editing sites with detailed diagnostic data."""
     st.title("➕ Add/Edit Site Diagnostic")
@@ -2290,12 +2399,18 @@ def show_add_edit_site():
                 del st.session_state.processing_save
             del st.session_state.edit_site_id
             st.rerun()
+        
+        # Show AI Research UI if editing
+        with st.expander("🤖 AI Research Assistant", expanded=False):
+            run_ai_site_research(st.session_state.edit_site_id, site)
     
     with st.form("site_form"):
         # Tabs for organized data entry
-        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        # Expanded tabs to include Site Profile Builder sections
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
             "Basic Info", "Phasing & Studies", "Infrastructure", 
-            "Onsite Gen", "Schedule", "Non-Power", "Analysis"
+            "Onsite Gen", "Schedule", "Non-Power", "Analysis",
+            "Site Profile (Human Input)", "AI Research Results"
         ])
         
         # --- Tab 1: Basic Info ---
@@ -2346,7 +2461,17 @@ def show_add_edit_site():
                                            help="Example: -95.992775 (for Tulsa, OK)")
             with col3:
                 st.info("💡 Right-click 'What's here?' in Google Maps to get coordinates")
-            
+                
+                # AI Research Button
+                if latitude != 0.0 and longitude != 0.0:
+                    st.markdown("---")
+                    st.markdown("**🤖 AI Location Research**")
+                    st.caption("Research demographics, hazards, and utilities using coordinates.")
+                    
+                    # We can't put a button inside a form that triggers an action without submitting
+                    # So we'll use a checkbox to request research on save, or just rely on the separate AI Research tab
+                    st.info("👉 Go to **AI Research Results** tab to run location analysis")
+
             date_str = st.date_input("Assessment Date", value=datetime.now())
 
         # --- Tab 2: Phasing & Studies ---
@@ -2598,6 +2723,103 @@ def show_add_edit_site():
             risks_txt = st.text_area("Key Risks (one per line)", value='\n'.join(site.get('risks', [])))
             opps_txt = st.text_area("Acceleration Opportunities", value='\n'.join(site.get('opps', [])))
             questions_txt = st.text_area("Open Questions", value='\n'.join(site.get('questions', [])))
+
+        # --- Tab 8: Site Profile (Human Input) ---
+        with tab8:
+            st.subheader("✍️ Site Profile - Detailed Inputs")
+            st.info("These fields populate the detailed Site Profile export.")
+            
+            # Load existing profile data
+            profile_json = site.get('profile_json', {})
+            if isinstance(profile_json, str):
+                try:
+                    profile_json = json.loads(profile_json)
+                except:
+                    profile_json = {}
+            
+            # Get form fields definition
+            form_sections = get_human_input_form_fields()
+            
+            # We need to store these inputs to save them later
+            human_inputs = {}
+            
+            for section in form_sections:
+                with st.expander(f"📋 {section['section']}", expanded=False):
+                    cols = st.columns(2)
+                    for i, field_def in enumerate(section['fields']):
+                        with cols[i % 2]:
+                            field_name = field_def['name']
+                            label = field_def['label']
+                            field_type = field_def['type']
+                            help_text = field_def.get('help', '')
+                            
+                            # Get current value from profile_json or site dict
+                            current_value = profile_json.get(field_name, '')
+                            
+                            # Create input key
+                            input_key = f"hi_{field_name}"
+                            
+                            if field_type == 'text':
+                                human_inputs[field_name] = st.text_input(
+                                    label, 
+                                    value=str(current_value) if current_value else '',
+                                    help=help_text,
+                                    key=input_key
+                                )
+                            elif field_type == 'number':
+                                try:
+                                    default_val = float(current_value) if current_value else 0.0
+                                except (ValueError, TypeError):
+                                    default_val = 0.0
+                                human_inputs[field_name] = st.number_input(
+                                    label,
+                                    value=default_val,
+                                    help=help_text,
+                                    key=input_key
+                                )
+                            elif field_type == 'select':
+                                options = field_def.get('options', ['TBD'])
+                                try:
+                                    idx = options.index(str(current_value)) if current_value in options else 0
+                                except (ValueError, IndexError):
+                                    idx = 0
+                                human_inputs[field_name] = st.selectbox(
+                                    label,
+                                    options=options,
+                                    index=idx,
+                                    help=help_text,
+                                    key=input_key
+                                )
+
+        # --- Tab 9: AI Research Results ---
+        with tab9:
+            st.subheader("🔍 AI Research Data")
+            
+            # Show existing research results
+            if profile_json:
+                st.write("Current Profile Data:")
+                
+                # Filter for AI fields
+                ai_data = {}
+                for field, desc in AI_RESEARCHABLE_FIELDS.items():
+                    if field in profile_json:
+                        ai_data[field] = profile_json[field]
+                
+                if ai_data:
+                    st.json(ai_data)
+                else:
+                    st.info("No AI research data found.")
+            else:
+                st.info("No profile data found.")
+                
+            st.markdown("---")
+            st.markdown("**To run new research:**")
+            st.markdown("1. Ensure coordinates are set in 'Basic Info'")
+            st.markdown("2. Save the site first")
+            st.markdown("3. Use the 'AI Chat' page or the standalone 'Site Profile Builder' (if enabled) to run deep research.")
+            # Note: We can't easily run the async AI research inside this form without breaking the form state.
+            # Ideally, we would move the AI research button outside the form or use a callback.
+            # For now, we'll rely on the user saving and then using the AI Chat or we can add a button OUTSIDE the form.
         
         submitted = st.form_submit_button("💾 Save Site Diagnostic")
         
@@ -2631,6 +2853,8 @@ def show_add_edit_site():
                     # Coordinates for AI research
                     'latitude': latitude if latitude != 0.0 else None,
                     'longitude': longitude if longitude != 0.0 else None,
+                    # Profile JSON (Human Inputs + AI Results)
+                    'profile_json': json.dumps({**profile_json, **human_inputs}),
                     # Legacy fields for backward compatibility
                     'study_status': phases[0].get('screening_status', 'Not Started') if phases else 'Not Started',
                     'utility_commitment': 'Committed' if phases and phases[0].get('energy_contract_status') == 'Executed' else 'None',
