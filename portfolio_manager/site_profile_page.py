@@ -145,8 +145,31 @@ def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict):
         
         if st.button("Save Coordinates"):
             if new_lat and new_lon:
-                st.session_state.pending_coords = {'latitude': new_lat, 'longitude': new_lon}
-                st.success("Coordinates saved! Refresh the page to use AI research.")
+                # Save to Google Sheets database
+                try:
+                    if hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
+                        db = st.session_state.db
+                        
+                        if site_data.get('site_id') in db['sites']:
+                            # Update coordinates in database
+                            db['sites'][site_data['site_id']]['latitude'] = new_lat
+                            db['sites'][site_data['site_id']]['longitude'] = new_lon
+                            
+                            # Save to Google Sheets
+                            from .streamlit_app import save_database
+                            save_database(db)
+                            
+                            st.success(f"✅ Coordinates saved to Google Sheets! Latitude: {new_lat}, Longitude: {new_lon}")
+                            st.info("🔄 Click the Refresh button above to reload with coordinates and enable AI research.")
+                        else:
+                            st.error(f"Site {site_data.get('site_id')} not found in database")
+                    else:
+                        st.error("No database connection available. Please visit Portfolio Manager first.")
+                except Exception as e:
+                    st.error(f"Failed to save coordinates: {e}")
+                    import traceback
+                    with st.expander("Error Details"):
+                        st.code(traceback.format_exc())
         return
     
     st.success(f"📍 Coordinates: {lat}, {lon}")
