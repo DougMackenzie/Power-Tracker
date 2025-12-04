@@ -739,8 +739,16 @@ def show_site_profile_builder(sites: Dict, data_layer=None):
             key="profile_site_select"
         )
     
+    
     site_id = site_options[selected]
-    site_data = sites[site_id]
+    
+    # CRITICAL: Always get fresh site_data from database, not the stale sites parameter
+    # This ensures we load the latest profile_json that was saved
+    if hasattr(st.session_state, 'db') and 'sites' in st.session_state.db and site_id in st.session_state.db['sites']:
+        site_data = st.session_state.db['sites'][site_id]
+    else:
+        # Fallback to parameter if database not available
+        site_data = sites[site_id]
     
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
