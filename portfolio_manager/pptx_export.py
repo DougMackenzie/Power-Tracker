@@ -1426,21 +1426,37 @@ def export_site_to_pptx(
     
     # Check if we have structured profile data
     profile_data = None
+    print(f"[DEBUG] site_data keys: {list(site_data.keys())}")
     if 'profile' in site_data:
         p = site_data['profile']
+        print(f"[DEBUG] Found 'profile' in site_data. Type: {type(p)}")
         # Use duck typing instead of isinstance to handle module reloads
         if hasattr(p, 'overview') and hasattr(p, 'to_dict'):
+            print("[DEBUG] Profile has required attributes (duck typing passed)")
             profile_data = p
         elif isinstance(p, dict):
+            print("[DEBUG] Profile is a dict, converting to SiteProfileData")
             profile_data = SiteProfileData.from_dict(p)
+        else:
+            print(f"[DEBUG] Profile failed type check. Attributes: {dir(p)}")
+    else:
+        print("[DEBUG] 'profile' NOT found in site_data")
 
     # Process existing slides
-    for slide in prs.slides:
+    for slide_idx, slide in enumerate(prs.slides):
+        print(f"[DEBUG] Processing slide {slide_idx}")
         for shape in slide.shapes:
             if shape.has_table:
+                row_count = len(shape.table.rows)
+                print(f"[DEBUG] Found table with {row_count} rows")
                 # Check if this is the main Site Profile table (18 rows)
-                if len(shape.table.rows) >= 17 and profile_data:
-                    populate_site_profile_table(shape.table, profile_data)
+                if row_count >= 17:
+                    if profile_data:
+                        print("[DEBUG] Calling populate_site_profile_table")
+                        populate_site_profile_table(shape.table, profile_data)
+                    else:
+                        print("[DEBUG] Skipping populate_site_profile_table because profile_data is None")
+                        replace_in_table(shape.table, replacements)
                 else:
                     replace_in_table(shape.table, replacements)
             elif shape.has_text_frame:
