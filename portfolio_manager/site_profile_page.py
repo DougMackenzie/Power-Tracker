@@ -448,6 +448,10 @@ def show_human_input_section(builder: SiteProfileBuilder):
         if submitted:
             # Filter out empty values but keep 0, False, Unknown
             filtered_inputs = {k: v for k, v in inputs.items() if v is not None and str(v) != '' and str(v) != 'TBD'}
+            
+            # DEBUG: Print filtered inputs
+            print(f"[DEBUG] Filtered Inputs: {filtered_inputs}")
+            
             st.session_state.human_inputs = filtered_inputs
             builder.apply_human_inputs(filtered_inputs)
             
@@ -471,6 +475,9 @@ def show_human_input_section(builder: SiteProfileBuilder):
                                 # KEEP: False, 0, 0.0 (these are valid values!)
                                 if value is not None and value != '' and value != 'TBD':
                                     profile_dict[field] = value
+                            
+                            # DEBUG: Print profile_dict
+                            print(f"[DEBUG] Profile Dict to Save: {profile_dict}")
                             
                             if hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
                                 db = st.session_state.db
