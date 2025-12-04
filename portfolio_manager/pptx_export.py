@@ -1306,6 +1306,7 @@ def export_site_to_pptx(
     # Check if we have structured profile data
     profile_data = None
     print(f"[DEBUG] site_data keys: {list(site_data.keys())}")
+    print("[DEBUG] EXPORTING WITH NEW SPLIT CHARTS LOGIC")
     if 'profile' in site_data:
         p = site_data['profile']
         print(f"[DEBUG] Found 'profile' in site_data. Type: {type(p)}")
