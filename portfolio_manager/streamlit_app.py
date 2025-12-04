@@ -101,7 +101,9 @@ def load_database() -> Dict:
                     "client", "total_fee_potential", "contract_status",
                     "site_control_stage", "power_stage", "marketing_stage", "buyer_stage",
                     "zoning_stage", "water_stage", "incentives_stage",
-                    "probability", "weighted_fee", "tracker_notes"
+                    "probability", "weighted_fee", "tracker_notes",
+                    # Site profile builder columns
+                    "profile_json", "latitude", "longitude"
                 ]
                 sites_ws.append_row(headers)
             
@@ -195,6 +197,31 @@ def load_database() -> Dict:
                     
                 site['tracker_notes'] = str(row.get('tracker_notes', ''))
                 
+                # Load site profile builder fields
+                profile_json_str = row.get('profile_json', '')
+                if profile_json_str and profile_json_str.strip():
+                    try:
+                        site['profile_json'] = json.loads(profile_json_str)
+                    except json.JSONDecodeError:
+                        site['profile_json'] = {}
+                else:
+                    site['profile_json'] = {}
+                
+                # Load coordinates
+                try:
+                    lat = row.get('latitude', '')
+                    if lat and str(lat).strip():
+                        site['latitude'] = float(lat)
+                except (ValueError, TypeError):
+                    pass
+                
+                try:
+                    lon = row.get('longitude', '')
+                    if lon and str(lon).strip():
+                        site['longitude'] = float(lon)
+                except (ValueError, TypeError):
+                    pass
+                
                 sites[site_id] = site
             
             # Try to get metadata
@@ -262,7 +289,9 @@ def save_database(db: Dict):
             "client", "total_fee_potential", "contract_status",
             "site_control_stage", "power_stage", "marketing_stage", "buyer_stage",
             "zoning_stage", "water_stage", "incentives_stage",
-            "probability", "weighted_fee", "tracker_notes"
+            "probability", "weighted_fee", "tracker_notes",
+            # Site profile builder columns
+            "profile_json", "latitude", "longitude"
         ]
         sites_ws.append_row(headers)
         
@@ -309,7 +338,11 @@ def save_database(db: Dict):
                 tracker_data.incentives_stage,
                 tracker_data.probability,
                 tracker_data.weighted_fee,
-                tracker_data.tracker_notes
+                tracker_data.tracker_notes,
+                # Site profile builder columns
+                json.dumps(site.get('profile_json', {})),
+                site.get('latitude', ''),
+                site.get('longitude', '')
             ]
             sites_ws.append_row(row)
         
@@ -2263,7 +2296,24 @@ def show_add_edit_site():
                     current_land_status = 'None'
                 land_status = st.selectbox("Land Status", options=land_status_options,
                                           index=land_status_options.index(current_land_status))
-                date_str = st.date_input("Assessment Date", value=datetime.now())
+            
+            st.markdown("---")
+            st.markdown("**📍 Coordinates (for AI Research)**")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                latitude = st.number_input("Latitude", 
+                                          value=float(site.get('latitude', 0.0)) if site.get('latitude') else 0.0,
+                                          format="%.6f",
+                                          help="Example: 36.154940 (for Tulsa, OK)")
+            with col2:
+                longitude = st.number_input("Longitude", 
+                                           value=float(site.get('longitude', 0.0)) if site.get('longitude') else 0.0,
+                                           format="%.6f",
+                                           help="Example: -95.992775 (for Tulsa, OK)")
+            with col3:
+                st.info("💡 Right-click 'What's here?' in Google Maps to get coordinates")
+            
+            date_str = st.date_input("Assessment Date", value=datetime.now())
 
         # --- Tab 2: Phasing & Studies ---
         with tab2:
@@ -2544,6 +2594,9 @@ def show_add_edit_site():
                     'risks': [r.strip() for r in risks_txt.split('\n') if r.strip()],
                     'opps': [o.strip() for o in opps_txt.split('\n') if o.strip()],
                     'questions': [q.strip() for q in questions_txt.split('\n') if q.strip()],
+                    # Coordinates for AI research
+                    'latitude': latitude if latitude != 0.0 else None,
+                    'longitude': longitude if longitude != 0.0 else None,
                     # Legacy fields for backward compatibility
                     'study_status': phases[0].get('screening_status', 'Not Started') if phases else 'Not Started',
                     'utility_commitment': 'Committed' if phases and phases[0].get('energy_contract_status') == 'Executed' else 'None',

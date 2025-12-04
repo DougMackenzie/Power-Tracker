@@ -146,10 +146,6 @@ def map_app_to_profile(site_data: Dict) -> SiteProfileData:
     # Electricity from utility field
     profile.electric_utility = site_data.get('utility', '')
     
-    # Voltage if available
-    if site_data.get('voltage_kv'):
-        profile.voltage_kv = int(site_data['voltage_kv'])
-    
     # Estimated capacity from target_mw
     if site_data.get('target_mw'):
         profile.estimated_capacity_mw = float(site_data['target_mw'])
@@ -158,12 +154,111 @@ def map_app_to_profile(site_data: Dict) -> SiteProfileData:
     if site_data.get('latitude') and site_data.get('longitude'):
         profile.coordinates = f"{site_data['latitude']}, {site_data['longitude']}"
     
-    # Water from water_capacity or water_stage
-    if site_data.get('water_capacity'):
+    # === NEW: Extract from phases data ===
+    phases = site_data.get('phases_json') or site_data.get('phases', [])
+    if phases and isinstance(phases, list):
+        # Voltage (highest available)
+        voltages = []
+        for p in phases:
+            if isinstance(p, dict):
+                v = p.get('voltage') or p.get('voltage_kv', 0)
+                if v:
+                    try:
+                        voltages.append(int(v))
+                    except (ValueError, TypeError):
+                        pass
+        if voltages:
+            max_voltage = max(voltages)
+            profile.voltage_kv = str(max_voltage)
+            profile.transmission_line = f"{max_voltage} kV line (see phases)"
+        
+        # Distance to transmission (shortest from any phase)
+        distances = []
+        for p in phases:
+            if isinstance(p, dict) and p.get('trans_dist'):
+                try:
+                    distances.append(float(p['trans_dist']))
+                except (ValueError, TypeError):
+                    pass
+        if distances:
+            min_dist = min(distances)
+            profile.distance_to_transmission = f"{min_dist} miles"
+        
+        # Phase 1 delivery from first phase
+        if len(phases) > 0:
+            phase1 = phases[0]
+            if isinstance(phase1, dict):
+                if phase1.get('target_date'):
+                    profile.phase1_delivery = phase1['target_date']
+                elif phase1.get('target_online'):
+                    profile.phase1_delivery = phase1['target_online']
+                if phase1.get('mw') or phase1.get('target_mw'):
+                    mw = phase1.get('mw') or phase1.get('target_mw')
+                    try:
+                        profile.phase1_acres = float(mw) / 5  # Estimate: 5 MW/acre
+                    except (ValueError, TypeError):
+                        pass
+    
+    # === NEW: Extract from non_power data ===
+    non_power = site_data.get('non_power_json') or site_data.get('non_power', {})
+    if isinstance(non_power, dict):
+        # Water
+        if non_power.get('water_cap'):
+            water_val = non_power['water_cap']
+            # Handle both string and numeric formats
+            if isinstance(water_val, (int, float)):
+                profile.water_capacity_gpd = f"{water_val:,} GPD"
+            else:
+                profile.water_capacity_gpd = str(water_val)
+        
+        if non_power.get('water_source'):
+            profile.water_provider = non_power['water_source']
+        
+        if non_power.get('wastewater'):
+            profile.wastewater_solution = non_power['wastewater']
+        
+        # Fiber
+        if non_power.get('fiber_provider'):
+            profile.fiber_provider = non_power['fiber_provider']
+        
+        if non_power.get('fiber_status'):
+            fiber_status = non_power['fiber_status']
+            if 'lit' in fiber_status.lower():
+                profile.fiber_capacity = "Lit fiber available"
+            elif 'at site' in fiber_status.lower() or 'nearby' in fiber_status.lower():
+                profile.fiber_capacity = fiber_status
+            else:
+                profile.fiber_capacity = f"Status: {fiber_status}"
+        
+        # Gas
+        if non_power.get('gas_cap') or non_power.get('gas_capacity'):
+            gas_val = non_power.get('gas_cap') or non_power.get('gas_capacity')
+            if isinstance(gas_val, (int, float)):
+                profile.gas_capacity = f"{gas_val:,} MMBTU/day"
+            else:
+                profile.gas_capacity = str(gas_val)
+        
+        # Zoning
+        if non_power.get('zoning_status'):
+            zoning = non_power['zoning_status']
+            profile.current_zoning = zoning
+            if 'approved' in zoning.lower():
+                profile.permits_proposed_use = 'Approved'
+            elif 'submitted' in zoning.lower():
+                profile.permits_proposed_use = 'Pending approval'
+            elif 'pre-app' in zoning.lower():
+                profile.permits_proposed_use = 'Pre-application in progress'
+    
+    # Voltage fallback if not in phases
+    if not profile.voltage_kv and site_data.get('voltage_kv'):
+        profile.voltage_kv = str(site_data['voltage_kv'])
+    
+    # Water fallback from water_capacity
+    if not profile.water_capacity_gpd and site_data.get('water_capacity'):
         profile.water_capacity_gpd = str(site_data['water_capacity'])
     
-    # Fiber from fiber_available
-    if site_data.get('fiber_available'):
+    # Fiber fallback from fiber_available
+    if not profile.fiber_capacity and site_data.get('fiber_available'):
         profile.fiber_capacity = 'Available' if site_data['fiber_available'] else 'TBD'
     
     # Environmental from environmental_complete
@@ -175,29 +270,22 @@ def map_app_to_profile(site_data: Dict) -> SiteProfileData:
     if 'control' in land_status.lower() or 'loi' in land_status.lower():
         profile.willing_to_sell = 'Yes'
     
-    # Zoning stage to zoning status
-    zoning_stage = site_data.get('zoning_stage', 0)
-    if zoning_stage:
-        zoning_map = {
-            1: 'Research needed',
-            2: 'In progress',
-            3: 'Approved',
-        }
-        profile.permits_proposed_use = zoning_map.get(zoning_stage, 'TBD')
+    # Zoning stage to zoning status (if not already set from non_power)
+    if not profile.permits_proposed_use:
+        zoning_stage = site_data.get('zoning_stage', 0)
+        if zoning_stage:
+            zoning_map = {
+                1: 'Research needed',
+                2: 'In progress',
+                3: 'Approved',
+            }
+            profile.permits_proposed_use = zoning_map.get(zoning_stage, 'TBD')
     
     # County
     if site_data.get('county'):
-        profile.nearest_town = site_data['county']  # Approximate
-    
-    # Phases for phase delivery
-    phases = site_data.get('phases_json') or site_data.get('phases', [])
-    if phases and isinstance(phases, list) and len(phases) > 0:
-        phase1 = phases[0]
-        if isinstance(phase1, dict):
-            if phase1.get('target_online'):
-                profile.phase1_delivery = phase1['target_online']
-            if phase1.get('target_mw'):
-                profile.phase1_acres = float(phase1['target_mw']) / 2  # Rough estimate
+        # Only use county as nearest_town if we don't have better info
+        if not profile.nearest_town or profile.nearest_town == '':
+            profile.nearest_town = site_data['county'] + ' County'
     
     # Overview from existing data - build a compelling summary
     overview_parts = []
