@@ -449,9 +449,6 @@ def show_human_input_section(builder: SiteProfileBuilder):
             # Filter out empty values but keep 0, False, Unknown
             filtered_inputs = {k: v for k, v in inputs.items() if v is not None and str(v) != '' and str(v) != 'TBD'}
             
-            # DEBUG: Print filtered inputs
-            print(f"[DEBUG] Filtered Inputs: {filtered_inputs}")
-            
             st.session_state.human_inputs = filtered_inputs
             builder.apply_human_inputs(filtered_inputs)
             
@@ -481,9 +478,6 @@ def show_human_input_section(builder: SiteProfileBuilder):
                                 if value is not None and value != '' and value != 'TBD':
                                     profile_dict[field] = value
                             
-                            # DEBUG: Print profile_dict
-                            print(f"[DEBUG] Profile Dict to Save: {profile_dict}")
-                            
                             if hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
                                 db = st.session_state.db
                                 if site_id in db['sites']:
@@ -497,13 +491,7 @@ def show_human_input_section(builder: SiteProfileBuilder):
                                 else:
                                     st.success(f"Saved {len(filtered_inputs)} fields! (Google Sheets save failed - site not found)")
                             else:
-                                # Debug why it failed
-                                reason = []
-                                if not hasattr(st.session_state, 'db'): reason.append("No 'db' in session_state")
-                                elif 'sites' not in st.session_state.db: reason.append("No 'sites' in db")
-                                
-                                st.success(f"Saved {len(filtered_inputs)} fields! (Session only - {', '.join(reason)})")
-                                print(f"[DEBUG] Session State Keys: {list(st.session_state.keys())}")
+                                st.success(f"Saved {len(filtered_inputs)} fields! (Session only - Database not connected)")
                         else:
                             st.success(f"Saved {len(filtered_inputs)} fields! (Session only - No site options)")
                     else:
