@@ -449,7 +449,44 @@ def show_human_input_section(builder: SiteProfileBuilder):
             filtered_inputs = {k: v for k, v in inputs.items() if v and str(v) not in ['', 'TBD', '0', '0.0', 'Unknown']}
             st.session_state.human_inputs = filtered_inputs
             builder.apply_human_inputs(filtered_inputs)
-            st.success(f"Saved {len(filtered_inputs)} fields!")
+            
+            # Auto-save to Google Sheets
+            try:
+                # Get site_id from the page context
+                if 'profile_site_select' in st.session_state:
+                    sites = st.session_state.get('sites', {})
+                    site_options = {f"{site.get('name', site_id)} ({site.get('state', '')})" : site_id 
+                                   for site_id, site in sites.items()}
+                    if site_options:
+                        selected = st.session_state.profile_site_select
+                        site_id = site_options.get(selected)
+                        
+                        if site_id:
+                            profile = builder.profile
+                            profile_dict = {
+                                field: getattr(profile, field) 
+                                for field in SiteProfileData.__dataclass_fields__
+                                if getattr(profile, field) and str(getattr(profile, field)) not in ['', 'TBD', '0', '0.0']
+                            }
+                            
+                            if hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
+                                db = st.session_state.db
+                                if site_id in db['sites']:
+                                    db['sites'][site_id]['profile_json'] = json.dumps(profile_dict)
+                                    from .streamlit_app import save_database
+                                    save_database(db)
+                                    st.success(f"✅ Saved {len(filtered_inputs)} fields to Google Sheets!")
+                                else:
+                                    st.success(f"Saved {len(filtered_inputs)} fields! (Google Sheets save failed - site not found)")
+                            else:
+                                st.success(f"Saved {len(filtered_inputs)} fields! (Google Sheets save failed - no database)")
+                        else:
+                            st.success(f"Saved {len(filtered_inputs)} fields! (Session only)")
+                    else:
+                        st.success(f"Saved {len(filtered_inputs)} fields! (Session only)")
+            except Exception as e:
+                st.warning(f"Saved {len(filtered_inputs)} fields but Google Sheets save failed: {e}")
+            
             st.rerun()
 
 
