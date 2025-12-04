@@ -145,14 +145,22 @@ def map_app_to_profile(site_data: Dict) -> SiteProfileData:
             
             if isinstance(saved_profile, dict):
                 # Restore all saved fields
+                fields_restored = 0
                 for field, value in saved_profile.items():
                     if hasattr(profile, field) and value:
                         setattr(profile, field, value)
+                        fields_restored += 1
+                
+                # Debug: Print how many fields were restored
+                print(f"[DEBUG] Restored {fields_restored} fields from profile_json")
                 
                 # If we have a saved profile, return it (already enriched)
                 # We still continue below to overlay any NEW data from current site_data
         except (json.JSONDecodeError, Exception) as e:
+            print(f"[DEBUG] Failed to load profile_json: {type(e).__name__}: {e}")
             pass  # Ignore errors, fall through to auto-mapping
+    else:
+        print(f"[DEBUG] No profile_json found in site_data. Keys: {list(site_data.keys())[:10]}")
     
     # Direct mappings (will override saved data if present)
     if site_data.get('name'):
