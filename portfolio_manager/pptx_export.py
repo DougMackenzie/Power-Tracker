@@ -371,11 +371,11 @@ class SiteProfileData:
         descriptions['Wetlands and Jurisdictional Water'] = wetland_text
         
         # Row 9: Disaster
-        disaster_parts = [f"Flood: {self.flood_zone}"]
-        disaster_parts.append(f"Seismic: {self.seismic_risk}")
-        disaster_parts.append(f"Hurricane/Weather: {self.hurricane_risk}")
+        disaster_parts = [f"Flood: {self.flood_zone.strip() if self.flood_zone else ''}"]
+        disaster_parts.append(f"Seismic: {self.seismic_risk.strip() if self.seismic_risk else ''}")
+        disaster_parts.append(f"Hurricane/Weather: {self.hurricane_risk.strip() if self.hurricane_risk else ''}")
         if self.tornado_risk:
-            disaster_parts.append(f"Tornado: {self.tornado_risk}")
+            disaster_parts.append(f"Tornado: {self.tornado_risk.strip()}")
         descriptions['Disaster'] = ". ".join(disaster_parts)
         
         # Row 10: Easements
@@ -1128,6 +1128,7 @@ def update_overview_textbox(shape, site_data: Dict, profile: Optional['SiteProfi
     Also fixes any red coloring to use theme color.
     """
     from pptx.enum.dml import MSO_THEME_COLOR
+    from pptx.dml.color import RGBColor
     
     if not shape.has_text_frame:
         return False
@@ -1148,8 +1149,8 @@ def update_overview_textbox(shape, site_data: Dict, profile: Optional['SiteProfi
             if new_content and len(para.runs) >= 2:
                 # Run 1 has the content (Run 0 has "Overview:  ")
                 para.runs[1].text = new_content
-                # Fix color - use same tan/brown as label or theme color
-                para.runs[1].font.color.theme_color = MSO_THEME_COLOR.TEXT_1
+                # Fix color - use tan/light brown
+                para.runs[1].font.color.rgb = RGBColor.from_string(JLL_COLORS['tan'][1:])
                 updated = True
         
         elif 'observation' in para_text:
@@ -1161,14 +1162,8 @@ def update_overview_textbox(shape, site_data: Dict, profile: Optional['SiteProfi
             
             if new_content and len(para.runs) >= 2:
                 para.runs[1].text = new_content
-                # Remove red - copy color from label run or use theme
-                if para.runs[0].font.color and para.runs[0].font.color.rgb:
-                    try:
-                        para.runs[1].font.color.rgb = para.runs[0].font.color.rgb
-                    except:
-                        para.runs[1].font.color.theme_color = MSO_THEME_COLOR.TEXT_1
-                else:
-                    para.runs[1].font.color.theme_color = MSO_THEME_COLOR.TEXT_1
+                # Use tan/light brown
+                para.runs[1].font.color.rgb = RGBColor.from_string(JLL_COLORS['tan'][1:])
                 updated = True
         
         elif 'outstanding' in para_text:
@@ -1420,7 +1415,8 @@ def export_site_to_pptx(
         from pptx import Presentation
         from pptx.util import Inches, Pt
         from pptx.dml.color import RGBColor
-        from pptx.enum.shapes import MSO_SHAPE
+        from pptx.enum.shapes import MSO_SHAPE, MSO_SHAPE_TYPE
+        from pptx.enum.text import PP_ALIGN
     except ImportError:
         raise ImportError("python-pptx required")
 
@@ -1452,6 +1448,59 @@ def export_site_to_pptx(
                     update_overview_textbox(shape, site_data, profile_data)
                 else:
                     find_and_replace_text(shape, replacements)
+
+    # Handle images on Site Profile slide (Slide 1)
+    if len(prs.slides) > 1:
+        sp_slide = prs.slides[1]
+        shapes_to_replace = []
+        state_shape = None
+        
+        for shape in sp_slide.shapes:
+            # Check for state silhouette on the left (approx < 4 inches)
+            if shape.shape_type in [MSO_SHAPE_TYPE.PICTURE, MSO_SHAPE_TYPE.AUTO_SHAPE] and shape.left < Inches(4):
+                # Heuristic: It's likely the state shape if it's in the top-left quadrant
+                if shape.top < Inches(4):
+                    state_shape = shape
+
+            # Check for map images on the right (approx > 9 inches)
+            if shape.shape_type == MSO_SHAPE_TYPE.PICTURE and shape.left > Inches(9):
+                shapes_to_replace.append(shape)
+        
+        # Handle state silhouette
+        current_state = site_data.get('state', '').upper()
+        if state_shape and current_state != 'OK':
+            # Hide the Oklahoma shape if state is not OK
+            # We can't easily replace it without assets, so hiding is safer than showing wrong state
+            sp_element = state_shape.element
+            sp_element.getparent().remove(sp_element)
+
+        # Replace map images with placeholders
+        for shape in shapes_to_replace:
+            left, top, width, height = shape.left, shape.top, shape.width, shape.height
+            # Remove original
+            sp_element = shape.element
+            sp_element.getparent().remove(sp_element)
+            
+            # Add placeholder rectangle
+            rect = sp_slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
+            rect.fill.solid()
+            rect.fill.fore_color.rgb = RGBColor(240, 240, 240) # Light gray
+            rect.line.color.rgb = RGBColor(200, 200, 200)
+            
+            # Add text
+            tf = rect.text_frame
+            tf.text = "Map Placeholder"
+            # Determine type based on vertical position
+            if top < Inches(2.5):
+                tf.text = "Location Map"
+            elif top < Inches(5):
+                tf.text = "Site Map"
+            else:
+                tf.text = "Plot Map"
+            
+            p = tf.paragraphs[0]
+            p.font.color.rgb = RGBColor(100, 100, 100)
+            p.alignment = PP_ALIGN.CENTER
 
     # Find blank layout
     blank_layout = None
