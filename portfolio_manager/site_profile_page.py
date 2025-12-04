@@ -217,29 +217,52 @@ def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict, site_
             # Try to use LLM integration
             if LLM_AVAILABLE:
                 try:
-                    chat = get_chat_client()
-                    if chat:
-                        response = chat.chat(
-                            f"You are a location research assistant. {prompt}\n\n"
-                            "IMPORTANT: Return ONLY valid JSON, no markdown or explanation."
-                        )
+                    # Use direct Gemini call for location research
+                    # PortfolioChat is designed for general queries, not structured research
+                    import google.generativeai as genai
+                    import os
+                    
+                    # Get API key
+                    api_key = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY"))
+                    
+                    if api_key:
+                        genai.configure(api_key=api_key)
+                        model = genai.GenerativeModel("models/gemini-2.0-flash-exp")
+                        
+                        # Build research-specific prompt
+                        research_prompt = f"""You are a location research assistant. Research this data center site location and return ONLY a JSON object with the following fields:
+
+{prompt}
+
+CRITICAL: Return ONLY valid JSON with no explanation, no markdown, no additional text. Just the JSON object starting with {{ and ending with }}.
+
+Example format:
+{{
+  "nearest_town": "City Name",
+  "distance_to_town": "X miles",
+  "airport_name": "Airport Name (CODE)",
+  ...
+}}"""
+                        
+                        response = model.generate_content(research_prompt)
+                        response_text = response.text
                         
                         
                         # Parse JSON from response
                         try:
                             # Multiple strategies to extract JSON
-                            json_str = response.strip()
+                            json_str = response_text.strip()
                             
                             # Strategy 1: Look for ```json blocks
-                            if "```json" in response:
-                                json_str = response.split("```json")[1].split("```")[0].strip()
+                            if "```json" in response_text:
+                                json_str = response_text.split("```json")[1].split("```")[0].strip()
                             # Strategy 2: Look for generic ``` blocks
-                            elif "```" in response:
-                                json_str = response.split("```")[1].split("```")[0].strip()
+                            elif "```" in response_text:
+                                json_str = response_text.split("```")[1].split("```")[0].strip()
                             # Strategy 3: Look for { } braces
-                            elif "{" in response and "}" in response:
+                            elif "{" in response_text and "}" in response_text:
                                 import re
-                                match = re.search(r'\{.*\}', response, re.DOTALL)
+                                match = re.search(r'\{.*\}', response_text, re.DOTALL)
                                 if match:
                                     json_str = match.group(0)
                             
@@ -281,7 +304,7 @@ def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict, site_
                             st.error(f"Could not parse AI response as JSON: {e}")
                             st.info("The AI might have returned text instead of JSON. Try the manual paste option below.")
                             with st.expander("Raw Response (click to see what AI returned)", expanded=True):
-                                st.code(response if response else "Empty response")
+                                st.code(response_text if response_text else "Empty response")
                                 
                             # Show manual input option
                             st.markdown("---")
@@ -297,7 +320,7 @@ def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict, site_
                                 except json.JSONDecodeError as e2:
                                     st.error(f"Invalid JSON: {e2}")
                     else:
-                        st.error("LLM client not configured")
+                        st.error("Gemini API key not configured. Please add GEMINI_API_KEY to secrets.toml")
                 except Exception as e:
                     st.error(f"AI research failed: {e}")
             else:
