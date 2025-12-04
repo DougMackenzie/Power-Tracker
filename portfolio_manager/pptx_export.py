@@ -1394,7 +1394,7 @@ def add_market_text(slide, market_data):
         p.level = 1
 
     # Bottom Left: ISO/Utility
-    left, top = Inches(0.5), Inches(4.5)
+    left, top = Inches(0.5), Inches(5.5)
     txBox = slide.shapes.add_textbox(left, top, width, height)
     tf = txBox.text_frame
     p = tf.paragraphs[0]
@@ -1420,7 +1420,7 @@ def add_market_text(slide, market_data):
         p.space_before = Pt(6)
 
     # Bottom Right: SWOT
-    left, top = Inches(6.8), Inches(4.5)
+    left, top = Inches(6.8), Inches(5.5)
     txBox = slide.shapes.add_textbox(left, top, width, height)
     tf = txBox.text_frame
     p = tf.paragraphs[0]
@@ -1970,7 +1970,7 @@ def export_site_to_pptx(
             
         print(f"[DEBUG] Generating market chart at {market_path}")
         # Generate Market Chart (Top Left)
-        generate_market_analysis_chart(market_data, site_data.get('name', 'Site'), market_path, width=6, height=4)
+        generate_market_analysis_chart(market_data, site_data.get('name', 'Site'), market_path, width=6, height=3.5)
         slide.shapes.add_picture(market_path, Inches(0.5), Inches(1.5), width=Inches(6.0))
         
         # Add Market Text Quadrants
