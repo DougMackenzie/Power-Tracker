@@ -1664,101 +1664,101 @@ def add_market_text(slide, market_data):
         p.text = f"• {w}"
         p.font.size = Pt(11)
         p.level = 1
-    def convert_phase_data(phase_dict: Dict) -> Dict:
-        """Convert Google Sheets phase data format to PhaseData format."""
-        # Google Sheets uses: mw, screening_status, contract_study_status, loa_status, energy_contract_status, target_date, voltage
-        # PhaseData expects: target_mw, screening_study, contract_study, letter_of_agreement, energy_contract, target_online, voltage_kv
-        
-        converted = {}
-        
-        # Map MW
-        if 'mw' in phase_dict:
-            converted['target_mw'] = float(phase_dict['mw'])
-        elif 'target_mw' in phase_dict:
-            converted['target_mw'] = float(phase_dict['target_mw'])
-        else:
-            converted['target_mw'] = 0.0
-        
-        # Map voltage
-        if 'voltage' in phase_dict:
-            try:
-                converted['voltage_kv'] = int(phase_dict['voltage'])
-            except (ValueError, TypeError):
-                converted['voltage_kv'] = 138
-        elif 'voltage_kv' in phase_dict:
-            converted['voltage_kv'] = int(phase_dict['voltage_kv'])
-        else:
+def convert_phase_data(phase_dict: Dict) -> Dict:
+    """Convert Google Sheets phase data format to PhaseData format."""
+    # Google Sheets uses: mw, screening_status, contract_study_status, loa_status, energy_contract_status, target_date, voltage
+    # PhaseData expects: target_mw, screening_study, contract_study, letter_of_agreement, energy_contract, target_online, voltage_kv
+    
+    converted = {}
+    
+    # Map MW
+    if 'mw' in phase_dict:
+        converted['target_mw'] = float(phase_dict['mw'])
+    elif 'target_mw' in phase_dict:
+        converted['target_mw'] = float(phase_dict['target_mw'])
+    else:
+        converted['target_mw'] = 0.0
+    
+    # Map voltage
+    if 'voltage' in phase_dict:
+        try:
+            converted['voltage_kv'] = int(phase_dict['voltage'])
+        except (ValueError, TypeError):
             converted['voltage_kv'] = 138
-        
-        # Map target date/online
-        if 'target_date' in phase_dict:
-            converted['target_online'] = phase_dict['target_date']
-        elif 'target_online' in phase_dict:
-            converted['target_online'] = phase_dict['target_online']
-        else:
-            converted['target_online'] = '2028-01-01'
-        
-        # Map study statuses
-        if 'screening_status' in phase_dict:
-            converted['screening_study'] = phase_dict['screening_status']
-        elif 'screening_study' in phase_dict:
-            converted['screening_study'] = phase_dict['screening_study']
-        else:
-            converted['screening_study'] = 'Not Started'
-        
-        if 'contract_study_status' in phase_dict:
-            converted['contract_study'] = phase_dict['contract_study_status']
-        elif 'contract_study' in phase_dict:
-            converted['contract_study'] = phase_dict['contract_study']
-        else:
-            converted['contract_study'] = 'Not Started'
-        
-        if 'loa_status' in phase_dict:
-            converted['letter_of_agreement'] = phase_dict['loa_status']
-        elif 'letter_of_agreement' in phase_dict:
-            converted['letter_of_agreement'] = phase_dict['letter_of_agreement']
-        else:
-            converted['letter_of_agreement'] = 'Not Started'
-        
-        if 'energy_contract_status' in phase_dict:
-            converted['energy_contract'] = phase_dict['energy_contract_status']
-        elif 'energy_contract' in phase_dict:
-            converted['energy_contract'] = phase_dict['energy_contract']
-        else:
-            converted['energy_contract'] = 'Not Started'
-        
-        # Optional fields
-        if 'service_type' in phase_dict:
-            converted['transmission_type'] = phase_dict['service_type']
-        elif 'transmission_type' in phase_dict:
-            converted['transmission_type'] = phase_dict['transmission_type']
-        else:
-            converted['transmission_type'] = ''
-        
-        if 'substation_status' in phase_dict:
-            converted['substation_type'] = phase_dict['substation_status']
-        elif 'substation_type' in phase_dict:
-            converted['substation_type'] = phase_dict['substation_type']
-        else:
-            converted['substation_type'] = ''
-        
-        if 'trans_dist' in phase_dict:
-            try:
-                converted['distance_to_transmission'] = float(phase_dict['trans_dist'])
-            except (ValueError, TypeError):
-                converted['distance_to_transmission'] = 0.0
-        elif 'distance_to_transmission' in phase_dict:
-            converted['distance_to_transmission'] = float(phase_dict['distance_to_transmission'])
-        else:
+    elif 'voltage_kv' in phase_dict:
+        converted['voltage_kv'] = int(phase_dict['voltage_kv'])
+    else:
+        converted['voltage_kv'] = 138
+    
+    # Map target date/online
+    if 'target_date' in phase_dict:
+        converted['target_online'] = phase_dict['target_date']
+    elif 'target_online' in phase_dict:
+        converted['target_online'] = phase_dict['target_online']
+    else:
+        converted['target_online'] = '2028-01-01'
+    
+    # Map study statuses
+    if 'screening_status' in phase_dict:
+        converted['screening_study'] = phase_dict['screening_status']
+    elif 'screening_study' in phase_dict:
+        converted['screening_study'] = phase_dict['screening_study']
+    else:
+        converted['screening_study'] = 'Not Started'
+    
+    if 'contract_study_status' in phase_dict:
+        converted['contract_study'] = phase_dict['contract_study_status']
+    elif 'contract_study' in phase_dict:
+        converted['contract_study'] = phase_dict['contract_study']
+    else:
+        converted['contract_study'] = 'Not Started'
+    
+    if 'loa_status' in phase_dict:
+        converted['letter_of_agreement'] = phase_dict['loa_status']
+    elif 'letter_of_agreement' in phase_dict:
+        converted['letter_of_agreement'] = phase_dict['letter_of_agreement']
+    else:
+        converted['letter_of_agreement'] = 'Not Started'
+    
+    if 'energy_contract_status' in phase_dict:
+        converted['energy_contract'] = phase_dict['energy_contract_status']
+    elif 'energy_contract' in phase_dict:
+        converted['energy_contract'] = phase_dict['energy_contract']
+    else:
+        converted['energy_contract'] = 'Not Started'
+    
+    # Optional fields
+    if 'service_type' in phase_dict:
+        converted['transmission_type'] = phase_dict['service_type']
+    elif 'transmission_type' in phase_dict:
+        converted['transmission_type'] = phase_dict['transmission_type']
+    else:
+        converted['transmission_type'] = ''
+    
+    if 'substation_status' in phase_dict:
+        converted['substation_type'] = phase_dict['substation_status']
+    elif 'substation_type' in phase_dict:
+        converted['substation_type'] = phase_dict['substation_type']
+    else:
+        converted['substation_type'] = ''
+    
+    if 'trans_dist' in phase_dict:
+        try:
+            converted['distance_to_transmission'] = float(phase_dict['trans_dist'])
+        except (ValueError, TypeError):
             converted['distance_to_transmission'] = 0.0
-        
-        # Add phase number if missing
-        if 'phase_num' not in converted and 'phase_num' in phase_dict:
-            converted['phase_num'] = int(phase_dict['phase_num'])
-        elif 'phase_num' not in converted:
-            converted['phase_num'] = 1
-        
-        return converted
+    elif 'distance_to_transmission' in phase_dict:
+        converted['distance_to_transmission'] = float(phase_dict['distance_to_transmission'])
+    else:
+        converted['distance_to_transmission'] = 0.0
+    
+    # Add phase number if missing
+    if 'phase_num' not in converted and 'phase_num' in phase_dict:
+        converted['phase_num'] = int(phase_dict['phase_num'])
+    elif 'phase_num' not in converted:
+        converted['phase_num'] = 1
+    
+    return converted
 
     phases = []
     phase_data = site_data.get('phases', [])
@@ -1799,6 +1799,7 @@ def add_market_text(slide, market_data):
 
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
             chart_path = tmp.name
+        print(f"[DEBUG] Generating trajectory chart at {chart_path}")
         generate_capacity_trajectory_chart(trajectory, site_data.get('name', 'Site'),
                                            chart_path, phases, subtitle=config.chart_subtitle)
         slide.shapes.add_picture(chart_path, Inches(0.4), Inches(0.8), width=Inches(12.5))
@@ -1816,7 +1817,7 @@ def add_market_text(slide, market_data):
 
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
             infra_path = tmp.name
-        
+        print(f"[DEBUG] Generating infra chart at {infra_path}")
         # Generate Infrastructure Chart (Right side)
         generate_critical_path_chart(phases, site_data, infra_path, width=6, height=5)
         slide.shapes.add_picture(infra_path, Inches(6.8), Inches(1.5), width=Inches(6.0))
@@ -1867,8 +1868,7 @@ def add_market_text(slide, market_data):
         
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
             score_path = tmp.name
-            
-        # Generate Radar Chart (Left side)
+        print(f"[DEBUG] Generating score chart at {score_path}")
         generate_score_radar_chart(scores, site_data.get('name', 'Site'), score_path, width=6, height=6)
         slide.shapes.add_picture(score_path, Inches(0.5), Inches(1.5), width=Inches(6.0))
         
@@ -1900,6 +1900,9 @@ def add_market_text(slide, market_data):
                 'GA': {'TX': {}, 'VA': {}, 'OH': {}},
                 'VA': {'GA': {}, 'OH': {}, 'TX': {}},
                 'OH': {'IN': {}, 'GA': {}, 'TX': {}},
+                'IN': {'IN': {}, 'GA': {}, 'TX': {}},
+                'WY': {'IN': {}, 'GA': {}, 'TX': {}},
+                'AZ': {'IN': {}, 'GA': {}, 'TX': {}},
             }
             comp_codes = list(default_comparisons.get(state_code, {'TX': {}, 'GA': {}}).keys())[:3]
             
@@ -1967,6 +1970,7 @@ def add_market_text(slide, market_data):
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
             market_path = tmp.name
             
+        print(f"[DEBUG] Generating market chart at {market_path}")
         # Generate Market Chart (Top Left)
         generate_market_analysis_chart(market_data, site_data.get('name', 'Site'), market_path, width=6, height=4)
         slide.shapes.add_picture(market_path, Inches(0.5), Inches(1.5), width=Inches(6.0))
