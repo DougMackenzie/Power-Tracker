@@ -1283,181 +1283,6 @@ def build_replacements(site_data: Dict, config: ExportConfig) -> Dict[str, str]:
 # MAIN EXPORT
 # =============================================================================
 
-def export_site_to_pptx(
-    site_data: Dict,
-    template_path: str,
-    output_path: str,
-    config: ExportConfig = None,
-) -> str:
-    """Export site data to PowerPoint."""
-    print(f"[DEBUG] export_site_to_pptx called with template_path='{template_path}', output_path='{output_path}'")
-    
-    if not template_path:
-        raise ValueError("template_path is required and cannot be None or empty")
-    if not output_path:
-        raise ValueError("output_path is required and cannot be None or empty")
-        
-    try:
-        from pptx import Presentation
-        from pptx.util import Inches, Pt
-        from pptx.dml.color import RGBColor
-        from pptx.enum.shapes import MSO_SHAPE, MSO_SHAPE_TYPE
-        from pptx.enum.text import PP_ALIGN
-    except ImportError:
-        raise ImportError("python-pptx required")
-
-    config = config or ExportConfig()
-    prs = Presentation(template_path)
-    replacements = build_replacements(site_data, config)
-    
-    # Check if we have structured profile data
-    profile_data = None
-    print(f"[DEBUG] site_data keys: {list(site_data.keys())}")
-    print("[DEBUG] EXPORTING WITH NEW SPLIT CHARTS LOGIC")
-    if 'profile' in site_data:
-        p = site_data['profile']
-        print(f"[DEBUG] Found 'profile' in site_data. Type: {type(p)}")
-        # Use duck typing instead of isinstance to handle module reloads
-        if hasattr(p, 'overview') and hasattr(p, 'to_description_dict'):
-            print("[DEBUG] Profile has required attributes (duck typing passed)")
-            profile_data = p
-        elif isinstance(p, dict):
-            print("[DEBUG] Profile is a dict, converting to SiteProfileData")
-            profile_data = SiteProfileData.from_dict(p)
-        else:
-            print(f"[DEBUG] Profile failed type check. Attributes: {dir(p)}")
-    else:
-        print("[DEBUG] 'profile' NOT found in site_data")
-
-    # Process existing slides
-    for slide_idx, slide in enumerate(prs.slides):
-        print(f"[DEBUG] Processing slide {slide_idx}")
-        for shape in slide.shapes:
-            if shape.has_table:
-                row_count = len(shape.table.rows)
-                print(f"[DEBUG] Found table with {row_count} rows")
-                # Check if this is the main Site Profile table (18 rows)
-                if row_count >= 17:
-                    if profile_data:
-                        print("[DEBUG] Calling populate_site_profile_table")
-                        populate_site_profile_table(shape.table, profile_data)
-                    else:
-                        print("[DEBUG] Skipping populate_site_profile_table because profile_data is None")
-                        replace_in_table(shape.table, replacements)
-                else:
-                    replace_in_table(shape.table, replacements)
-            elif shape.has_text_frame:
-                # Check if this is the Overview/Observation/Outstanding text box
-                shape_text = shape.text_frame.text.lower()
-                if 'overview' in shape_text and 'observation' in shape_text:
-                    # Special handling for this multi-field text box
-                    update_overview_textbox(shape, site_data, profile_data)
-                else:
-                    find_and_replace_text(shape, replacements)
-        
-        # Handle placeholders for Site Boundary (idx 2) and Topography (idx 3)
-        if slide_idx in [2, 3]:
-            from pptx.enum.shapes import MSO_SHAPE
-            from pptx.enum.text import PP_ALIGN
-            from pptx.dml.color import RGBColor
-            
-            # Find pictures to replace
-            pics_to_replace = []
-            for shape in slide.shapes:
-                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
-                    pics_to_replace.append(shape)
-            
-            # Replace them
-            for pic in pics_to_replace:
-                left, top, width, height = pic.left, pic.top, pic.width, pic.height
-                # Remove picture
-                sp = pic._element
-                sp.getparent().remove(sp)
-                
-                # Add placeholder
-                shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
-                shape.fill.solid()
-                shape.fill.fore_color.rgb = RGBColor(240, 240, 240)  # Light gray
-                shape.line.color.rgb = RGBColor(200, 200, 200)
-                
-                # Add label
-                tf = shape.text_frame
-                p = tf.paragraphs[0]
-                p.text = "Site Boundary Map" if slide_idx == 2 else "Topography Map"
-                p.alignment = PP_ALIGN.CENTER
-                p.font.color.rgb = RGBColor(100, 100, 100)
-                p.font.size = Pt(18)
-
-    # Handle images on Site Profile slide (Slide 1)
-    if len(prs.slides) > 1:
-        sp_slide = prs.slides[1]
-        shapes_to_replace = []
-        state_shape = None
-        
-        for shape in sp_slide.shapes:
-            # Check for state silhouette on the left (approx < 4 inches)
-            if shape.shape_type in [MSO_SHAPE_TYPE.PICTURE, MSO_SHAPE_TYPE.AUTO_SHAPE] and shape.left < Inches(4):
-                # Heuristic: It's likely the state shape if it's in the top-left quadrant
-                if shape.top < Inches(4):
-                    state_shape = shape
-
-            # Check for map images on the right (approx > 9 inches)
-            if shape.shape_type == MSO_SHAPE_TYPE.PICTURE and shape.left > Inches(9):
-                shapes_to_replace.append(shape)
-        
-        # Handle state silhouette
-        current_state = site_data.get('state', '').upper()
-        if state_shape and current_state != 'OK':
-            # Hide the Oklahoma shape if state is not OK
-            # We can't easily replace it without assets, so hiding is safer than showing wrong state
-            sp_element = state_shape.element
-            sp_element.getparent().remove(sp_element)
-
-        # Replace map images with placeholders
-        for shape in shapes_to_replace:
-            left, top, width, height = shape.left, shape.top, shape.width, shape.height
-            # Remove original
-            sp_element = shape.element
-            sp_element.getparent().remove(sp_element)
-            
-            # Add placeholder rectangle
-            rect = sp_slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
-            rect.fill.solid()
-            rect.fill.fore_color.rgb = RGBColor(240, 240, 240) # Light gray
-            rect.line.color.rgb = RGBColor(200, 200, 200)
-            
-            # Add text
-            tf = rect.text_frame
-            tf.text = "Map Placeholder"
-            # Determine type based on vertical position
-            if top < Inches(2.5):
-                tf.text = "Location Map"
-            elif top < Inches(5):
-                tf.text = "Site Map"
-            else:
-                tf.text = "Plot Map"
-            
-            p = tf.paragraphs[0]
-            p.font.color.rgb = RGBColor(100, 100, 100)
-            p.alignment = PP_ALIGN.CENTER
-
-    # Find blank layout
-    blank_layout = None
-    for layout in prs.slide_layouts:
-        if 'blank' in layout.name.lower():
-            blank_layout = layout
-            break
-    blank_layout = blank_layout or prs.slide_layouts[-1]
-
-    # Get trajectory and phases
-    trajectory = None
-    if config.include_capacity_trajectory and MATPLOTLIB_AVAILABLE:
-        traj_data = site_data.get('capacity_trajectory', {})
-        trajectory = (CapacityTrajectory.from_dict(traj_data) if traj_data else
-                      CapacityTrajectory.generate_default(
-                          site_data.get('target_mw', 600),
-                          site_data.get('phase1_mw'),
-                          site_data.get('start_year', 2028)))
 
 def add_critical_path_text(slide, phases):
     """Add Critical Path text to slide."""
@@ -1671,6 +1496,8 @@ def add_market_text(slide, market_data):
         p.text = f"• {w}"
         p.font.size = Pt(11)
         p.level = 1
+
+
 def convert_phase_data(phase_dict: Dict) -> Dict:
     """Convert Google Sheets phase data format to PhaseData format."""
     # Google Sheets uses: mw, screening_status, contract_study_status, loa_status, energy_contract_status, target_date, voltage
@@ -1766,6 +1593,185 @@ def convert_phase_data(phase_dict: Dict) -> Dict:
         converted['phase_num'] = 1
     
     return converted
+
+
+def export_site_to_pptx(
+    site_data: Dict,
+    template_path: str,
+    output_path: str,
+    config: ExportConfig = None,
+) -> str:
+    """Export site data to PowerPoint."""
+    print(f"[DEBUG] export_site_to_pptx called with template_path='{template_path}', output_path='{output_path}'")
+    
+    if not template_path:
+        raise ValueError("template_path is required and cannot be None or empty")
+    if not output_path:
+        raise ValueError("output_path is required and cannot be None or empty")
+        
+    try:
+        from pptx import Presentation
+        from pptx.util import Inches, Pt
+        from pptx.dml.color import RGBColor
+        from pptx.enum.shapes import MSO_SHAPE, MSO_SHAPE_TYPE
+        from pptx.enum.text import PP_ALIGN
+    except ImportError:
+        raise ImportError("python-pptx required")
+
+    config = config or ExportConfig()
+    prs = Presentation(template_path)
+    replacements = build_replacements(site_data, config)
+    
+    # Check if we have structured profile data
+    profile_data = None
+    print(f"[DEBUG] site_data keys: {list(site_data.keys())}")
+    print("[DEBUG] EXPORTING WITH NEW SPLIT CHARTS LOGIC")
+    if 'profile' in site_data:
+        p = site_data['profile']
+        print(f"[DEBUG] Found 'profile' in site_data. Type: {type(p)}")
+        # Use duck typing instead of isinstance to handle module reloads
+        if hasattr(p, 'overview') and hasattr(p, 'to_description_dict'):
+            print("[DEBUG] Profile has required attributes (duck typing passed)")
+            profile_data = p
+        elif isinstance(p, dict):
+            print("[DEBUG] Profile is a dict, converting to SiteProfileData")
+            profile_data = SiteProfileData.from_dict(p)
+        else:
+            print(f"[DEBUG] Profile failed type check. Attributes: {dir(p)}")
+    else:
+        print("[DEBUG] 'profile' NOT found in site_data")
+
+    # Process existing slides
+    for slide_idx, slide in enumerate(prs.slides):
+        print(f"[DEBUG] Processing slide {slide_idx}")
+        for shape in slide.shapes:
+            if shape.has_table:
+                row_count = len(shape.table.rows)
+                print(f"[DEBUG] Found table with {row_count} rows")
+                # Check if this is the main Site Profile table (18 rows)
+                if row_count >= 17:
+                    if profile_data:
+                        print("[DEBUG] Calling populate_site_profile_table")
+                        populate_site_profile_table(shape.table, profile_data)
+                    else:
+                        print("[DEBUG] Skipping populate_site_profile_table because profile_data is None")
+                        replace_in_table(shape.table, replacements)
+                else:
+                    replace_in_table(shape.table, replacements)
+            elif shape.has_text_frame:
+                # Check if this is the Overview/Observation/Outstanding text box
+                shape_text = shape.text_frame.text.lower()
+                if 'overview' in shape_text and 'observation' in shape_text:
+                    # Special handling for this multi-field text box
+                    update_overview_textbox(shape, site_data, profile_data)
+                else:
+                    find_and_replace_text(shape, replacements)
+        
+        # Handle placeholders for Site Boundary (idx 2) and Topography (idx 3)
+        if slide_idx in [2, 3]:
+            from pptx.enum.shapes import MSO_SHAPE
+            from pptx.enum.text import PP_ALIGN
+            from pptx.dml.color import RGBColor
+            
+            # Find pictures to replace
+            pics_to_replace = []
+            for shape in slide.shapes:
+                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                    pics_to_replace.append(shape)
+            
+            # Replace them
+            for pic in pics_to_replace:
+                left, top, width, height = pic.left, pic.top, pic.width, pic.height
+                # Remove picture
+                sp = pic._element
+                sp.getparent().remove(sp)
+                
+                # Add placeholder
+                shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
+                shape.fill.solid()
+                shape.fill.fore_color.rgb = RGBColor(240, 240, 240)  # Light gray
+                shape.line.color.rgb = RGBColor(200, 200, 200)
+                
+                # Add label
+                tf = shape.text_frame
+                p = tf.paragraphs[0]
+                p.text = "Site Boundary Map" if slide_idx == 2 else "Topography Map"
+                p.alignment = PP_ALIGN.CENTER
+                p.font.color.rgb = RGBColor(100, 100, 100)
+                p.font.size = Pt(18)
+
+    # Handle images on Site Profile slide (Slide 1)
+    if len(prs.slides) > 1:
+        sp_slide = prs.slides[1]
+        shapes_to_replace = []
+        state_shape = None
+        
+        for shape in sp_slide.shapes:
+            # Check for state silhouette on the left (approx < 4 inches)
+            if shape.shape_type in [MSO_SHAPE_TYPE.PICTURE, MSO_SHAPE_TYPE.AUTO_SHAPE] and shape.left < Inches(4):
+                # Heuristic: It's likely the state shape if it's in the top-left quadrant
+                if shape.top < Inches(4):
+                    state_shape = shape
+
+            # Check for map images on the right (approx > 9 inches)
+            if shape.shape_type == MSO_SHAPE_TYPE.PICTURE and shape.left > Inches(9):
+                shapes_to_replace.append(shape)
+        
+        # Handle state silhouette
+        current_state = site_data.get('state', '').upper()
+        if state_shape and current_state != 'OK':
+            # Hide the Oklahoma shape if state is not OK
+            # We can't easily replace it without assets, so hiding is safer than showing wrong state
+            sp_element = state_shape.element
+            sp_element.getparent().remove(sp_element)
+
+        # Replace map images with placeholders
+        for shape in shapes_to_replace:
+            left, top, width, height = shape.left, shape.top, shape.width, shape.height
+            # Remove original
+            sp_element = shape.element
+            sp_element.getparent().remove(sp_element)
+            
+            # Add placeholder rectangle
+            rect = sp_slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
+            rect.fill.solid()
+            rect.fill.fore_color.rgb = RGBColor(240, 240, 240) # Light gray
+            rect.line.color.rgb = RGBColor(200, 200, 200)
+            
+            # Add text
+            tf = rect.text_frame
+            tf.text = "Map Placeholder"
+            # Determine type based on vertical position
+            if top < Inches(2.5):
+                tf.text = "Location Map"
+            elif top < Inches(5):
+                tf.text = "Site Map"
+            else:
+                tf.text = "Plot Map"
+            
+            p = tf.paragraphs[0]
+            p.font.color.rgb = RGBColor(100, 100, 100)
+            p.alignment = PP_ALIGN.CENTER
+
+    # Find blank layout
+    blank_layout = None
+    for layout in prs.slide_layouts:
+        if 'blank' in layout.name.lower():
+            blank_layout = layout
+            break
+    blank_layout = blank_layout or prs.slide_layouts[-1]
+
+    # Get trajectory and phases
+    trajectory = None
+    if config.include_capacity_trajectory and MATPLOTLIB_AVAILABLE:
+        traj_data = site_data.get('capacity_trajectory', {})
+        trajectory = (CapacityTrajectory.from_dict(traj_data) if traj_data else
+                      CapacityTrajectory.generate_default(
+                          site_data.get('target_mw', 600),
+                          site_data.get('phase1_mw'),
+                          site_data.get('start_year', 2028)))
+
+
 
     phases = []
     phase_data = site_data.get('phases', [])
