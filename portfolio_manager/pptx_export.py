@@ -883,8 +883,12 @@ def generate_market_analysis_chart(market_data: Dict, site_name: str, output_pat
     
     ax1.spines['top'].set_visible(False)
     ax1_twin.spines['top'].set_visible(False)
-    ax1.legend(loc='upper left', fontsize=8, frameon=False)
-    ax1_twin.legend(loc='upper right', fontsize=8, frameon=False)
+    
+    # Combine legends and place at bottom
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax1_twin.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper center', 
+               bbox_to_anchor=(0.5, -0.15), ncol=2, fontsize=8, frameon=False)
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white', edgecolor='none')
