@@ -88,7 +88,41 @@ def load_database() -> Dict:
             # Try to get Sites worksheet, create if doesn't exist
             try:
                 sites_ws = sheet.worksheet("Sites")
+                
+                # Check if new columns exist, add if missing
+                try:
+                    existing_headers = sites_ws.row_values(1)
+                    required_headers = [
+                        "site_id", "name", "state", "utility", "target_mw", "acreage", "iso", "county",
+                        "developer", "land_status", "community_support", "political_support",
+                        "dev_experience", "capital_status", "financial_status", "last_updated",
+                        "phases_json", "onsite_gen_json", "schedule_json", "non_power_json",
+                        "risks_json", "opps_json", "questions_json",
+                        "client", "total_fee_potential", "contract_status",
+                        "site_control_stage", "power_stage", "marketing_stage", "buyer_stage",
+                        "zoning_stage", "water_stage", "incentives_stage",
+                        "probability", "weighted_fee", "tracker_notes",
+                        # Site profile builder columns
+                        "profile_json", "latitude", "longitude"
+                    ]
+                    
+                    # Find missing columns
+                    missing_columns = [h for h in required_headers if h not in existing_headers]
+                    
+                    if missing_columns:
+                        st.info(f"📋 Updating Google Sheets schema: Adding {len(missing_columns)} new columns ({', '.join(missing_columns)})...")
+                        
+                        # Add missing columns to header row
+                        next_col = len(existing_headers) + 1
+                        for i, col_name in enumerate(missing_columns):
+                            sites_ws.update_cell(1, next_col + i, col_name)
+                        
+                        st.success(f"✅ Added {len(missing_columns)} columns to Google Sheets")
+                except Exception as e:
+                    st.warning(f"Could not update schema: {e}")
+                    
             except:
+                # Worksheet doesn't exist, create it
                 sites_ws = sheet.add_worksheet(title="Sites", rows=1000, cols=50)
                 # Add headers
                 headers = [
