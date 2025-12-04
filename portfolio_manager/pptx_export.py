@@ -1203,8 +1203,6 @@ def replace_in_table(table, replacements: Dict[str, str]) -> bool:
     return replaced
 
 
-def populate_site_profile_table(table, profile_data: SiteProfileData) -> bool:
-    """
 def populate_site_profile_table(table, profile_data) -> bool:
     """
     Populate the Site Profile table with data from SiteProfileData.
