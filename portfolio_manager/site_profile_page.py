@@ -500,7 +500,7 @@ def show_human_input_section(builder: SiteProfileBuilder):
             except Exception as e:
                 st.warning(f"Saved {len(filtered_inputs)} fields but Google Sheets save failed: {e}")
             
-            st.rerun()
+            # st.rerun() - Removed to allow success message to be seen
 
 
 # =============================================================================
