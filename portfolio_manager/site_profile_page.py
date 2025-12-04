@@ -284,11 +284,12 @@ Example format:
                             # Auto-save to Google Sheets
                             try:
                                 profile = builder.profile
-                                profile_dict = {
-                                    field: getattr(profile, field) 
-                                    for field in SiteProfileData.__dataclass_fields__
-                                    if getattr(profile, field) and str(getattr(profile, field)) not in ['', 'TBD', '0', '0.0']
-                                }
+                                profile_dict = {}
+                                for field in SiteProfileData.__dataclass_fields__:
+                                    value = getattr(profile, field)
+                                    # Save field if it has any value except None, empty string, or 'TBD'
+                                    if value is not None and value != '' and value != 'TBD':
+                                        profile_dict[field] = value
                                 
                                 if hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
                                     db = st.session_state.db
@@ -463,11 +464,13 @@ def show_human_input_section(builder: SiteProfileBuilder):
                         
                         if site_id:
                             profile = builder.profile
-                            profile_dict = {
-                                field: getattr(profile, field) 
-                                for field in SiteProfileData.__dataclass_fields__
-                                if getattr(profile, field) and str(getattr(profile, field)) not in ['', 'TBD', '0', '0.0']
-                            }
+                            profile_dict = {}
+                            for field in SiteProfileData.__dataclass_fields__:
+                                value = getattr(profile, field)
+                                # Save field if it has any value except None, empty string, or the literal string 'TBD'
+                                # KEEP: False, 0, 0.0 (these are valid values!)
+                                if value is not None and value != '' and value != 'TBD':
+                                    profile_dict[field] = value
                             
                             if hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
                                 db = st.session_state.db
