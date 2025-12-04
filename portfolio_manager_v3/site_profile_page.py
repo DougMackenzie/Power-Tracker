@@ -16,7 +16,7 @@ from datetime import datetime
 
 # Import profile builder
 try:
-    from .site_profile_builder import (
+    from site_profile_builder import (
         SiteProfileBuilder, 
         SiteProfileData,
         get_human_input_form_fields,
@@ -24,7 +24,7 @@ try:
         AI_RESEARCHABLE_FIELDS,
         HUMAN_INPUT_FIELDS,
     )
-    from .pptx_export import export_site_to_pptx, ExportConfig
+    from pptx_export import export_site_to_pptx, ExportConfig
     PROFILE_BUILDER_AVAILABLE = True
 except ImportError as e:
     PROFILE_BUILDER_AVAILABLE = False
@@ -32,7 +32,7 @@ except ImportError as e:
 
 # LLM integration for AI research
 try:
-    from .llm_integration import get_chat_client
+    from llm_integration import get_chat_client
     LLM_AVAILABLE = True
 except ImportError:
     LLM_AVAILABLE = False
@@ -118,7 +118,7 @@ def show_field_status(builder: SiteProfileBuilder):
 # AI RESEARCH SECTION
 # =============================================================================
 
-def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict, site_id: str):
+def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict):
     """Section for AI-powered location research."""
     st.markdown("---")
     st.subheader("🔍 AI Location Research")
@@ -145,31 +145,8 @@ def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict, site_
         
         if st.button("Save Coordinates"):
             if new_lat and new_lon:
-                # Save to Google Sheets database
-                try:
-                    if hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
-                        db = st.session_state.db
-                        
-                        if site_id in db['sites']:
-                            # Update coordinates in database
-                            db['sites'][site_id]['latitude'] = new_lat
-                            db['sites'][site_id]['longitude'] = new_lon
-                            
-                            # Save to Google Sheets
-                            from .streamlit_app import save_database
-                            save_database(db)
-                            
-                            st.success(f"✅ Coordinates saved to Google Sheets! Latitude: {new_lat}, Longitude: {new_lon}")
-                            st.info("🔄 Click the Refresh button above to reload with coordinates and enable AI research.")
-                        else:
-                            st.error(f"Site {site_id} not found in database")
-                    else:
-                        st.error("No database connection available. Please visit Portfolio Manager first.")
-                except Exception as e:
-                    st.error(f"Failed to save coordinates: {e}")
-                    import traceback
-                    with st.expander("Error Details"):
-                        st.code(traceback.format_exc())
+                st.session_state.pending_coords = {'latitude': new_lat, 'longitude': new_lon}
+                st.success("Coordinates saved! Refresh the page to use AI research.")
         return
     
     st.success(f"📍 Coordinates: {lat}, {lon}")
@@ -219,7 +196,7 @@ def show_ai_research_section(builder: SiteProfileBuilder, site_data: Dict, site_
                 try:
                     chat = get_chat_client()
                     if chat:
-                        response = chat.chat(
+                        response = chat.send_message(
                             f"You are a location research assistant. {prompt}\n\n"
                             "IMPORTANT: Return ONLY valid JSON, no markdown or explanation."
                         )
@@ -401,25 +378,13 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
     st.markdown("---")
     st.subheader("📥 Export to PowerPoint")
     
-    st.info("""💡 **Template Setup:** Place your PowerPoint template with the 17-row Site Profile table in your project folder and enter the path below. 
-    If you don't have a template yet, you can skip this section and export once you create one.""")
-    
     col1, col2 = st.columns(2)
     
     with col1:
-        # Check if Sample Site Profile Template exists
-        import os
-        default_template = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Sample Site Profile Template.pptx')
-        if os.path.exists(default_template):
-            default_path = default_template
-        else:
-            default_path = st.session_state.get('export_template_path', '')
-        
         template_path = st.text_input(
-            "Template Path (Optional)",
-            value=default_path,
-            help="Path to your PowerPoint template with Site Profile table",
-            placeholder="Leave empty to skip for now"
+            "Template Path",
+            value=st.session_state.get('export_template_path', '/path/to/template.pptx'),
+            help="Path to your Site Profile template"
         )
     
     with col2:
@@ -442,16 +407,8 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
     
     if st.button("📤 Export PPTX", type="primary", use_container_width=True):
         import os
-        
-        if not template_path or template_path.strip() == '':
-            st.warning("⚠️ No template path provided. Please add a template path to export to PowerPoint.")
-            st.info("""To use PowerPoint export:
-            1. Create or obtain a PowerPoint template with the Site Profile table structure
-            2. Save it as `Sample Site Profile Template.pptx` in your project root, OR
-            3. Enter the path to your template in the field above""")
-        elif not os.path.exists(template_path):
+        if not os.path.exists(template_path):
             st.error(f"Template not found: {template_path}")
-            st.info("Please check the path and make sure the file exists.")
         else:
             try:
                 # Build export data
@@ -476,7 +433,7 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                         mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
                     )
                 
-                st.success(f"✅ Export complete: {output_name}")
+                st.success(f"Export complete: {output_name}")
                 
             except Exception as e:
                 st.error(f"Export failed: {e}")
@@ -513,11 +470,8 @@ def show_save_section(builder: SiteProfileBuilder, site_id: str, data_layer):
     if profile.coordinates:
         parts = profile.coordinates.split(',')
         if len(parts) == 2:
-            try:
-                save_fields['latitude'] = float(parts[0].strip())
-                save_fields['longitude'] = float(parts[1].strip())
-            except ValueError:
-                pass
+            save_fields['latitude'] = float(parts[0].strip())
+            save_fields['longitude'] = float(parts[1].strip())
     
     # Store full profile as JSON
     profile_dict = {
@@ -535,60 +489,22 @@ def show_save_section(builder: SiteProfileBuilder, site_id: str, data_layer):
                 st.markdown(f"**{key}**: _{len(profile_dict)} profile fields_")
     
     if st.button("💾 Save to Portfolio", type="primary"):
-        from datetime import datetime
-        
         try:
-            # Try first to use Portfolio Manager's Google Sheets database
-            if hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
-                db = st.session_state.db
-                
-                if site_id in db['sites']:
+            if data_layer:
+                # Get existing site data
+                existing = data_layer.get_site(site_id)
+                if existing:
                     # Merge with new data
-                    db['sites'][site_id].update(save_fields)
-                    db['sites'][site_id]['last_updated'] = datetime.now().isoformat()
-                    
-                    # Save back to Google Sheets
-                    from .streamlit_app import save_database
-                    save_database(db)
-                    
-                    st.success(f"✅ Saved {len(save_fields)} fields to {site_id} (Google Sheets)")
-                    st.balloons()
+                    existing.update(save_fields)
+                    existing['last_updated'] = datetime.now().isoformat()
+                    data_layer.save_site(site_id, existing)
+                    st.success(f"Saved {len(save_fields)} fields to {site_id}")
                 else:
-                    st.error(f"Site {site_id} not found in database")
+                    st.error(f"Site {site_id} not found")
             else:
-                # Fallback to JSON file
-                import os
-                db_path = os.path.join(os.path.dirname(__file__), 'site_database.json')
-                
-                if os.path.exists(db_path):
-                    with open(db_path, 'r') as f:
-                        db_data = json.load(f)
-                    
-                    # Get the sites dict
-                    sites = db_data.get('sites', db_data)
-                    
-                    if site_id in sites:
-                        # Merge with new data
-                        sites[site_id].update(save_fields)
-                        sites[site_id]['last_updated'] = datetime.now().isoformat()
-                        
-                        # Save back to database
-                        db_data['sites'] = sites
-                        with open(db_path, 'w') as f:
-                            json.dump(db_data, f, indent=2)
-                        
-                        st.success(f"✅ Saved {len(save_fields)} fields to {site_id} (JSON file)")
-                        st.balloons()
-                    else:
-                        st.error(f"Site {site_id} not found in database")
-                else:
-                    st.error(f"Database not found: {db_path}")
-                    
+                st.warning("Data layer not available - data not saved")
         except Exception as e:
             st.error(f"Save failed: {e}")
-            import traceback
-            with st.expander("Error Details"):
-                st.code(traceback.format_exc())
 
 
 # =============================================================================
@@ -664,7 +580,7 @@ def show_site_profile_builder(sites: Dict, data_layer=None):
         show_field_status(builder)
     
     with tabs[1]:
-        show_ai_research_section(builder, site_data, site_id)
+        show_ai_research_section(builder, site_data)
     
     with tabs[2]:
         show_human_input_section(builder)
