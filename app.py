@@ -169,11 +169,26 @@ elif app_mode == "Site Profile Builder":
         if hasattr(st, 'session_state') and hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
             sites = st.session_state.db['sites']
             st.success(f"✅ Loaded {len(sites)} sites from Portfolio Manager database")
-        # Priority 2: Check session state directly
-        elif 'sites' in st.session_state:
-            sites = st.session_state.sites
-            st.success(f"✅ Loaded {len(sites)} sites from session")
         else:
+            # Try to initialize database connection directly
+            try:
+                from portfolio_manager.streamlit_app import load_database
+                with st.spinner("Connecting to Google Sheets database..."):
+                    db = load_database()
+                    if db and 'sites' in db:
+                        st.session_state.db = db
+                        sites = db['sites']
+                        st.success(f"✅ Connected to Google Sheets: Loaded {len(sites)} sites")
+                    else:
+                        sites = {}
+            except Exception as e:
+                st.warning(f"Could not connect to Google Sheets: {e}")
+                # Fallback to session state or JSON
+                if 'sites' in st.session_state:
+                    sites = st.session_state.sites
+                    st.success(f"✅ Loaded {len(sites)} sites from session (Offline)")
+                else:
+                    sites = {}
             # Priority 3: Try to load from site_database.json as fallback
             import json
             import os
