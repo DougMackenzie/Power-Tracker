@@ -1478,6 +1478,39 @@ def export_site_to_pptx(
                     update_overview_textbox(shape, site_data, profile_data)
                 else:
                     find_and_replace_text(shape, replacements)
+        
+        # Handle placeholders for Site Boundary (idx 2) and Topography (idx 3)
+        if slide_idx in [2, 3]:
+            from pptx.enum.shapes import MSO_SHAPE
+            from pptx.enum.text import PP_ALIGN
+            from pptx.dml.color import RGBColor
+            
+            # Find pictures to replace
+            pics_to_replace = []
+            for shape in slide.shapes:
+                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                    pics_to_replace.append(shape)
+            
+            # Replace them
+            for pic in pics_to_replace:
+                left, top, width, height = pic.left, pic.top, pic.width, pic.height
+                # Remove picture
+                sp = pic._element
+                sp.getparent().remove(sp)
+                
+                # Add placeholder
+                shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
+                shape.fill.solid()
+                shape.fill.fore_color.rgb = RGBColor(240, 240, 240)  # Light gray
+                shape.line.color.rgb = RGBColor(200, 200, 200)
+                
+                # Add label
+                tf = shape.text_frame
+                p = tf.paragraphs[0]
+                p.text = "Site Boundary Map" if slide_idx == 2 else "Topography Map"
+                p.alignment = PP_ALIGN.CENTER
+                p.font.color.rgb = RGBColor(100, 100, 100)
+                p.font.size = Pt(18)
 
     # Handle images on Site Profile slide (Slide 1)
     if len(prs.slides) > 1:
