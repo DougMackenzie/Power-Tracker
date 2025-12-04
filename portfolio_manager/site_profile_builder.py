@@ -22,6 +22,7 @@ Usage:
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
+import json
 from .pptx_export import SiteProfileData
 
 
@@ -134,9 +135,30 @@ def map_app_to_profile(site_data: Dict) -> SiteProfileData:
     """
     profile = SiteProfileData()
     
-    # Direct mappings
-    profile.name = site_data.get('name', '')
-    profile.state = site_data.get('state', '')
+    # === FIRST: Load previously saved profile_json if exists ===
+    if site_data.get('profile_json'):
+        try:
+            saved_profile = site_data['profile_json']
+            # Handle both dict and JSON string
+            if isinstance(saved_profile, str):
+                saved_profile = json.loads(saved_profile)
+            
+            if isinstance(saved_profile, dict):
+                # Restore all saved fields
+                for field, value in saved_profile.items():
+                    if hasattr(profile, field) and value:
+                        setattr(profile, field, value)
+                
+                # If we have a saved profile, return it (already enriched)
+                # We still continue below to overlay any NEW data from current site_data
+        except (json.JSONDecodeError, Exception) as e:
+            pass  # Ignore errors, fall through to auto-mapping
+    
+    # Direct mappings (will override saved data if present)
+    if site_data.get('name'):
+        profile.name = site_data.get('name', '')
+    if site_data.get('state'):
+        profile.state = site_data.get('state', '')
     
     # Acreage
     acreage = site_data.get('acreage') or site_data.get('total_acres', 0)
