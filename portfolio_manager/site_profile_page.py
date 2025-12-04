@@ -37,6 +37,13 @@ try:
 except ImportError:
     LLM_AVAILABLE = False
 
+# Import scoring engine
+try:
+    from .streamlit_app import calculate_site_score
+    SCORING_AVAILABLE = True
+except ImportError:
+    SCORING_AVAILABLE = False
+
 
 # =============================================================================
 # SESSION STATE INITIALIZATION
@@ -588,6 +595,27 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                 # Build export data
                 export_data = site_data.copy()
                 export_data['profile'] = profile
+                
+                # Calculate fresh scores if available
+                if SCORING_AVAILABLE:
+                    if 'weights' in st.session_state:
+                        weights = st.session_state.weights
+                    else:
+                        weights = {'state': 0.20, 'power': 0.25, 'relationship': 0.20, 'execution': 0.15, 'fundamentals': 0.10, 'financial': 0.10}
+                    
+                    try:
+                        scores = calculate_site_score(site_data, weights)
+                        export_data['scores'] = scores
+                        # Also populate top-level score keys that pptx_export might look for as fallback
+                        export_data['overall_score'] = scores['overall_score']
+                        export_data['power_score'] = scores['power_score']
+                        export_data['site_score'] = scores['fundamentals_score'] # Map fundamentals to site_score
+                        export_data['execution_score'] = scores['execution_score']
+                        export_data['relationship_score'] = scores['relationship_score']
+                        export_data['financial_score'] = scores['financial_score']
+                    except Exception as e:
+                        print(f"Error calculating scores for export: {e}")
+
                 
                 config = ExportConfig(
                     include_capacity_trajectory=inc_trajectory,

@@ -115,8 +115,11 @@ class CapacityTrajectory:
             try:
                 year = int(year_str)
                 years.append(year)
-                ic = values.get('interconnection_mw', values.get('capacity', 0))
-                gen = values.get('generation_mw', values.get('ramp', 0))
+                # Handle various key formats (interconnection_mw, capacity, ic_mw)
+                ic = values.get('interconnection_mw', values.get('capacity', values.get('ic_mw', 0)))
+                # Handle various key formats (generation_mw, ramp, gen_mw)
+                gen = values.get('generation_mw', values.get('ramp', values.get('gen_mw', 0)))
+                
                 interconnection.append(ic)
                 generation.append(gen)
                 available.append(values.get('available_mw', min(ic, gen) if ic and gen else 0))
@@ -1739,7 +1742,9 @@ def export_site_to_pptx(
     # Get trajectory and phases
     trajectory = None
     if config.include_capacity_trajectory and MATPLOTLIB_AVAILABLE:
-        traj_data = site_data.get('capacity_trajectory', {})
+        # Try 'capacity_trajectory' first, then 'schedule'
+        traj_data = site_data.get('capacity_trajectory', site_data.get('schedule', {}))
+        
         trajectory = (CapacityTrajectory.from_dict(traj_data) if traj_data else
                       CapacityTrajectory.generate_default(
                           site_data.get('target_mw', 600),
