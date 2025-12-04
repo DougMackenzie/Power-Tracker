@@ -648,55 +648,16 @@ def generate_critical_path_chart(
     phases: List[PhaseData],
     site_data: Dict,
     output_path: str,
-    width: float = 11,
-    height: float = 6,
+    width: float = 6,
+    height: float = 4,
 ) -> str:
-    """Generate critical path and infrastructure summary."""
+    """Generate Infrastructure Readiness bar chart only."""
     if not MATPLOTLIB_AVAILABLE:
         raise ImportError("matplotlib required")
 
-    fig = plt.figure(figsize=(width, height), facecolor='white')
-    gs = fig.add_gridspec(1, 2, width_ratios=[1, 1], wspace=0.3)
-
-    # Left: Critical Path
-    ax1 = fig.add_subplot(gs[0, 0])
-    ax1.set_facecolor('white')
-    ax1.set_title('Critical Path to Power', fontsize=14, fontweight='bold',
-                  color=JLL_COLORS['dark_blue'], loc='left', pad=10)
-
-    y_pos = 0.95
-    for phase in phases:
-        ax1.text(0.02, y_pos, f"Phase {phase.phase_num}: {phase.target_mw:.0f} MW @ {phase.voltage_kv} kV",
-                fontsize=11, fontweight='bold', color=JLL_COLORS['dark_blue'], transform=ax1.transAxes)
-        y_pos -= 0.06
-        ax1.text(0.04, y_pos, f"Target: {phase.target_online}",
-                fontsize=9, color=JLL_COLORS['medium_gray'], transform=ax1.transAxes)
-        y_pos -= 0.05
-
-        items = [
-            ('Screening Study', phase.screening_study),
-            ('Contract Study', phase.contract_study),
-            ('Letter of Agreement', phase.letter_of_agreement),
-            ('Energy Contract', phase.energy_contract),
-        ]
-        for label, status in items:
-            if status.lower() in ['complete', 'executed']:
-                symbol, color = '✓', JLL_COLORS['green']
-            elif status.lower() in ['drafted', 'initiated', 'in_progress', 'in progress']:
-                symbol, color = '○', JLL_COLORS['amber']
-            else:
-                symbol, color = '□', JLL_COLORS['medium_gray']
-            ax1.text(0.04, y_pos, symbol, fontsize=12, color=color, transform=ax1.transAxes)
-            ax1.text(0.08, y_pos, f"{label}: {status}", fontsize=9,
-                    color=JLL_COLORS['dark_gray'], transform=ax1.transAxes)
-            y_pos -= 0.045
-        y_pos -= 0.03
-    ax1.axis('off')
-
-    # Right: Infrastructure
-    ax2 = fig.add_subplot(gs[0, 1])
-    ax2.set_facecolor('white')
-    ax2.set_title('Infrastructure Readiness', fontsize=14, fontweight='bold',
+    fig, ax = plt.subplots(figsize=(width, height), facecolor='white')
+    
+    ax.set_title('Infrastructure Readiness', fontsize=14, fontweight='bold',
                   color=JLL_COLORS['dark_blue'], loc='left', pad=10)
 
     categories = [
@@ -711,18 +672,18 @@ def generate_critical_path_chart(
     y_positions = list(range(len(categories) - 1, -1, -1))
     for i, (name, stage, max_stage) in enumerate(categories):
         pct = (stage / max_stage) * 100
-        ax2.barh(y_positions[i], 100, height=0.6, color=JLL_COLORS['light_gray'], zorder=1)
+        ax.barh(y_positions[i], 100, height=0.6, color=JLL_COLORS['light_gray'], zorder=1)
         color = JLL_COLORS['green'] if pct >= 75 else (JLL_COLORS['amber'] if pct >= 50 else JLL_COLORS['teal'])
-        ax2.barh(y_positions[i], pct, height=0.6, color=color, zorder=2)
-        ax2.text(pct + 2, y_positions[i], f'{pct:.0f}%', va='center', fontsize=10,
+        ax.barh(y_positions[i], pct, height=0.6, color=color, zorder=2)
+        ax.text(pct + 2, y_positions[i], f'{pct:.0f}%', va='center', fontsize=10,
                 color=JLL_COLORS['dark_blue'], fontweight='bold')
 
-    ax2.set_yticks(y_positions)
-    ax2.set_yticklabels([c[0] for c in categories], fontsize=10)
-    ax2.set_xlim(0, 115)
+    ax.set_yticks(y_positions)
+    ax.set_yticklabels([c[0] for c in categories], fontsize=10)
+    ax.set_xlim(0, 115)
     for spine in ['top', 'right', 'bottom']:
-        ax2.spines[spine].set_visible(False)
-    ax2.tick_params(bottom=False, labelbottom=False)
+        ax.spines[spine].set_visible(False)
+    ax.tick_params(bottom=False, labelbottom=False)
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white', edgecolor='none')
@@ -732,7 +693,7 @@ def generate_critical_path_chart(
 
 def generate_score_radar_chart(scores: ScoreAnalysis, site_name: str, output_path: str,
                                 width: float = 6, height: float = 6) -> str:
-    """Generate radar chart for site scores."""
+    """Generate radar chart for site scores only."""
     if not MATPLOTLIB_AVAILABLE:
         raise ImportError("matplotlib required")
 
@@ -751,12 +712,12 @@ def generate_score_radar_chart(scores: ScoreAnalysis, site_name: str, output_pat
     ax.plot(angles_closed, values_closed, color=JLL_COLORS['teal'], linewidth=2.5, marker='o', markersize=6)
     
     # Add value labels
-    for angle, value, cat in zip(angles, values, categories):
-        ax.annotate(f'{value:.0f}', xy=(angle, value), xytext=(angle, value + 8),
+    for angle, value in zip(angles, values):
+        ax.annotate(f'{value:.0f}', xy=(angle, value), xytext=(angle, value + 10),
                    ha='center', fontsize=10, fontweight='bold', color=JLL_COLORS['dark_blue'])
     
     ax.set_xticks(angles)
-    ax.set_xticklabels(categories, fontsize=11, color=JLL_COLORS['dark_gray'])
+    ax.set_xticklabels(categories, fontsize=10, color=JLL_COLORS['dark_gray'])
     ax.set_ylim(0, 100)
     ax.set_yticks([25, 50, 75, 100])
     ax.set_yticklabels(['25', '50', '75', '100'], fontsize=8, color=JLL_COLORS['medium_gray'])
@@ -858,31 +819,21 @@ def generate_score_summary_chart(scores: ScoreAnalysis, site_name: str, output_p
 
 
 def generate_market_analysis_chart(market_data: Dict, site_name: str, output_path: str,
-                                    width: float = 11, height: float = 6.5) -> str:
+                                    width: float = 6, height: float = 4) -> str:
     """
-    Generate market analysis visualization using state analysis framework.
-    
-    Quadrants:
-    - Top Left: State Comparison (queue times + costs)
-    - Top Right: Competitive Landscape (DC MW, hyperscalers)
-    - Bottom Left: ISO/Utility Profile
-    - Bottom Right: State SWOT Summary
+    Generate market analysis chart (State Comparison only).
     """
     if not MATPLOTLIB_AVAILABLE:
         raise ImportError("matplotlib required")
 
-    fig = plt.figure(figsize=(width, height), facecolor='white')
-    gs = fig.add_gridspec(2, 2, hspace=0.35, wspace=0.25)
-
-    # === TOP LEFT: State Comparison (New Generation Timeline) ===
-    ax1 = fig.add_subplot(gs[0, 0])
-    ax1.set_facecolor('white')
+    fig, ax1 = plt.subplots(figsize=(width, height), facecolor='white')
+    
     ax1.set_title('New Generation Capacity: State Comparison', fontsize=11, fontweight='bold',
                   color=JLL_COLORS['dark_blue'], loc='left', pad=8)
     
     # Get state data
     state_code = market_data.get('state_code', 'OK')
-    state_name = market_data.get('state_name', 'State')
+    # state_name = market_data.get('state_name', 'State') # Not used in this simplified chart
     queue_months = market_data.get('avg_queue_time_months', 36)
     rate = market_data.get('avg_industrial_rate', 0.06)
     comparisons = market_data.get('comparison_states', {})
@@ -891,24 +842,26 @@ def generate_market_analysis_chart(market_data: Dict, site_name: str, output_pat
     states = [state_code]
     queues = [queue_months]
     rates = [rate * 100]  # Convert to cents/kWh
-    colors = [JLL_COLORS['teal']]
+    colors = [JLL_COLORS['teal']] # This will be the color for the current state's queue bar
     
     for code, data in comparisons.items():
         states.append(code)
         queues.append(data.get('queue_months', 36))
         rates.append(data.get('rate', 0.06) * 100)
-        colors.append(JLL_COLORS['light_gray'])
+        colors.append(JLL_COLORS['light_gray']) # Comparison states queue bars
     
     # Create dual bar chart
     x = np.arange(len(states))
     bar_width = 0.35
     
+    # Queue bars: current state is teal, others are light_gray
     bars1 = ax1.bar(x - bar_width/2, queues, bar_width, label='Gen. Queue (months)', 
-                    color=[c if i == 0 else JLL_COLORS['teal'] for i, c in enumerate(colors)], alpha=0.8)
+                    color=[JLL_COLORS['teal'] if i == 0 else JLL_COLORS['light_gray'] for i in range(len(states))], alpha=0.8)
     
     ax1_twin = ax1.twinx()
+    # Rate bars: all are tan
     bars2 = ax1_twin.bar(x + bar_width/2, rates, bar_width, label='Power Cost (¢/kWh)',
-                         color=[JLL_COLORS['tan'] if i == 0 else JLL_COLORS['tan'] for i in range(len(states))], alpha=0.7)
+                         color=[JLL_COLORS['tan'] for _ in range(len(states))], alpha=0.7)
     
     ax1.set_xticks(x)
     ax1.set_xticklabels(states, fontsize=10)
@@ -928,91 +881,6 @@ def generate_market_analysis_chart(market_data: Dict, site_name: str, output_pat
     ax1.legend(loc='upper left', fontsize=8, frameon=False)
     ax1_twin.legend(loc='upper right', fontsize=8, frameon=False)
 
-    # === TOP RIGHT: Competitive Landscape ===
-    ax2 = fig.add_subplot(gs[0, 1])
-    ax2.set_facecolor('white')
-    ax2.axis('off')
-    ax2.set_title('Competitive Landscape', fontsize=11, fontweight='bold',
-                  color=JLL_COLORS['dark_blue'], loc='left', pad=8)
-    
-    existing_mw = market_data.get('existing_dc_mw', 0)
-    hyperscalers = market_data.get('hyperscaler_presence', [])
-    fiber = market_data.get('fiber_density', 'medium')
-    
-    # DC Capacity indicator
-    ax2.text(0.05, 0.85, 'Existing DC Capacity:', fontsize=10, fontweight='bold',
-            color=JLL_COLORS['dark_gray'], transform=ax2.transAxes)
-    ax2.text(0.55, 0.85, f'{existing_mw:,} MW', fontsize=12, fontweight='bold',
-            color=JLL_COLORS['teal'], transform=ax2.transAxes)
-    
-    # Fiber density
-    ax2.text(0.05, 0.72, 'Fiber Density:', fontsize=10, fontweight='bold',
-            color=JLL_COLORS['dark_gray'], transform=ax2.transAxes)
-    fiber_color = JLL_COLORS['green'] if fiber == 'high' else (JLL_COLORS['amber'] if fiber == 'medium' else JLL_COLORS['red'])
-    ax2.text(0.55, 0.72, fiber.title(), fontsize=10, fontweight='bold',
-            color=fiber_color, transform=ax2.transAxes)
-    
-    # Hyperscaler presence
-    ax2.text(0.05, 0.55, 'Hyperscaler Presence:', fontsize=10, fontweight='bold',
-            color=JLL_COLORS['dark_gray'], transform=ax2.transAxes)
-    
-    y_pos = 0.42
-    if hyperscalers:
-        for hs in hyperscalers[:5]:
-            ax2.text(0.08, y_pos, f'• {hs}', fontsize=9, color=JLL_COLORS['dark_gray'],
-                    transform=ax2.transAxes)
-            y_pos -= 0.10
-    else:
-        ax2.text(0.08, y_pos, '• Limited presence', fontsize=9, color=JLL_COLORS['medium_gray'],
-                transform=ax2.transAxes)
-
-    # === BOTTOM LEFT: ISO/Utility Profile ===
-    ax3 = fig.add_subplot(gs[1, 0])
-    ax3.set_facecolor('white')
-    ax3.axis('off')
-    ax3.set_title('ISO & Utility Profile', fontsize=11, fontweight='bold',
-                  color=JLL_COLORS['dark_blue'], loc='left', pad=8)
-    
-    profile_items = [
-        ('Primary ISO', market_data.get('primary_iso', 'N/A')),
-        ('Regulatory Structure', market_data.get('regulatory_structure', 'N/A').title()),
-        ('Utility', market_data.get('utility_name', 'N/A')),
-        ('Gen. Queue Time', f"{market_data.get('avg_queue_time_months', 'N/A')} months"),
-        ('Industrial Rate', f"{market_data.get('avg_industrial_rate', 0)*100:.1f} ¢/kWh"),
-        ('Renewable Mix', f"{market_data.get('renewable_percentage', 0):.0f}%"),
-        ('State Tier', f"Tier {market_data.get('tier', 3)}"),
-        ('Overall Score', f"{market_data.get('overall_score', 0)}/100"),
-    ]
-    
-    y_pos = 0.88
-    for label, value in profile_items:
-        ax3.text(0.05, y_pos, f'{label}:', fontsize=9, fontweight='bold',
-                color=JLL_COLORS['dark_gray'], transform=ax3.transAxes)
-        ax3.text(0.50, y_pos, str(value), fontsize=9,
-                color=JLL_COLORS['dark_blue'], transform=ax3.transAxes)
-        y_pos -= 0.11
-    
-    # Incentives if available
-    incentives = market_data.get('incentives', [])
-    if incentives:
-        ax3.text(0.05, y_pos - 0.02, 'Key Incentives:', fontsize=9, fontweight='bold',
-                color=JLL_COLORS['dark_gray'], transform=ax3.transAxes)
-        y_pos -= 0.12
-        for inc in incentives[:2]:
-            ax3.text(0.07, y_pos, f'• {inc[:40]}...', fontsize=8, 
-                    color=JLL_COLORS['medium_gray'], transform=ax3.transAxes)
-            y_pos -= 0.08
-
-    # === BOTTOM RIGHT: State SWOT Summary ===
-    ax4 = fig.add_subplot(gs[1, 1])
-    ax4.set_facecolor('white')
-    ax4.axis('off')
-    ax4.set_title(f'{state_name} SWOT Summary', fontsize=11, fontweight='bold',
-                  color=JLL_COLORS['dark_blue'], loc='left', pad=8)
-    
-    strengths = market_data.get('strengths', [])
-    weaknesses = market_data.get('weaknesses', [])
-    opportunities = market_data.get('opportunities', [])
     threats = market_data.get('threats', [])
     
     # Two columns
@@ -1583,6 +1451,218 @@ def export_site_to_pptx(
                           site_data.get('phase1_mw'),
                           site_data.get('start_year', 2028)))
 
+def add_critical_path_text(slide, phases):
+    """Add Critical Path text to slide."""
+    from pptx.util import Inches, Pt
+    from pptx.dml.color import RGBColor
+    
+    left = Inches(0.5)
+    top = Inches(1.5)
+    width = Inches(6.0)
+    height = Inches(5.0)
+    
+    txBox = slide.shapes.add_textbox(left, top, width, height)
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    
+    p = tf.paragraphs[0]
+    p.text = "Critical Path to Power"
+    p.font.size = Pt(18)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(26, 43, 74) # Dark Blue
+    
+    for phase in phases:
+        p = tf.add_paragraph()
+        p.text = f"Phase {phase.phase_num}: {phase.target_mw:.0f} MW @ {phase.voltage_kv} kV"
+        p.font.size = Pt(14)
+        p.font.bold = True
+        p.font.color.rgb = RGBColor(26, 43, 74)
+        p.space_before = Pt(12)
+        
+        p = tf.add_paragraph()
+        p.text = f"Target: {phase.target_online}"
+        p.font.size = Pt(11)
+        p.font.color.rgb = RGBColor(102, 102, 102) # Medium Gray
+        
+        items = [
+            ('Screening Study', phase.screening_study),
+            ('Contract Study', phase.contract_study),
+            ('Letter of Agreement', phase.letter_of_agreement),
+            ('Energy Contract', phase.energy_contract),
+        ]
+        for label, status in items:
+            p = tf.add_paragraph()
+            if status.lower() in ['complete', 'executed']:
+                symbol = '✓'
+            elif status.lower() in ['drafted', 'initiated', 'in_progress', 'in progress']:
+                symbol = '○'
+            else:
+                symbol = '□'
+            
+            p.text = f"{symbol} {label}: {status}"
+            p.font.size = Pt(11)
+            p.level = 1
+            p.space_before = Pt(3)
+
+
+def add_score_breakdown_text(slide, scores):
+    """Add Score Breakdown text to slide."""
+    from pptx.util import Inches, Pt
+    from pptx.dml.color import RGBColor
+    
+    left = Inches(6.8)
+    top = Inches(1.5)
+    width = Inches(6.0)
+    height = Inches(5.0)
+    
+    txBox = slide.shapes.add_textbox(left, top, width, height)
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    
+    p = tf.paragraphs[0]
+    p.text = "Score Breakdown"
+    p.font.size = Pt(18)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(26, 43, 74)
+    
+    p = tf.add_paragraph()
+    p.text = f"Overall Score: {scores.overall_score:.0f}/100"
+    p.font.size = Pt(24)
+    p.font.bold = True
+    p.space_before = Pt(12)
+    if scores.overall_score >= 70:
+        p.font.color.rgb = RGBColor(46, 125, 50) # Green
+    elif scores.overall_score >= 50:
+        p.font.color.rgb = RGBColor(249, 168, 37) # Amber
+    else:
+        p.font.color.rgb = RGBColor(227, 24, 55) # Red
+        
+    sub_scores = [
+        ('Power Pathway', scores.power_pathway, 0.30),
+        ('Site Specific', scores.site_specific, 0.10),
+        ('Execution', scores.execution, 0.20),
+        ('Relationships', scores.relationship_capital, 0.35),
+        ('Financial', scores.financial, 0.05),
+    ]
+    
+    for name, score, weight in sub_scores:
+        p = tf.add_paragraph()
+        p.text = f"{name}: {score:.0f} (Weight: {weight*100:.0f}%)"
+        p.font.size = Pt(14)
+        p.font.color.rgb = RGBColor(51, 51, 51)
+        p.space_before = Pt(10)
+
+
+def add_market_text(slide, market_data):
+    """Add Market Analysis text quadrants."""
+    from pptx.util import Inches, Pt
+    from pptx.dml.color import RGBColor
+    
+    # Top Right: Competitive Landscape
+    left, top, width, height = Inches(6.8), Inches(1.5), Inches(6.0), Inches(2.8)
+    txBox = slide.shapes.add_textbox(left, top, width, height)
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "Competitive Landscape"
+    p.font.size = Pt(14)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(26, 43, 74)
+    
+    existing_mw = market_data.get('existing_dc_mw', 0)
+    fiber = market_data.get('fiber_density', 'medium')
+    hyperscalers = market_data.get('hyperscaler_presence', [])
+    
+    p = tf.add_paragraph()
+    p.text = f"Existing DC Capacity: {existing_mw:,} MW"
+    p.font.size = Pt(12)
+    p.space_before = Pt(6)
+    
+    p = tf.add_paragraph()
+    p.text = f"Fiber Density: {fiber.title()}"
+    p.font.size = Pt(12)
+    
+    p = tf.add_paragraph()
+    p.text = "Major Operators:"
+    p.font.size = Pt(12)
+    p.font.bold = True
+    p.space_before = Pt(6)
+    
+    if hyperscalers:
+        for hs in hyperscalers[:4]:
+            p = tf.add_paragraph()
+            p.text = f"• {hs}"
+            p.font.size = Pt(11)
+            p.level = 1
+    else:
+        p = tf.add_paragraph()
+        p.text = "• None identified"
+        p.font.size = Pt(11)
+        p.level = 1
+
+    # Bottom Left: ISO/Utility
+    left, top = Inches(0.5), Inches(4.5)
+    txBox = slide.shapes.add_textbox(left, top, width, height)
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "ISO / Utility Profile"
+    p.font.size = Pt(14)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(26, 43, 74)
+    
+    iso = market_data.get('primary_iso', 'N/A')
+    utility = market_data.get('utility_name', 'N/A')
+    queue = market_data.get('avg_queue_time_months', 'N/A')
+    
+    items = [
+        f"ISO: {iso}",
+        f"Utility: {utility}",
+        f"Avg Queue Time: {queue} months",
+        f"Regulatory: {market_data.get('regulatory_structure', 'N/A').title()}"
+    ]
+    for item in items:
+        p = tf.add_paragraph()
+        p.text = item
+        p.font.size = Pt(12)
+        p.space_before = Pt(6)
+
+    # Bottom Right: SWOT
+    left, top = Inches(6.8), Inches(4.5)
+    txBox = slide.shapes.add_textbox(left, top, width, height)
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "State SWOT Summary"
+    p.font.size = Pt(14)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(26, 43, 74)
+    
+    strengths = market_data.get('swot', {}).get('strengths', [])
+    weaknesses = market_data.get('swot', {}).get('weaknesses', [])
+    
+    p = tf.add_paragraph()
+    p.text = "Strengths:"
+    p.font.size = Pt(12)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(46, 125, 50)
+    p.space_before = Pt(6)
+    
+    for s in strengths[:2]:
+        p = tf.add_paragraph()
+        p.text = f"• {s}"
+        p.font.size = Pt(11)
+        p.level = 1
+        
+    p = tf.add_paragraph()
+    p.text = "Challenges:"
+    p.font.size = Pt(12)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(249, 168, 37)
+    p.space_before = Pt(6)
+    
+    for w in weaknesses[:2]:
+        p = tf.add_paragraph()
+        p.text = f"• {w}"
+        p.font.size = Pt(11)
+        p.level = 1
     def convert_phase_data(phase_dict: Dict) -> Dict:
         """Convert Google Sheets phase data format to PhaseData format."""
         # Google Sheets uses: mw, screening_status, contract_study_status, loa_status, energy_contract_status, target_date, voltage
@@ -1735,14 +1815,19 @@ def export_site_to_pptx(
 
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
             infra_path = tmp.name
-        generate_critical_path_chart(phases, site_data, infra_path)
-        slide.shapes.add_picture(infra_path, Inches(0.4), Inches(0.8), width=Inches(12.5))
+        
+        # Generate Infrastructure Chart (Right side)
+        generate_critical_path_chart(phases, site_data, infra_path, width=6, height=5)
+        slide.shapes.add_picture(infra_path, Inches(6.8), Inches(1.5), width=Inches(6.0))
+        
+        # Add Critical Path Text (Left side)
+        add_critical_path_text(slide, phases)
 
         # Add risks/opportunities summary at bottom
         risks = site_data.get('risks', [])
         opportunities = site_data.get('opportunities', [])
         if risks or opportunities:
-            details_box = slide.shapes.add_textbox(Inches(0.4), Inches(6.3), Inches(12), Inches(0.8))
+            details_box = slide.shapes.add_textbox(Inches(0.5), Inches(6.5), Inches(12.3), Inches(0.8))
             tf = details_box.text_frame
             tf.word_wrap = True
             p = tf.paragraphs[0]
@@ -1752,7 +1837,7 @@ def export_site_to_pptx(
             if opportunities:
                 summary_parts.append(f"Opportunities: {', '.join(opportunities[:3])}")
             p.text = "  |  ".join(summary_parts)
-            p.font.size = Pt(9)
+            p.font.size = Pt(10)
             p.font.color.rgb = RGBColor.from_string(JLL_COLORS['medium_gray'][1:])
 
         add_footer(slide, 6, Inches, Pt, RGBColor)
@@ -1781,8 +1866,14 @@ def export_site_to_pptx(
         
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
             score_path = tmp.name
-        generate_score_summary_chart(scores, site_data.get('name', 'Site'), score_path)
-        slide.shapes.add_picture(score_path, Inches(0.4), Inches(0.8), width=Inches(12.5))
+            
+        # Generate Radar Chart (Left side)
+        generate_score_radar_chart(scores, site_data.get('name', 'Site'), score_path, width=6, height=6)
+        slide.shapes.add_picture(score_path, Inches(0.5), Inches(1.5), width=Inches(6.0))
+        
+        # Add Score Breakdown Text (Right side)
+        add_score_breakdown_text(slide, scores)
+        
         add_footer(slide, 7, Inches, Pt, RGBColor)
         os.unlink(score_path)
 
@@ -1862,18 +1953,25 @@ def export_site_to_pptx(
             'existing_dc_mw': market_raw.get('existing_dc_mw', defaults.get('dc_mw', 500)),
             'hyperscaler_presence': market_raw.get('hyperscaler_presence', defaults.get('hyperscalers', [])),
             'fiber_density': market_raw.get('fiber_density', defaults.get('fiber', 'medium')),
-            'strengths': market_raw.get('strengths', defaults.get('strengths', [])),
-            'weaknesses': market_raw.get('weaknesses', defaults.get('weaknesses', [])),
-            'opportunities': market_raw.get('opportunities', defaults.get('opportunities', [])),
-            'threats': market_raw.get('threats', defaults.get('threats', [])),
+            'swot': {
+                'strengths': market_raw.get('strengths', defaults.get('strengths', [])),
+                'weaknesses': market_raw.get('weaknesses', defaults.get('weaknesses', [])),
+                'opportunities': market_raw.get('opportunities', defaults.get('opportunities', [])),
+                'threats': market_raw.get('threats', defaults.get('threats', [])),
+            },
             'comparison_states': comparison_states,
             'incentives': market_raw.get('incentives', defaults.get('incentives', [])),
         }
         
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
             market_path = tmp.name
-        generate_market_analysis_chart(market_data, site_data.get('name', 'Site'), market_path)
-        slide.shapes.add_picture(market_path, Inches(0.4), Inches(0.8), width=Inches(12.5))
+            
+        # Generate Market Chart (Top Left)
+        generate_market_analysis_chart(market_data, site_data.get('name', 'Site'), market_path, width=6, height=4)
+        slide.shapes.add_picture(market_path, Inches(0.5), Inches(1.5), width=Inches(6.0))
+        
+        # Add Market Text Quadrants
+        add_market_text(slide, market_data)
         
         add_footer(slide, 8, Inches, Pt, RGBColor)
         os.unlink(market_path)
