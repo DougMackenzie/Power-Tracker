@@ -459,7 +459,12 @@ def show_human_input_section(builder: SiteProfileBuilder):
             try:
                 # Get site_id from the page context
                 if 'profile_site_select' in st.session_state:
-                    sites = st.session_state.get('sites', {})
+                    # Try to get sites from DB first, then session
+                    if hasattr(st.session_state, 'db') and 'sites' in st.session_state.db:
+                        sites = st.session_state.db['sites']
+                    else:
+                        sites = st.session_state.get('sites', {})
+                        
                     site_options = {f"{site.get('name', site_id)} ({site.get('state', '')})" : site_id 
                                    for site_id, site in sites.items()}
                     if site_options:
