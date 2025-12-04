@@ -1715,7 +1715,26 @@ def export_site_to_pptx(
         if 'blank' in layout.name.lower():
             blank_layout = layout
             break
+    
+    # Fallback to last layout if no blank found
     blank_layout = blank_layout or prs.slide_layouts[-1]
+    
+    # Clean "Thank You" text from the selected layout
+    # This ensures new slides don't inherit the "Thank You" background
+    try:
+        shapes_to_remove = []
+        for shape in blank_layout.shapes:
+            if shape.has_text_frame:
+                text = shape.text_frame.text.lower()
+                if "thank you" in text or "questions?" in text:
+                    shapes_to_remove.append(shape)
+        
+        for shape in shapes_to_remove:
+            sp = shape._element
+            sp.getparent().remove(sp)
+            print(f"[DEBUG] Removed '{shape.text_frame.text}' from layout {blank_layout.name}")
+    except Exception as e:
+        print(f"[WARNING] Failed to clean layout: {e}")
 
     # Get trajectory and phases
     trajectory = None
