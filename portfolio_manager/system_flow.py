@@ -146,7 +146,8 @@ def show_system_flow():
     <head>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/viz.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/full.render.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/svg-pan-zoom/3.6.1/svg-pan-zoom.min.js"></script>
+        <!-- Switch to jsdelivr for better reliability -->
+        <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
         <style>
             #graph-container {{
                 width: 100%;
@@ -154,6 +155,7 @@ def show_system_flow():
                 border: 1px solid #333;
                 background-color: #0e1117;
                 overflow: hidden;
+                position: relative;
             }}
             svg {{
                 width: 100%;
@@ -164,27 +166,42 @@ def show_system_flow():
     <body>
         <div id="graph-container"></div>
         <script>
-            var viz = new Viz();
-            var dotSource = "{dot_source_js}";
-            
-            viz.renderSVGElement(dotSource)
-                .then(function(element) {{
-                    document.getElementById('graph-container').appendChild(element);
+            // Wait for libraries to load
+            window.onload = function() {{
+                try {{
+                    var viz = new Viz();
+                    var dotSource = "{dot_source_js}";
                     
-                    // Enable Pan/Zoom
-                    svgPanZoom(element, {{
-                        zoomEnabled: true,
-                        controlIconsEnabled: true,
-                        fit: true,
-                        center: true,
-                        minZoom: 0.1,
-                        maxZoom: 10
-                    }});
-                }})
-                .catch(error => {{
-                    console.error(error);
-                    document.getElementById('graph-container').innerHTML = '<p style="color:red">Error rendering graph: ' + error + '</p>';
-                }});
+                    viz.renderSVGElement(dotSource)
+                        .then(function(element) {{
+                            document.getElementById('graph-container').appendChild(element);
+                            
+                            // Check if svgPanZoom is loaded
+                            if (typeof svgPanZoom === 'undefined') {{
+                                console.error("svg-pan-zoom library not loaded!");
+                                document.getElementById('graph-container').innerHTML += '<p style="color:red; position:absolute; top:10px; left:10px;">Error: Zoom library failed to load.</p>';
+                                return;
+                            }}
+                            
+                            // Enable Pan/Zoom
+                            svgPanZoom(element, {{
+                                zoomEnabled: true,
+                                controlIconsEnabled: true,
+                                fit: true,
+                                center: true,
+                                minZoom: 0.1,
+                                maxZoom: 10
+                            }});
+                        }})
+                        .catch(error => {{
+                            console.error(error);
+                            document.getElementById('graph-container').innerHTML = '<p style="color:red">Error rendering graph: ' + error + '</p>';
+                        }});
+                }} catch (e) {{
+                    console.error(e);
+                    document.getElementById('graph-container').innerHTML = '<p style="color:red">Critical Error: ' + e + '</p>';
+                }}
+            }};
         </script>
     </body>
     </html>
