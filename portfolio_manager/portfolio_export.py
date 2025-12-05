@@ -140,89 +140,269 @@ def generate_portfolio_export(
     config: ExportConfig = None
 ) -> str:
     """
-    Generate a comprehensive portfolio export by merging individual site decks.
+    Generate a comprehensive portfolio export using a single-presentation strategy.
+    Instead of merging files, we duplicate slides within the master template.
     """
     if not Presentation:
         raise ImportError("python-pptx is required")
     
     print(f"[DEBUG] Generating Portfolio Export for {len(sites)} sites")
     
-    # 1. Create Master Presentation (starts with template to get masters, but we'll clear slides)
-    master_prs = Presentation(template_path)
-    # Clear existing slides to start fresh (or keep title?)
-    # Let's keep the Title slide layout available but remove actual slides
-    xml_slides = master_prs.slides._sldIdLst  
-    slides = list(xml_slides)
-    for s in slides:
-        xml_slides.remove(s)
-        
-    # 2. Add Portfolio Summary Slides
-    # -----------------------------
-    # Title Slide
-    layout = master_prs.slide_layouts[0] 
-    slide = master_prs.slides.add_slide(layout)
+    # 1. Load Master Presentation
+    prs = Presentation(template_path)
     
-    # Set Title
-    if slide.shapes.title:
-        slide.shapes.title.text = "Portfolio Overview"
+    # 2. Prepare Template Slides
+    # We need to identify the template slides we want to clone for each site.
+    # Assuming standard template structure:
+    # Slide 0: Title
+    # Slide 1: Site Profile
+    # Slide 2: Site Boundary
+    # Slide 3: Topography
+    # Slide 4: Thank You (or others)
     
-    # Set Subtitle (handle missing placeholder)
+    # We will keep the original slides as "Masters" to clone from, 
+    # and then delete them at the very end.
+    template_indices = {
+        'profile': 1,
+        'boundary': 2,
+        'topo': 3
+    }
+    
+    # 3. Add Portfolio Summary Section (At the beginning)
+    # -------------------------------------------------
+    # Insert Title Slide at index 0 (pushing everything down)
+    # Actually, the template already has a title slide at 0. We can just use it.
+    title_slide = prs.slides[0]
+    if title_slide.shapes.title:
+        title_slide.shapes.title.text = "Portfolio Overview"
+    
+    # Subtitle
     subtitle_text = f"Generated: {datetime.now().strftime('%B %d, %Y')}"
-    if len(slide.placeholders) > 1:
+    if len(title_slide.placeholders) > 1:
         try:
-            slide.placeholders[1].text = subtitle_text
+            title_slide.placeholders[1].text = subtitle_text
         except:
-            pass # Fallback to textbox
-    else:
-        # Fallback: Create a textbox for subtitle
-        left = Inches(1)
-        top = Inches(4)
-        width = Inches(8)
-        height = Inches(1)
-        txBox = slide.shapes.add_textbox(left, top, width, height)
-        p = txBox.text_frame.paragraphs[0]
-        p.text = subtitle_text
-        p.font.size = Pt(24)
-        p.font.color.rgb = RGBColor(128, 128, 128)
-        p.alignment = PP_ALIGN.CENTER
+            pass
+            
+    # Add Metrics Slide (Index 1)
+    add_portfolio_metrics_slide(prs, sites, index=1)
     
-    # Metrics Slide
-    add_portfolio_metrics_slide(master_prs, sites)
+    # Add Ranking Slide (Index 2)
+    add_portfolio_ranking_slide(prs, sites, index=2)
     
-    # Ranking Slide
-    add_portfolio_ranking_slide(master_prs, sites)
+    # Now our "Template" slides have shifted down by 2 positions (Metrics + Ranking)
+    # Original 1 -> Now 3
+    # Original 2 -> Now 4
+    # Original 3 -> Now 5
+    shift = 2
+    template_indices = {k: v + shift for k, v in template_indices.items()}
     
-    # 3. Generate and Merge Individual Site Decks
-    # -------------------------------------------
-    from .pptx_export import export_site_to_pptx
-    import tempfile
-    import os
+    # 4. Generate Slides for Each Site
+    # --------------------------------
+    from .pptx_export import (
+        populate_site_profile_table, update_overview_textbox, replace_in_table,
+        find_and_replace_text, build_replacements, SiteProfileData,
+        generate_capacity_trajectory_chart, generate_critical_path_chart,
+        generate_score_summary_chart, generate_market_analysis_chart,
+        add_critical_path_text, add_score_breakdown_text, add_market_text,
+        convert_phase_data, PhaseData, CapacityTrajectory, ScoreAnalysis
+    )
     
+    # We append new slides to the end
     for site_id, site_data in sites.items():
         print(f"[DEBUG] Processing site: {site_data.get('name', site_id)}")
         
-        # Create temp file for this site
-        with tempfile.NamedTemporaryFile(suffix='.pptx', delete=False) as tmp:
-            tmp_path = tmp.name
+        # Prepare Data
+        replacements = build_replacements(site_data, config)
+        
+        # Get Profile Data
+        profile_data = None
+        if 'profile' in site_data:
+            p = site_data['profile']
+            if hasattr(p, 'overview') and hasattr(p, 'to_description_dict'):
+                profile_data = p
+            elif isinstance(p, dict):
+                profile_data = SiteProfileData.from_dict(p)
+        
+        # --- 1. Site Profile Slide ---
+        # Clone the template profile slide
+        source_profile_idx = template_indices['profile']
+        profile_slide = duplicate_slide_in_place(prs, source_profile_idx)
+        
+        # Populate Profile Slide
+        for shape in profile_slide.shapes:
+            if shape.has_table:
+                if len(shape.table.rows) >= 17:
+                    if profile_data:
+                        populate_site_profile_table(shape.table, profile_data)
+                    else:
+                        replace_in_table(shape.table, replacements)
+                else:
+                    replace_in_table(shape.table, replacements)
+            elif shape.has_text_frame:
+                shape_text = shape.text_frame.text.lower()
+                if 'overview' in shape_text and 'observation' in shape_text:
+                    update_overview_textbox(shape, site_data, profile_data)
+                else:
+                    find_and_replace_text(shape, replacements)
+                    
+        # Handle Image Placeholders on Profile Slide
+        replace_images_with_placeholders(profile_slide, site_data)
+
+        # --- 2. Site Boundary Slide ---
+        if config.include_site_boundary:
+            source_boundary_idx = template_indices['boundary']
+            boundary_slide = duplicate_slide_in_place(prs, source_boundary_idx)
+            # Replace placeholders
+            for shape in boundary_slide.shapes:
+                find_and_replace_text(shape, replacements)
+            replace_images_with_placeholders(boundary_slide, site_data, label="Site Boundary Map")
+
+        # --- 3. Topography Slide ---
+        if config.include_topography:
+            source_topo_idx = template_indices['topo']
+            topo_slide = duplicate_slide_in_place(prs, source_topo_idx)
+            for shape in topo_slide.shapes:
+                find_and_replace_text(shape, replacements)
+            replace_images_with_placeholders(topo_slide, site_data, label="Topography Map")
             
-        try:
-            # Generate individual deck
-            export_site_to_pptx(site_data, template_path, tmp_path, config)
+        # --- 4. Capacity Trajectory (New Slide) ---
+        if config.include_capacity_trajectory:
+            add_capacity_slide(prs, site_data, replacements)
+
+        # --- 5. Infrastructure (New Slide) ---
+        if config.include_infrastructure:
+            add_infrastructure_slide(prs, site_data, replacements)
             
-            # Merge into master
-            source_prs = Presentation(tmp_path)
-            for source_slide in source_prs.slides:
-                copy_slide_from_external(source_slide, master_prs)
-                
-        except Exception as e:
-            print(f"[ERROR] Failed to process site {site_id}: {e}")
-        finally:
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
-                
-    # 4. Save Master
-    master_prs.save(output_path)
+        # --- 6. Market Analysis (New Slide) ---
+        if config.include_market_analysis:
+            add_market_slide(prs, site_data, replacements)
+            
+        # --- 7. Score Analysis (New Slide) ---
+        if config.include_score_analysis:
+            add_score_slide(prs, site_data, replacements)
+
+    # 5. Cleanup
+    # ----------
+    # Delete the original template slides (which are now in the middle/beginning)
+    # We must delete from highest index to lowest to avoid shifting issues
+    indices_to_delete = sorted(template_indices.values(), reverse=True)
+    xml_slides = prs.slides._sldIdLst
+    for idx in indices_to_delete:
+        if idx < len(prs.slides):
+            xml_slides.remove(xml_slides[idx])
+            
+    # 6. Save
+    prs.save(output_path)
     return output_path
+
+
+def duplicate_slide_in_place(prs, index):
+    """
+    Duplicate a slide within the same presentation.
+    This is much more robust than copying between presentations.
+    """
+    source = prs.slides[index]
+    blank_layout = prs.slide_layouts[6] # Blank
+    dest = prs.slides.add_slide(blank_layout)
+    
+    # Copy shapes
+    for shape in source.shapes:
+        new_shape = None
+        
+        # 1. Pictures
+        if shape.shape_type == 13: 
+            try:
+                blob = shape.image.blob
+                dest.shapes.add_picture(io.BytesIO(blob), shape.left, shape.top, shape.width, shape.height)
+            except: pass
+            
+        # 2. Tables
+        elif shape.shape_type == 19:
+            try:
+                rows = len(shape.table.rows)
+                cols = len(shape.table.columns)
+                new_table = dest.shapes.add_table(rows, cols, shape.left, shape.top, shape.width, shape.height).table
+                # Copy content
+                for r in range(rows):
+                    for c in range(cols):
+                        source_cell = shape.table.cell(r, c)
+                        dest_cell = new_table.cell(r, c)
+                        dest_cell.text = source_cell.text
+                        # Copy basic font props from first paragraph
+                        if source_cell.text_frame.paragraphs:
+                            p_src = source_cell.text_frame.paragraphs[0]
+                            p_dst = dest_cell.text_frame.paragraphs[0]
+                            if p_src.runs:
+                                r_src = p_src.runs[0]
+                                if p_dst.runs:
+                                    r_dst = p_dst.runs[0]
+                                    r_dst.font.size = r_src.font.size
+                                    r_dst.font.bold = r_src.font.bold
+                                    try:
+                                        r_dst.font.color.rgb = r_src.font.color.rgb
+                                    except: pass
+            except: pass
+            
+        # 3. AutoShapes / TextBoxes
+        elif shape.shape_type == MSO_SHAPE.AUTO_SHAPE or shape.shape_type == MSO_SHAPE.TEXT_BOX:
+            try:
+                new_shape = dest.shapes.add_shape(shape.auto_shape_type, shape.left, shape.top, shape.width, shape.height)
+                # Copy text
+                if shape.has_text_frame:
+                    new_shape.text_frame.clear()
+                    for p in shape.text_frame.paragraphs:
+                        new_p = new_shape.text_frame.add_paragraph()
+                        new_p.text = p.text
+                        new_p.alignment = p.alignment
+                        # Copy runs
+                        for r in p.runs:
+                            new_r = new_p.add_run()
+                            new_r.text = r.text
+                            new_r.font.size = r.font.size
+                            new_r.font.bold = r.font.bold
+                            try:
+                                new_r.font.color.rgb = r.font.color.rgb
+                            except: pass
+                
+                # Copy fill
+                if shape.fill.type == 1:
+                    new_shape.fill.solid()
+                    try:
+                        new_shape.fill.fore_color.rgb = shape.fill.fore_color.rgb
+                    except: pass
+            except: pass
+            
+    return dest
+
+
+def replace_images_with_placeholders(slide, site_data, label="Map Placeholder"):
+    """Replace images with gray placeholders."""
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+    
+    shapes_to_replace = []
+    for shape in slide.shapes:
+        # Identify images to replace (heuristic: large images on right side)
+        if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+            if shape.left > Inches(4): # Right side images
+                shapes_to_replace.append(shape)
+                
+    for shape in shapes_to_replace:
+        left, top, width, height = shape.left, shape.top, shape.width, shape.height
+        # Remove
+        sp = shape._element
+        sp.getparent().remove(sp)
+        
+        # Add Placeholder
+        rect = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
+        rect.fill.solid()
+        rect.fill.fore_color.rgb = RGBColor(240, 240, 240)
+        rect.line.color.rgb = RGBColor(200, 200, 200)
+        
+        tf = rect.text_frame
+        tf.text = label
+        tf.paragraphs[0].font.color.rgb = RGBColor(100, 100, 100)
+        tf.paragraphs[0].alignment = PP_ALIGN.CENTER
 
 
 def add_portfolio_metrics_slide(prs, sites):
@@ -336,3 +516,88 @@ def add_portfolio_ranking_slide(prs, sites):
         table.cell(row, 1).text = f"${fee:,.0f}"
         table.cell(row, 2).text = f"{prob:.1%}"
         table.cell(row, 3).text = f"${fee*prob:,.0f}"
+
+
+def add_capacity_slide(prs, site_data, replacements):
+    """Add Capacity Trajectory slide."""
+    from .pptx_export import generate_capacity_trajectory_chart, CapacityTrajectory
+    
+    blank_layout = prs.slide_layouts[6]
+    slide = prs.slides.add_slide(blank_layout)
+    add_header_bar(slide, "Capacity Trajectory", Inches, Pt, RGBColor)
+    
+    # Generate Chart
+    traj_data = site_data.get('capacity_trajectory', site_data.get('schedule', {}))
+    trajectory = (CapacityTrajectory.from_dict(traj_data) if traj_data else
+                  CapacityTrajectory.generate_default(
+                      site_data.get('target_mw', 600),
+                      site_data.get('phase1_mw'),
+                      site_data.get('start_year', 2028)))
+                      
+    img_stream = generate_capacity_trajectory_chart(trajectory)
+    if img_stream:
+        slide.shapes.add_picture(img_stream, Inches(0.5), Inches(1.5), Inches(12.33), Inches(5.5))
+
+
+def add_infrastructure_slide(prs, site_data, replacements):
+    """Add Infrastructure slide."""
+    blank_layout = prs.slide_layouts[6]
+    slide = prs.slides.add_slide(blank_layout)
+    add_header_bar(slide, "Infrastructure Analysis", Inches, Pt, RGBColor)
+    
+    # Placeholder content
+    left = Inches(1)
+    top = Inches(2)
+    width = Inches(11)
+    height = Inches(4)
+    
+    txBox = slide.shapes.add_textbox(left, top, width, height)
+    tf = txBox.text_frame
+    tf.text = "Infrastructure Details"
+    p = tf.add_paragraph()
+    p.text = f"Substation: {site_data.get('substation', 'TBD')}"
+    p = tf.add_paragraph()
+    p.text = f"Transmission Line: {site_data.get('transmission_line', 'TBD')}"
+
+
+def add_market_slide(prs, site_data, replacements):
+    """Add Market Analysis slide."""
+    from .pptx_export import generate_market_analysis_chart, add_market_text
+    
+    blank_layout = prs.slide_layouts[6]
+    slide = prs.slides.add_slide(blank_layout)
+    add_header_bar(slide, "Market Analysis", Inches, Pt, RGBColor)
+    
+    # Chart
+    img_stream = generate_market_analysis_chart(site_data)
+    if img_stream:
+        slide.shapes.add_picture(img_stream, Inches(0.5), Inches(1.5), Inches(6.0), Inches(4.5))
+        
+    # Text
+    add_market_text(slide, site_data)
+
+
+def add_score_slide(prs, site_data, replacements):
+    """Add Score Analysis slide."""
+    from .pptx_export import generate_score_summary_chart, add_score_breakdown_text, ScoreAnalysis
+    
+    blank_layout = prs.slide_layouts[6]
+    slide = prs.slides.add_slide(blank_layout)
+    add_header_bar(slide, "Site Scoring Analysis", Inches, Pt, RGBColor)
+    
+    # Score Data
+    score_data = None
+    if 'profile' in site_data and hasattr(site_data['profile'], 'ratings'):
+         score_data = ScoreAnalysis.from_dict(site_data['profile'].ratings)
+    
+    if score_data:
+        # Chart
+        img_stream = generate_score_summary_chart(score_data)
+        if img_stream:
+            slide.shapes.add_picture(img_stream, Inches(0.5), Inches(1.5), Inches(6.0), Inches(4.5))
+            
+        # Text
+        add_score_breakdown_text(slide, score_data)
+    else:
+        txBox = slide.shapes.add_textbox(Inches(1), Inches(2), Inches(10), Inches(1))
+        txBox.text_frame.text = "No scoring data available for this site."
