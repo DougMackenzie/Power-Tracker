@@ -153,8 +153,10 @@ def show_system_flow():
     graph.edge('Tracker', 'ProfileObj', label=' updates_metrics', color='#00e5ff')
     
     # Clarify Data Flow: ProfileObj carries all data to Session/Sheet
-    graph.edge('ProfileObj', 'Session', label=' stores_full_state', color='#ffea00')
-    graph.edge('Session', 'Sheet', label=' syncs_json_blobs', color='#ffea00')
+    # Two-way arrows for full persistence cycle
+    graph.edge('Session', 'Builder', label=' hydrates_from_db', color='#ffea00')
+    graph.edge('ProfileObj', 'Session', label=' load_save_cycle', color='#ffea00', dir='both')
+    graph.edge('Session', 'Sheet', label=' 2_way_sync', color='#ffea00', dir='both')
     
     # Logic -> Object Loops
     graph.edge('ProfileObj', 'Scorer', label=' provides_attrs', color='#ffea00')
