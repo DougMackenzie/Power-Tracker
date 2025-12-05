@@ -158,7 +158,7 @@ def calculate_bottoms_up_demand(year, cowos_wpm):
 # =============================================================================
 
 def show_research_module():
-    st.title("🔬 Power Research Framework (v2.4)")
+    st.title("🔬 Power Research Framework (v2.5)")
     st.markdown("Dynamic analysis of AI power demand vs. utility supply constraints.")
 
     # --- Sidebar Controls ---
@@ -271,3 +271,129 @@ def show_bottoms_up_build():
         - **Destinations**: Middle East (10-15%), Europe (8-12%), Asia-Pacific (5-8%).
         - **Critical Insight**: International sites face identical equipment bottlenecks (gas turbines, transformers). Overspill does not relieve global pressure; it queues behind it.
         """)
+
+def show_gap_analysis(demand_scen, supply_scen, show_global, show_us_tech, show_us_located):
+    st.subheader("Supply vs. Demand Gap Analysis")
+    
+    # Prepare Data
+    years = list(range(2024, 2036))
+    
+    # Get Demand Curves
+    d_data = DEMAND_DATA[demand_scen]
+    
+    # Get Supply Curve
+    s_data = SUPPLY_DATA[supply_scen]['trajectory']
+    
+    # Create DataFrame for Plotting
+    plot_data = []
+    for y in years:
+        if y in s_data:
+            row = {'Year': y, 'Supply (US Available)': s_data[y]}
+            if show_global: row['Global Demand'] = d_data['global_demand'].get(y)
+            if show_us_tech: row['US Tech Demand'] = d_data['us_tech_demand'].get(y)
+            if show_us_located: row['US Located Demand'] = d_data['us_located_demand'].get(y)
+            plot_data.append(row)
+            
+    df = pd.DataFrame(plot_data)
+    
+    # Plot
+    fig = go.Figure()
+    
+    # Supply Area
+    fig.add_trace(go.Scatter(
+        x=df['Year'], y=df['Supply (US Available)'],
+        mode='lines', name='US Supply Capacity',
+        line=dict(width=3, color='green'),
+        fill='tozeroy'
+    ))
+    
+    # Demand Lines
+    if show_us_located:
+        fig.add_trace(go.Scatter(
+            x=df['Year'], y=df['US Located Demand'],
+            mode='lines+markers', name='US Located Demand',
+            line=dict(width=3, color='blue')
+        ))
+        
+    if show_us_tech:
+        fig.add_trace(go.Scatter(
+            x=df['Year'], y=df['US Tech Demand'],
+            mode='lines', name='US Tech Stack Demand',
+            line=dict(width=2, dash='dash', color='orange')
+        ))
+        
+    if show_global:
+        fig.add_trace(go.Scatter(
+            x=df['Year'], y=df['Global Demand'],
+            mode='lines', name='Global Demand',
+            line=dict(width=2, dash='dot', color='gray')
+        ))
+        
+    fig.update_layout(
+        title="Power Supply vs. Demand Trajectories (GW)",
+        xaxis_title="Year",
+        yaxis_title="Gigawatts (GW)",
+        hovermode="x unified",
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    with st.expander("View Raw Data"):
+        st.dataframe(df)
+    
+    # Gap Metrics
+    st.markdown("### 📉 Gap Metrics (US Located Demand vs. Supply)")
+    cols = st.columns(3)
+    
+    target_years = [2027, 2030, 2035]
+    for i, year in enumerate(target_years):
+        demand = d_data['us_located_demand'].get(year, 0)
+        supply = s_data.get(year, 0)
+        gap = supply - demand
+        
+        cols[i].metric(
+            label=f"{year} Gap",
+            value=f"{gap:+.1f} GW",
+            delta=f"Supply: {supply}GW | Demand: {demand}GW",
+            delta_color="off"
+        )
+        if gap < 0:
+            cols[i].markdown(f":red[**Deficit**: {abs(gap):.1f} GW]")
+        else:
+            cols[i].markdown(f":green[**Surplus**: {gap:.1f} GW]")
+
+def show_supply_analysis(supply_scen):
+    st.subheader("Regional Supply Analysis")
+    
+    st.markdown("""
+    **Supply Constraint Methodology**:
+    Supply is constrained by interconnection queue throughput, transmission lead times, and generation retirement schedules.
+    The table below shows the current status of major ISO queues.
+    """)
+    
+    # ISO Table
+    df_iso = pd.DataFrame(ISO_DATA)
+    df_iso['Effective Capacity (GW)'] = df_iso['queue_gw'] * df_iso['completion_rate']
+    
+    st.dataframe(
+        df_iso,
+        column_config={
+            "queue_gw": st.column_config.NumberColumn("Queue Size (GW)", format="%d GW"),
+            "completion_rate": st.column_config.ProgressColumn("Completion Rate", format="%.0f%%", min_value=0, max_value=1),
+            "Effective Capacity (GW)": st.column_config.NumberColumn("Est. Deliverable (GW)", format="%.1f GW"),
+        },
+        use_container_width=True,
+        hide_index=True
+    )
+    
+    # Chart
+    fig = px.bar(
+        df_iso, 
+        x='iso', 
+        y=['Effective Capacity (GW)', 'queue_gw'],
+        title="Queue Size vs. Deliverable Capacity by ISO",
+        barmode='overlay',
+        labels={'value': 'Gigawatts (GW)', 'variable': 'Metric'}
+    )
+    st.plotly_chart(fig, use_container_width=True)
