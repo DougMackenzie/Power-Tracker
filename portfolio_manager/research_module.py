@@ -164,7 +164,7 @@ def calculate_bottoms_up_demand(year, cowos_wpm):
 # =============================================================================
 
 def show_research_module():
-    st.title("🔬 Power Research Framework (v2.9)")
+    st.title("🔬 Power Research Framework (v3.0)")
     st.markdown("Dynamic analysis of AI power demand vs. utility supply constraints.")
 
     # --- Sidebar Controls ---
@@ -378,9 +378,6 @@ def show_gap_analysis(demand_scen, supply_scen, show_global, show_us_tech, show_
     )
     
     st.plotly_chart(fig, use_container_width=True)
-    
-    with st.expander("View Raw Data"):
-        st.dataframe(df)
     
     # Gap Metrics
     st.markdown("### 📉 Gap Metrics (US Located Demand vs. Supply)")
