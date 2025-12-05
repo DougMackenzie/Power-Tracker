@@ -2161,7 +2161,10 @@ def show_site_details(site_id: str):
 
     # --- Detailed Data View ---
     st.markdown("---")
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["⚡ Power Pathway", "🏗️ Infrastructure", "📅 Schedule", "🌍 Non-Power", "🗺️ State Context"])
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "⚡ Power Pathway", "🏗️ Infrastructure", "📅 Schedule", 
+        "🌍 Non-Power", "🗺️ State Context", "📋 Site Profile", "🤖 AI Research"
+    ])
     
     with tab1:
         st.subheader("Power System Studies & Approvals")
@@ -2268,6 +2271,59 @@ def show_site_details(site_id: str):
             st.metric("State Score", f"{state_context['summary']['overall_score']}/100")
         else:
             st.warning(state_context['error'])
+
+    with tab6:
+        st.subheader("Site Profile Data")
+        profile_json = site.get('profile_json', {})
+        if isinstance(profile_json, str):
+            try:
+                profile_json = json.loads(profile_json)
+            except:
+                profile_json = {}
+        
+        if profile_json:
+            # Group by categories for better readability
+            categories = {
+                'Ownership & Price': ['owner_name', 'willing_to_sell', 'asking_price'],
+                'Site Condition': ['site_condition', 'topography', 'slope', 'soil_type'],
+                'Environmental': ['environmental_status', 'phase1_esa', 'ecological_concerns', 'archeological', 'jurisdictional_water'],
+                'Wetlands': ['wetlands_present', 'wetlands_acres', 'wetlands_avoidable'],
+                'Easements & Access': ['easements', 'right_of_way'],
+                'Timeline': ['time_to_close', 'phase1_delivery', 'zoning_timeline']
+            }
+            
+            for category, fields in categories.items():
+                st.markdown(f"**{category}**")
+                cols = st.columns(2)
+                for i, field in enumerate(fields):
+                    val = profile_json.get(field, 'TBD')
+                    cols[i % 2].write(f"**{field.replace('_', ' ').title()}:** {val}")
+                st.markdown("---")
+        else:
+            st.info("No detailed site profile data available.")
+
+    with tab7:
+        st.subheader("AI Research Results")
+        # Display AI fields that are stored in profile_json
+        if profile_json:
+            ai_fields = [
+                'nearest_town', 'distance_to_town', 'airport_name', 'distance_to_airport',
+                'highway_name', 'highway_distance', 'rail_access',
+                'flood_zone', 'seismic_risk', 'hurricane_risk', 'tornado_risk',
+                'workforce_population', 'unemployment_rate'
+            ]
+            
+            found_ai = False
+            cols = st.columns(2)
+            for i, field in enumerate(ai_fields):
+                if field in profile_json:
+                    found_ai = True
+                    cols[i % 2].write(f"**{field.replace('_', ' ').title()}:** {profile_json[field]}")
+            
+            if not found_ai:
+                st.info("No AI research data found.")
+        else:
+            st.info("No AI research data found.")
 
     # Actions
     st.markdown("---")
