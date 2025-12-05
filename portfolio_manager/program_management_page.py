@@ -50,11 +50,12 @@ def show_program_tracker():
         return
     
     # Tabs for different views
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📈 Portfolio Summary",
         "📋 Deal Status",
         "✏️ Edit Tracker",
-        "💰 Fee Settings"
+        "💰 Fee Settings",
+        "📥 Portfolio Export"
     ])
     
     # =========================================================================
@@ -80,6 +81,12 @@ def show_program_tracker():
     # =========================================================================
     with tab4:
         show_fee_settings(sites)
+
+    # =========================================================================
+    # TAB 5: Portfolio Export
+    # =========================================================================
+    with tab5:
+        show_portfolio_export(sites)
 
 
 def show_portfolio_summary(sites: Dict):
@@ -570,6 +577,8 @@ def show_fee_settings(sites: Dict):
     st.dataframe(driver_df, use_container_width=True, hide_index=True)
 
 
+
+
 # =============================================================================
 # GOOGLE SHEETS COLUMN EXTENSION
 # =============================================================================
@@ -594,6 +603,105 @@ def get_extended_column_order():
     return COLUMN_ORDER + TRACKER_COLUMN_ORDER
 
 
+def show_portfolio_export(sites: Dict):
+    """UI for generating portfolio export."""
+    from .portfolio_export import generate_portfolio_export
+    from .pptx_export import ExportConfig
+    import tempfile
+    import os
+    
+    st.subheader("📥 Portfolio PowerPoint Export")
+    st.write("Generate a comprehensive master deck including portfolio summary, rankings, and individual site profiles.")
+    
+    # Selection
+    st.write("### 1. Select Sites")
+    
+    # Filter by Client
+    clients = sorted(list(set(s.get('client', '') for s in sites.values() if s.get('client'))))
+    selected_client = st.selectbox("Filter by Client (Optional)", ["All"] + clients)
+    
+    filtered_sites = sites
+    if selected_client != "All":
+        filtered_sites = {k: v for k, v in sites.items() if v.get('client') == selected_client}
+    
+    # Multiselect
+    site_options = {f"{s.get('name', sid)} ({sid})": sid for sid, s in filtered_sites.items()}
+    selected_ids = st.multiselect(
+        "Select Sites to Include",
+        options=list(site_options.keys()),
+        default=list(site_options.keys())
+    )
+    
+    selected_sites = {site_options[k]: sites[site_options[k]] for k in selected_ids}
+    
+    st.write(f"Selected **{len(selected_sites)}** sites for export.")
+    
+    # Configuration
+    st.write("### 2. Export Settings")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        include_market = st.checkbox("Include Market Analysis", value=True)
+        include_trajectory = st.checkbox("Include Capacity Trajectory", value=True)
+        include_infra = st.checkbox("Include Infrastructure", value=True)
+    with col2:
+        include_boundary = st.checkbox("Include Site Boundary", value=True)
+        include_topo = st.checkbox("Include Topography", value=True)
+        include_score = st.checkbox("Include Score Analysis", value=True)
+        
+    st.divider()
+    
+    # Generate Button
+    if st.button("🚀 Generate Portfolio Deck", type="primary", disabled=len(selected_sites) == 0):
+        with st.spinner("Generating comprehensive portfolio deck... this may take a minute..."):
+            try:
+                # Create config
+                config = ExportConfig(
+                    include_market_analysis=include_market,
+                    include_capacity_trajectory=include_trajectory,
+                    include_infrastructure=include_infra,
+                    include_site_boundary=include_boundary,
+                    include_topography=include_topo,
+                    include_score_analysis=include_score,
+                    contact_name="Douglas Mackenzie", # Default
+                    contact_email="douglas.mackenzie@jll.com"
+                )
+                
+                # Temp file for output
+                with tempfile.NamedTemporaryFile(suffix='.pptx', delete=False) as tmp:
+                    output_path = tmp.name
+                
+                # Template path
+                template_path = "template.pptx" # Assuming in root
+                if not os.path.exists(template_path):
+                    # Fallback or error
+                    st.error("Template file 'template.pptx' not found in root directory.")
+                    return
+                
+                # Generate
+                generate_portfolio_export(selected_sites, template_path, output_path, config)
+                
+                # Read for download
+                with open(output_path, "rb") as f:
+                    file_data = f.read()
+                
+                st.success("✅ Portfolio Deck Generated Successfully!")
+                
+                st.download_button(
+                    label="📥 Download Portfolio Deck (.pptx)",
+                    data=file_data,
+                    file_name=f"Portfolio_Export_{datetime.now().strftime('%Y%m%d')}.pptx",
+                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                )
+                
+                # Cleanup
+                os.unlink(output_path)
+                
+            except Exception as e:
+                st.error(f"Export failed: {str(e)}")
+                st.exception(e)
+
+
 # =============================================================================
 # EXPORT
 # =============================================================================
@@ -604,6 +712,7 @@ __all__ = [
     'show_deal_status',
     'show_tracker_editor',
     'show_fee_settings',
+    'show_portfolio_export',
     'get_extended_column_mapping',
     'get_extended_column_order',
 ]
