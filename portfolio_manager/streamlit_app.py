@@ -775,26 +775,54 @@ def run():
         del st.session_state.navigation_target
         st.session_state.page = target_page
     
+    # Initialize node_updates if missing (Command Center backing)
+    if 'node_updates' not in st.session_state:
+        st.session_state.node_updates = {}
+        
     # Use session state for navigation
     page = st.sidebar.radio(
         "Navigation",
-        ["📊 Dashboard", "🧩 System Flow", "🏭 Site Database", "💬 AI Chat", "📁 VDR Upload", "➕ Add/Edit Site", 
-         "🏆 Rankings", "📊 Program Tracker", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "⚙️ Settings"],
+        ["📊 Dashboard", "🏭 Site Database", "💬 AI Chat", "📁 VDR Upload", "➕ Add/Edit Site", 
+         "🏆 Rankings", "📊 Program Tracker", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "🧩 System Flow", "⚙️ Settings"],
         key="page"
     )
     
-    if page == "📊 Dashboard": show_dashboard()
-    elif page == "🧩 System Flow": show_system_flow()
-    elif page == "🏭 Site Database": show_site_database()
-    elif page == "💬 AI Chat": show_ai_chat()
-    elif page == "📁 VDR Upload": show_vdr_upload()
-    elif page == "➕ Add/Edit Site": show_add_edit_site()
-    elif page == "🏆 Rankings": show_rankings()
-    elif page == "📊 Program Tracker": show_program_tracker()
-    elif page == "🗺️ State Analysis": show_state_analysis()
-    elif page == "🔬 Research Framework": show_research_module()
-    elif page == "🔍 Utility Research": show_utility_research()
-    elif page == "⚙️ Settings": show_settings()
+    # Route and Log Activity
+    if page == "📊 Dashboard": 
+        log_activity('Dash')
+        show_dashboard()
+    elif page == "🏭 Site Database": 
+        log_activity('Session') # Viewing data
+        show_site_database()
+    elif page == "💬 AI Chat": 
+        log_activity('Chat')
+        show_ai_chat()
+    elif page == "📁 VDR Upload": 
+        log_activity('VDR') # User is interacting with VDR module
+        show_vdr_upload()
+    elif page == "➕ Add/Edit Site": 
+        log_activity('Human') # Manual input form
+        show_add_edit_site()
+    elif page == "🏆 Rankings": 
+        log_activity('Scorer') # Viewing scores
+        show_rankings()
+    elif page == "📊 Program Tracker": 
+        log_activity('Tracker')
+        show_program_tracker()
+    elif page == "🗺️ State Analysis": 
+        log_activity('SupplyDemand') # Viewing macro analysis
+        show_state_analysis()
+    elif page == "🔬 Research Framework": 
+        log_activity('DeepResearch') # Viewing research
+        show_research_module()
+    elif page == "🔍 Utility Research": 
+        log_activity('UtilAgent')
+        show_utility_research()
+    elif page == "🧩 System Flow":
+        # No log needed, we are viewing the logs
+        show_system_flow()
+    elif page == "⚙️ Settings": 
+        show_settings()
 
 
 # ... (skipping unchanged functions) ...
