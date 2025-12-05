@@ -751,6 +751,24 @@ def determine_stage(site: Dict) -> str:
 # STREAMLIT APP
 # =============================================================================
 
+from datetime import datetime, timedelta, timezone
+
+# Helper for EST Timestamp
+def get_est_timestamp():
+    try:
+        import pytz
+        est = pytz.timezone('US/Eastern')
+        now = datetime.now(est)
+    except ImportError:
+        now = datetime.now(timezone(timedelta(hours=-5)))
+    return now.strftime("%Y-%m-%d %H:%M:%S EST")
+
+def log_activity(node_key):
+    """Updates the 'Last Updated' timestamp for a given node in the Command Center."""
+    if 'node_updates' not in st.session_state:
+        st.session_state.node_updates = {}
+    st.session_state.node_updates[node_key] = get_est_timestamp()
+
 def run():
     # st.set_page_config() is handled by the main app
     
