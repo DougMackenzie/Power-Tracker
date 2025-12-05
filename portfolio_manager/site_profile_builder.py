@@ -363,6 +363,32 @@ def map_app_to_profile(site_data: Dict) -> SiteProfileData:
         outstanding.append("Environmental studies")
     profile.outstanding = "; ".join(outstanding) if outstanding else "to be completed"
     
+    # === NEW: Map Program Tracker Fields ===
+    # These fields are crucial for the two-way sync with ProgramTracker
+    tracker_fields = [
+        'client', 'total_fee_potential', 'contract_status',
+        'site_control_stage', 'power_stage', 'marketing_stage', 'buyer_stage',
+        'zoning_stage', 'water_stage', 'incentives_stage',
+        'probability', 'weighted_fee', 'tracker_notes'
+    ]
+    
+    for field in tracker_fields:
+        if field in site_data:
+            # Handle numeric conversions if needed
+            val = site_data[field]
+            if field in ['total_fee_potential', 'probability', 'weighted_fee']:
+                try:
+                    setattr(profile, field, float(val))
+                except (ValueError, TypeError):
+                    pass
+            elif field.endswith('_stage'):
+                try:
+                    setattr(profile, field, int(val))
+                except (ValueError, TypeError):
+                    pass
+            else:
+                setattr(profile, field, val)
+    
     return profile
 
 

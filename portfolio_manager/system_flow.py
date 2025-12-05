@@ -146,7 +146,11 @@ def show_system_flow():
     graph.edge('UtilAgent', 'Scorer', label=' iso_queue_data', color='#ff0000', style='dashed')
     
     graph.edge('Builder', 'ProfileObj', label=' instantiates', color='#00e5ff')
-    graph.edge('Tracker', 'Session', label=' updates_prob', color='#00e5ff')
+    
+    # Two-Way Sync: Tracker <-> ProfileObj
+    # Tracker reads state from the Profile/DB and updates probability/fees
+    graph.edge('ProfileObj', 'Tracker', label=' provides_state', color='#ffea00')
+    graph.edge('Tracker', 'ProfileObj', label=' updates_metrics', color='#00e5ff')
     
     # Clarify Data Flow: ProfileObj carries all data to Session/Sheet
     graph.edge('ProfileObj', 'Session', label=' stores_full_state', color='#ffea00')

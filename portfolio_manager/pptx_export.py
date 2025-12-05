@@ -295,6 +295,21 @@ class SiteProfileData:
     # Ratings (1=Desirable, 2=Acceptable, 3=Marginal, 4=Fatal Flaw, 0=NR)
     ratings: Dict[str, int] = field(default_factory=dict)
     
+    # --- Program Tracker Fields (Two-Way Sync) ---
+    client: str = ''
+    total_fee_potential: float = 0.0
+    contract_status: str = 'No'
+    site_control_stage: int = 1
+    power_stage: int = 1
+    marketing_stage: int = 1
+    buyer_stage: int = 1
+    zoning_stage: int = 1
+    water_stage: int = 1
+    incentives_stage: int = 1
+    probability: float = 0.0
+    weighted_fee: float = 0.0
+    tracker_notes: str = ''
+    
     def to_description_dict(self) -> Dict[str, str]:
         """
         Convert to dictionary of description texts for each row.
