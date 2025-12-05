@@ -3,8 +3,24 @@ import graphviz
 import sys
 import os
 import streamlit.components.v1 as components
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import json
+
+# Try to import pytz for accurate EST handling, fallback to fixed offset if missing
+try:
+    import pytz
+    EST = pytz.timezone('US/Eastern')
+except ImportError:
+    # Fallback to fixed offset (UTC-5)
+    EST = timezone(timedelta(hours=-5))
+
+def get_est_time():
+    """Returns current time in EST format."""
+    if isinstance(EST, timezone):
+        now = datetime.now(EST)
+    else:
+        now = datetime.now(EST)
+    return now.strftime("%Y-%m-%d %H:%M:%S EST")
 
 def show_system_flow():
     """
@@ -14,24 +30,25 @@ def show_system_flow():
     
     # --- 0. Initialize Telemetry State ---
     if 'node_updates' not in st.session_state:
-        # Simulate initial "boot" times for demonstration
-        now = datetime.now()
+        # Simulate initial "boot" times
+        initial_time = get_est_time()
         st.session_state.node_updates = {
-            'DeepResearch': now.strftime("%H:%M:%S"),
-            'Human': now.strftime("%H:%M:%S"),
-            'Chat': now.strftime("%H:%M:%S"),
-            'VDR': now.strftime("%H:%M:%S"),
-            'UtilAgent': now.strftime("%H:%M:%S"),
-            'SupplyDemand': now.strftime("%H:%M:%S"),
-            'Builder': now.strftime("%H:%M:%S"),
-            'Tracker': now.strftime("%H:%M:%S"),
-            'Scorer': now.strftime("%H:%M:%S"),
-            'Sheet': now.strftime("%H:%M:%S"),
-            'Session': now.strftime("%H:%M:%S"),
-            'ProfileObj': now.strftime("%H:%M:%S"),
-            'PPTX': now.strftime("%H:%M:%S"),
-            'PDF': now.strftime("%H:%M:%S"),
-            'Dash': now.strftime("%H:%M:%S"),
+            'DeepResearch': initial_time,
+            'Human': initial_time,
+            'Chat': initial_time,
+            'VDR': initial_time,
+            'UtilAgent': initial_time,
+            'LocAgent': initial_time,  # New Location Agent
+            'SupplyDemand': initial_time,
+            'Builder': initial_time,
+            'Tracker': initial_time,
+            'Scorer': initial_time,
+            'Sheet': initial_time,
+            'Session': initial_time,
+            'ProfileObj': initial_time,
+            'PPTX': initial_time,
+            'PDF': initial_time,
+            'Dash': initial_time,
         }
 
     # --- 1. System Health & Status (Live Telemetry) ---
@@ -53,7 +70,7 @@ def show_system_flow():
 
     # --- 2. Detailed Architecture Blueprint (Viz.js) ---
     st.subheader("🕸️ Master Architecture Blueprint")
-    st.caption("Interactive Zoom/Pan Enabled. Live Timestamps on all nodes.")
+    st.caption("Interactive Zoom/Pan Enabled. Live EST Timestamps on all nodes.")
     
     # Create Graphviz Object (for DOT generation only)
     graph = graphviz.Digraph()
@@ -90,6 +107,7 @@ def show_system_flow():
         c.node('Chat', html_node('Chat', '💬 AI Chat', '[llm_integration.py]', '#004d40'), **agent_attrs)
         c.node('VDR', html_node('VDR', '📁 VDR Processor', '(OCR + Extraction)', '#004d40'), **agent_attrs)
         c.node('UtilAgent', html_node('UtilAgent', '🕷️ Utility Agent', '(Scraper)', '#004d40'), **agent_attrs)
+        c.node('LocAgent', html_node('LocAgent', '🌐 AI Location Research', '(Lat/Lon Analysis)', '#004d40'), **agent_attrs)
         
         c.node('SupplyDemand', html_node('SupplyDemand', '⚖️ Supply/Demand Model', '[research_module.py]', '#004d40'))
 
@@ -120,15 +138,24 @@ def show_system_flow():
     # -- EDGES --
     graph.edge('DeepResearch', 'SupplyDemand', label=' drives_assumptions', color='#ffffff')
     graph.edge('SupplyDemand', 'Scorer', label=' state_scoring_framework', color='#ffffff')
+    
     graph.edge('Human', 'Builder', label=' manual_overrides', color='#00ff00')
     graph.edge('VDR', 'Builder', label=' extracted_json', color='#ff0000', style='dashed')
     graph.edge('Chat', 'Builder', label=' new_site_obj', color='#ff0000', style='dashed')
+    graph.edge('LocAgent', 'Builder', label=' fills_gaps', color='#ff0000', style='dashed')
     graph.edge('UtilAgent', 'Scorer', label=' iso_queue_data', color='#ff0000', style='dashed')
+    
     graph.edge('Builder', 'ProfileObj', label=' instantiates', color='#00e5ff')
     graph.edge('Tracker', 'Session', label=' updates_prob', color='#00e5ff')
-    graph.edge('ProfileObj', 'Session', label=' stores_in_db', color='#ffea00')
+    
+    # Clarify Data Flow: ProfileObj carries all data to Session/Sheet
+    graph.edge('ProfileObj', 'Session', label=' stores_full_state', color='#ffea00')
     graph.edge('Session', 'Sheet', label=' syncs_json_blobs', color='#ffea00')
+    
+    # Logic -> Object Loops
     graph.edge('ProfileObj', 'Scorer', label=' provides_attrs', color='#ffea00')
+    graph.edge('Scorer', 'ProfileObj', label=' updates_score', color='#00e5ff') # Closing the loop
+    
     graph.edge('Scorer', 'Dash', label=' rankings_table', color='#ff00ff')
     graph.edge('ProfileObj', 'PPTX', label=' populates_slides', color='#ff00ff')
     graph.edge('ProfileObj', 'PDF', label=' generates_summary', color='#ff00ff')
@@ -238,6 +265,7 @@ def show_system_flow():
             - **`site_profile_builder.py`**: The gatekeeper. It defines `HUMAN_INPUT_FIELDS` (e.g., Willingness to Sell) and `AI_RESEARCHABLE_FIELDS` (e.g., Flood Zone).
             - **`vdr_processor.py`** (Agent): Uses OCR to read PDFs, then an LLM to extract structured JSON matching the `SiteProfileData` schema.
             - **`utility_agent.py`** (Agent): Autonomous scraper that looks for IRP PDFs and Queue Excel files on utility websites.
+            - **`AI Location Research`** (Agent): Triggered via "Re-run Research", this uses Lat/Lon to query LLMs for specific site details (nearest town, flood zone, etc.).
             """)
             
         elif selected_layer == "Processing Layer":
