@@ -405,10 +405,17 @@ def replace_images_with_placeholders(slide, site_data, label="Map Placeholder"):
         tf.paragraphs[0].alignment = PP_ALIGN.CENTER
 
 
-def add_portfolio_metrics_slide(prs, sites):
+def add_portfolio_metrics_slide(prs, sites, index=None):
     """Add slide with portfolio metrics and charts."""
     blank_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(blank_layout)
+    
+    # Move slide if index is specified
+    if index is not None:
+        xml_slides = prs.slides._sldIdLst
+        slides = list(xml_slides)
+        xml_slides.remove(slides[-1])
+        xml_slides.insert(index, slides[-1])
     
     # Header
     add_header_bar(slide, "Portfolio Summary", Inches, Pt, RGBColor)
@@ -468,10 +475,17 @@ def add_portfolio_metrics_slide(prs, sites):
     slide.shapes.add_picture(img_stream, Inches(4.0), Inches(1.5), Inches(5.0), Inches(3.5))
     
 
-def add_portfolio_ranking_slide(prs, sites):
+def add_portfolio_ranking_slide(prs, sites, index=None):
     """Add slide with ranking table."""
     blank_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(blank_layout)
+    
+    # Move slide if index is specified
+    if index is not None:
+        xml_slides = prs.slides._sldIdLst
+        slides = list(xml_slides)
+        xml_slides.remove(slides[-1])
+        xml_slides.insert(index, slides[-1])
     
     add_header_bar(slide, "Portfolio Rankings", Inches, Pt, RGBColor)
     
