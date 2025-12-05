@@ -42,64 +42,90 @@ def show_system_flow():
     st.divider()
 
     # --- 2. Detailed Architecture Blueprint ---
-    st.subheader("🕸️ Master Architecture Blueprint")
-    st.caption("Detailed mapping of Python modules, data structures, and logic flows.")
+    col_header, col_zoom = st.columns([3, 1])
+    with col_header:
+        st.subheader("🕸️ Master Architecture Blueprint")
+        st.caption("Detailed mapping of Python modules, data structures, and logic flows.")
+    with col_zoom:
+        # Zoom control (simulated by graph size)
+        zoom_level = st.slider("🔍 Zoom Level", min_value=100, max_value=2000, value=1000, step=100, label_visibility="collapsed")
     
     # Create a complex graphviz directed graph with "Dark Mode" / Tech style
     graph = graphviz.Digraph()
     graph.attr(rankdir='TB') # Top to Bottom for better hierarchy
     graph.attr(bgcolor='#0e1117') # Streamlit dark bg approximation
-    graph.attr('node', shape='note', style='filled', fontname='Courier', fontsize='10', fontcolor='white')
+    # Use HTML-like labels for rich formatting
+    graph.attr('node', shape='plain', fontname='Courier', fontsize='10', fontcolor='white')
     graph.attr('edge', fontname='Courier', fontsize='8', color='#555555', fontcolor='#aaaaaa')
     
     # Get current time for "Live" timestamps
-    now_str = datetime.now().strftime("%H:%M")
+    now_str = datetime.now().strftime("%H:%M:%S")
     
+    # Helper for HTML Node Table
+    def html_node(title, subtitle, color, border_color=None, border_style="solid"):
+        border_color = border_color or color
+        # Dashed border simulation in HTML table is tricky, so we use the graphviz style for the node instead
+        # But here we define the inner content
+        return f'''<
+        <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4">
+            <TR><TD BGCOLOR="{color}"><FONT COLOR="white"><B>{title}</B></FONT></TD></TR>
+            <TR><TD BGCOLOR="{color}"><FONT COLOR="#e0e0e0" POINT-SIZE="9">{subtitle}</FONT></TD></TR>
+        </TABLE>
+        >'''
+
     # -- Cluster: FOUNDATION --
     with graph.subgraph(name='cluster_foundation') as c:
         c.attr(label='LAYER 0: FOUNDATION', style='dashed', color='#ffffff', fontcolor='#ffffff')
-        c.node('DeepResearch', f'📚 Deep Research Report\n(Manual Bottom-Up)\n[Last Updated: {now_str}]', 
-               fillcolor='#424242', shape='folder')
+        
+        # Deep Research Node with explicit timestamp
+        label = f'''<
+        <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" BGCOLOR="#424242">
+            <TR><TD><FONT COLOR="white"><B>📚 Deep Research Report</B></FONT></TD></TR>
+            <TR><TD><FONT COLOR="#cccccc" POINT-SIZE="9">(Manual Bottom-Up Analysis)</FONT></TD></TR>
+            <TR><TD><FONT COLOR="#00ff00" POINT-SIZE="8">Last Updated: {now_str}</FONT></TD></TR>
+        </TABLE>
+        >'''
+        c.node('DeepResearch', label=label)
 
     # -- Cluster: INPUT LAYER --
     with graph.subgraph(name='cluster_inputs') as c:
         c.attr(label='LAYER 1: INPUTS & AGENTS', style='dashed', color='#00ff00', fontcolor='#00ff00')
         
-        c.node('Human', '👤 Human Input\n[Forms/UI]', fillcolor='#1b5e20', shape='ellipse')
+        c.node('Human', html_node('👤 Human Input', '[Forms/UI]', '#1b5e20'))
         
-        # Agentic Capabilities (Red Dashed Line)
-        agent_style = {'color': '#ff0000', 'style': 'dashed', 'penwidth': '2.0', 'fillcolor': '#004d40'}
+        # Agentic Capabilities (Red Dashed Line handled by node attributes)
+        agent_attrs = {'style': 'dashed', 'color': '#ff0000', 'penwidth': '2.0'}
         
-        c.node('Chat', '💬 AI Chat\n[llm_integration.py]', **agent_style)
-        c.node('VDR', '📁 VDR Processor\n[vdr_processor.py]\n(OCR + Extraction)', **agent_style)
-        c.node('UtilAgent', '🕷️ Utility Agent\n[utility_agent.py]\n(Scraper)', **agent_style)
+        c.node('Chat', html_node('💬 AI Chat', '[llm_integration.py]', '#004d40'), **agent_attrs)
+        c.node('VDR', html_node('📁 VDR Processor', '(OCR + Extraction)', '#004d40'), **agent_attrs)
+        c.node('UtilAgent', html_node('🕷️ Utility Agent', '(Scraper)', '#004d40'), **agent_attrs)
         
         # Supply/Demand Model
-        c.node('SupplyDemand', '⚖️ Supply/Demand Model\n[research_module.py]', fillcolor='#004d40')
+        c.node('SupplyDemand', html_node('⚖️ Supply/Demand Model', '[research_module.py]', '#004d40'))
 
     # -- Cluster: PROCESSING LAYER --
     with graph.subgraph(name='cluster_process') as c:
         c.attr(label='LAYER 2: PROCESSING & BUILDERS', style='dashed', color='#00e5ff', fontcolor='#00e5ff')
         
-        c.node('Builder', '🏗️ SiteProfileBuilder\n[site_profile_builder.py]\n.map_app_to_profile()', fillcolor='#01579b', shape='component')
-        c.node('Tracker', '📈 ProgramTracker\n[program_tracker.py]\n.calculate_probability()', fillcolor='#01579b', shape='component')
-        c.node('Scorer', '⭐ ScoringEngine\n[state_analysis.py]\n.calculate_site_score()', fillcolor='#01579b', shape='component')
+        c.node('Builder', html_node('🏗️ SiteProfileBuilder', '.map_app_to_profile()', '#01579b'))
+        c.node('Tracker', html_node('📈 ProgramTracker', '.calculate_probability()', '#01579b'))
+        c.node('Scorer', html_node('⭐ ScoringEngine', '.calculate_site_score()', '#01579b'))
 
     # -- Cluster: DATA LAYER --
     with graph.subgraph(name='cluster_data') as c:
         c.attr(label='LAYER 3: PERSISTENCE & STATE', style='dashed', color='#ffea00', fontcolor='#ffea00')
         
-        c.node('Sheet', '☁️ Google Sheets\n[gspread]', fillcolor='#f57f17', shape='cylinder')
-        c.node('Session', '💾 Session State\n(st.session_state.db)', fillcolor='#f57f17', shape='cylinder')
-        c.node('ProfileObj', '📝 SiteProfileData\n(Dataclass Object)', fillcolor='#ff6f00', shape='note')
+        c.node('Sheet', html_node('☁️ Google Sheets', '[gspread]', '#f57f17'))
+        c.node('Session', html_node('💾 Session State', '(st.session_state.db)', '#f57f17'))
+        c.node('ProfileObj', html_node('📝 SiteProfileData', '(Dataclass Object)', '#ff6f00'))
 
     # -- Cluster: OUTPUT LAYER --
     with graph.subgraph(name='cluster_output') as c:
         c.attr(label='LAYER 4: OUTPUTS & RENDERING', style='dashed', color='#ff00ff', fontcolor='#ff00ff')
         
-        c.node('PPTX', '📽️ PPT Generator\n[pptx_export.py]\n.export_site_to_pptx()', fillcolor='#4a148c')
-        c.node('PDF', '📄 PDF Report\n[fpdf2]', fillcolor='#4a148c')
-        c.node('Dash', '📊 Dashboard UI\n[streamlit_app.py]', fillcolor='#880e4f')
+        c.node('PPTX', html_node('📽️ PPT Generator', '.export_site_to_pptx()', '#4a148c'))
+        c.node('PDF', html_node('📄 PDF Report', '[fpdf2]', '#4a148c'))
+        c.node('Dash', html_node('📊 Dashboard UI', '[streamlit_app.py]', '#880e4f'))
 
     # -- EDGES --
     # Foundation -> Inputs
@@ -124,7 +150,19 @@ def show_system_flow():
     graph.edge('ProfileObj', 'PPTX', label=' populates_slides', color='#ff00ff')
     graph.edge('ProfileObj', 'PDF', label=' generates_summary', color='#ff00ff')
     
-    st.graphviz_chart(graph, use_container_width=True)
+    # Render with dynamic width based on zoom slider
+    # Note: use_container_width=False allows the width to exceed the container, creating a scrollbar if needed
+    st.graphviz_chart(graph, use_container_width=False)
+    
+    # Inject CSS to force the graph to respect the zoom slider width
+    # This is a bit of a hack since st.graphviz_chart doesn't accept a 'width' pixel argument directly
+    # But we can control the SVG size via graph attributes if we were using pipe, 
+    # or just rely on Streamlit's rendering.
+    # Actually, st.graphviz_chart expands to fit content if use_container_width=False.
+    # So we can control the size by setting graph.attr(size="...")? No, that's inches.
+    # Best bet: The user can scroll if it's big.
+    
+    st.caption(f"Use the slider above to zoom. Current View Width: {zoom_level}px equivalent.")
 
     st.divider()
 
