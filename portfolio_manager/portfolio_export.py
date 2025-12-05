@@ -534,7 +534,9 @@ def add_portfolio_ranking_slide(prs, sites, index=None):
 
 def add_capacity_slide(prs, site_data, replacements):
     """Add Capacity Trajectory slide."""
-    from .pptx_export import generate_capacity_trajectory_chart, CapacityTrajectory
+    from .pptx_export import generate_capacity_trajectory_chart, CapacityTrajectory, PhaseData, convert_phase_data
+    import tempfile
+    import os
     
     blank_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(blank_layout)
@@ -547,10 +549,36 @@ def add_capacity_slide(prs, site_data, replacements):
                       site_data.get('target_mw', 600),
                       site_data.get('phase1_mw'),
                       site_data.get('start_year', 2028)))
+    
+    # Extract Phases
+    phases = []
+    phase_data = site_data.get('phases', [])
+    if phase_data:
+        for idx, pd in enumerate(phase_data, 1):
+            if isinstance(pd, dict):
+                converted_pd = convert_phase_data(pd)
+                if 'phase_num' not in converted_pd:
+                    converted_pd['phase_num'] = idx
+                phases.append(PhaseData(**converted_pd))
+            else:
+                phases.append(pd)
                       
-    img_stream = generate_capacity_trajectory_chart(trajectory)
-    if img_stream:
-        slide.shapes.add_picture(img_stream, Inches(0.5), Inches(1.5), Inches(12.33), Inches(5.5))
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+        chart_path = tmp.name
+        
+    try:
+        generate_capacity_trajectory_chart(
+            trajectory, 
+            site_data.get('name', 'Site'), 
+            chart_path, 
+            phases=phases
+        )
+        slide.shapes.add_picture(chart_path, Inches(0.5), Inches(1.5), Inches(12.33), Inches(5.5))
+    except Exception as e:
+        print(f"[ERROR] Failed to generate capacity chart: {e}")
+    finally:
+        if os.path.exists(chart_path):
+            os.unlink(chart_path)
 
 
 def add_infrastructure_slide(prs, site_data, replacements):
@@ -577,15 +605,29 @@ def add_infrastructure_slide(prs, site_data, replacements):
 def add_market_slide(prs, site_data, replacements):
     """Add Market Analysis slide."""
     from .pptx_export import generate_market_analysis_chart, add_market_text
+    import tempfile
+    import os
     
     blank_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(blank_layout)
     add_header_bar(slide, "Market Analysis", Inches, Pt, RGBColor)
     
     # Chart
-    img_stream = generate_market_analysis_chart(site_data)
-    if img_stream:
-        slide.shapes.add_picture(img_stream, Inches(0.5), Inches(1.5), Inches(6.0), Inches(4.5))
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+        chart_path = tmp.name
+        
+    try:
+        generate_market_analysis_chart(
+            site_data, 
+            site_data.get('name', 'Site'), 
+            chart_path
+        )
+        slide.shapes.add_picture(chart_path, Inches(0.5), Inches(1.5), Inches(6.0), Inches(4.5))
+    except Exception as e:
+        print(f"[ERROR] Failed to generate market chart: {e}")
+    finally:
+        if os.path.exists(chart_path):
+            os.unlink(chart_path)
         
     # Text
     add_market_text(slide, site_data)
@@ -594,6 +636,8 @@ def add_market_slide(prs, site_data, replacements):
 def add_score_slide(prs, site_data, replacements):
     """Add Score Analysis slide."""
     from .pptx_export import generate_score_summary_chart, add_score_breakdown_text, ScoreAnalysis
+    import tempfile
+    import os
     
     blank_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(blank_layout)
@@ -606,9 +650,21 @@ def add_score_slide(prs, site_data, replacements):
     
     if score_data:
         # Chart
-        img_stream = generate_score_summary_chart(score_data)
-        if img_stream:
-            slide.shapes.add_picture(img_stream, Inches(0.5), Inches(1.5), Inches(6.0), Inches(4.5))
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+            chart_path = tmp.name
+            
+        try:
+            generate_score_summary_chart(
+                score_data, 
+                site_data.get('name', 'Site'), 
+                chart_path
+            )
+            slide.shapes.add_picture(chart_path, Inches(0.5), Inches(1.5), Inches(6.0), Inches(4.5))
+        except Exception as e:
+            print(f"[ERROR] Failed to generate score chart: {e}")
+        finally:
+            if os.path.exists(chart_path):
+                os.unlink(chart_path)
             
         # Text
         add_score_breakdown_text(slide, score_data)
