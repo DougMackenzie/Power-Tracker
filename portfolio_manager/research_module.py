@@ -163,7 +163,7 @@ def calculate_bottoms_up_demand(year, cowos_wpm):
 # =============================================================================
 
 def show_research_module():
-    st.title("🔬 Power Research Framework (v2.5)")
+    st.title("🔬 Power Research Framework (v2.8)")
     st.markdown("Dynamic analysis of AI power demand vs. utility supply constraints.")
 
     # --- Sidebar Controls ---
@@ -213,7 +213,7 @@ def show_bottoms_up_build():
     st.markdown("Deriving **Global** power demand from physical semiconductor supply chain constraints (CoWoS).")
     
     # Controls
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         year = st.slider("Select Year", 2024, 2030, 2027)
         # Default to 100k if year not in baseline, but now baseline covers all slider years
@@ -224,13 +224,28 @@ def show_bottoms_up_build():
     with col2:
         tdp = st.number_input("Avg Chip TDP (kW)", value=1.0, step=0.1)
         pue = st.number_input("Avg Data Center PUE", value=1.3, step=0.1)
+        
+    with col3:
+        utilization = st.slider("Fleet Utilization (%)", 40, 100, 70, help="Research assumes 60-80%") / 100.0
+        overhead = st.number_input("Server Overhead (x)", value=1.45, step=0.05, help="Non-GPU power (CPU, storage, net). Research assumes 1.45x")
     
     # Calculate Global
     annual_wafers = cowos_wpm * 12
     total_dies = annual_wafers * CONVERSION_FACTORS['dies_per_wafer']
     good_dies = total_dies * CONVERSION_FACTORS['yield']
-    annual_chip_power_gw = (good_dies * tdp) / 1e6
-    annual_dc_power_gw = annual_chip_power_gw * pue
+    
+    # Power Calculation
+    # 1. Theoretical Max GPU Power
+    theoretical_gpu_power_gw = (good_dies * tdp) / 1e6
+    
+    # 2. Actual GPU Power (Utilization)
+    actual_gpu_power_gw = theoretical_gpu_power_gw * utilization
+    
+    # 3. Total IT Load (Server Overhead)
+    total_it_load_gw = actual_gpu_power_gw * overhead
+    
+    # 4. Total Facility Load (PUE)
+    annual_dc_power_gw = total_it_load_gw * pue
     
     # Calculate US Stack and Domestic
     us_stack_share = 0.75 # ~75%
@@ -242,11 +257,12 @@ def show_bottoms_up_build():
     # Display Flow
     st.markdown("### Conversion Logic (Global)")
     
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("1. Wafer Supply", f"{annual_wafers/1e3:.1f}K", "Annual Wafers")
-    c2.metric("2. Chip Yield", f"{good_dies/1e6:.1f}M", f"Good Dies (@{CONVERSION_FACTORS['yield']*100:.0f}%)")
-    c3.metric("3. Global IT Load", f"{annual_chip_power_gw:.1f} GW", f"@{tdp} kW/chip")
-    c4.metric("4. Global Facility Load", f"{annual_dc_power_gw:.1f} GW", f"PUE {pue}")
+    c2.metric("2. Chip Yield", f"{good_dies/1e6:.1f}M", f"Good Dies")
+    c3.metric("3. GPU Power", f"{actual_gpu_power_gw:.1f} GW", f"@{utilization*100:.0f}% Util")
+    c4.metric("4. Total IT Load", f"{total_it_load_gw:.1f} GW", f"{overhead}x Overhead")
+    c5.metric("5. Facility Load", f"{annual_dc_power_gw:.1f} GW", f"PUE {pue}")
     
     st.markdown("### 🇺🇸 US Specific Impact")
     st.info(f"""
@@ -263,8 +279,9 @@ def show_bottoms_up_build():
     **Calculation Path:**
     1. **{cowos_wpm:,}** Wafers/Month × 12 = **{annual_wafers:,}** Wafers/Year
     2. × **{CONVERSION_FACTORS['dies_per_wafer']}** Dies/Wafer × **{CONVERSION_FACTORS['yield']*100}%** Yield = **{good_dies:,.0f}** AI Accelerators
-    3. × **{tdp}** kW/Chip = **{annual_chip_power_gw*1e6:,.0f}** kW IT Load
-    4. × **{pue}** PUE = **{annual_dc_power_gw:.2f}** GW Total Facility Load (Global)
+    3. × **{tdp}** kW/Chip × **{utilization*100:.0f}%** Utilization = **{actual_gpu_power_gw*1e6:,.0f}** kW GPU Load
+    4. × **{overhead}x** Server Overhead = **{total_it_load_gw*1e6:,.0f}** kW Total IT Load
+    5. × **{pue}** PUE = **{annual_dc_power_gw:.2f}** GW Total Facility Load (Global)
     """)
 
     st.markdown("---")
