@@ -242,7 +242,7 @@ class GeminiClient:
         self.model = genai.GenerativeModel(model)
         self.chat = None
     
-    def start_chat(self, system_prompt: str, history: List[Dict] = None):
+    def start_chat(self, system_prompt: str, history: List[Dict] = None, use_search: bool = False):
         """Start or reset chat with system context."""
         # Gemini handles system prompt differently - we prepend it to first message
         self.system_prompt = system_prompt
@@ -254,7 +254,23 @@ class GeminiClient:
                 role = "user" if msg["role"] == "user" else "model"
                 gemini_history.append({"role": role, "parts": [msg["content"]]})
         
-        self.chat = self.model.start_chat(history=gemini_history)
+        # Configure tools
+        tools = []
+        if use_search:
+            tools = [{'google_search_retrieval': {}}]
+            
+        # Re-initialize model with tools if needed, or just pass to start_chat?
+        # For Gemini, tools are passed to GenerativeModel constructor or start_chat doesn't support them directly in all versions.
+        # Best practice: create a new model instance or pass tools to start_chat if supported.
+        # Checking latest API: tools are passed to GenerativeModel.
+        
+        if use_search:
+            # Create a temporary model instance with tools enabled
+            model_with_tools = genai.GenerativeModel(self.model.model_name, tools=tools)
+            self.chat = model_with_tools.start_chat(history=gemini_history)
+        else:
+            self.chat = self.model.start_chat(history=gemini_history)
+            
         self.first_message = True
     
     def send_message(self, message: str) -> str:

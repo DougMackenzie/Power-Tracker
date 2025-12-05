@@ -199,25 +199,58 @@ class UtilityResearchAgent:
             'sources': sources
         }
 
+    def research_with_grounding(self, utility: str, state: str, parent_co: str) -> Dict:
+        """
+        Use Google Search Grounding (Gemini) for deep research.
+        This offloads the search and retrieval to Google's infrastructure.
+        """
+        print(f"Running grounded research for {utility} ({state})...")
+        
+        prompt = f"""
+        Perform deep research on the utility company **{utility}** (Parent Company: {parent_co}) in **{state}**.
+        
+        I need a detailed report on the following topics:
+        
+        1. **Queue & Interconnection**: What is the current interconnection queue backlog? What are the timelines for large load studies?
+        2. **Capacity & Generation**: What is the status of their latest Integrated Resource Plan (IRP)? Are there RFPs for new generation? What is the available capacity?
+        3. **Rate Cases**: Are there recent or upcoming rate cases affecting industrial/data center customers? What are the estimated rates?
+        4. **Data Center Activity**: Are there specific tariffs or agreements for data centers? Any known hyperscaler projects?
+        5. **Transmission Projects**: What major transmission upgrades are planned by {parent_co} in {state}?
+        6. **Regulatory Filings**: Any major dockets regarding environmental permitting or natural gas facilities?
+        
+        For each topic, provide a detailed summary with specific numbers (MW, $, dates) and cite your sources.
+        
+        Format the output as a JSON object with keys: 'queue_and_interconnection', 'capacity_and_generation', 'rate_cases', 'data_center_specific', 'transmission_projects', 'regulatory_filings'.
+        Each key should contain an object with 'summary' (string) and 'sources' (list of objects with 'title' and 'url').
+        """
+        
+        try:
+            # Enable search tool
+            self.client.start_chat("You are an expert utility researcher.", use_search=True)
+            response = self.client.send_message(prompt)
+            
+            # Parse JSON from response
+            import re
+            json_match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
+            if json_match:
+                data = json.loads(json_match.group(1))
+                return data
+            else:
+                # Fallback if no JSON found - wrap text in generic structure
+                return {
+                    'queue_and_interconnection': {'summary': response, 'sources': []}
+                }
+                
+        except Exception as e:
+            print(f"Grounded research error: {e}")
+            return {}
+
     def run_full_research(self, utility: str, state: str) -> Dict:
         """Run full research suite for a utility."""
         
         # 1. Identify Parent Company
         parent_co = self.identify_parent_company(utility)
         print(f"Identified parent company: {parent_co}")
-        
-        # Generate queries (now including parent company context)
-        # We'll manually inject parent company into queries for now or update state_analysis later
-        # For now, let's just append parent company to the utility name for some queries
-        
-        all_queries = generate_utility_research_queries(utility, state)
-        
-        # Add parent company queries if different
-        if parent_co and parent_co.lower() != utility.lower():
-            parent_queries = generate_utility_research_queries(parent_co, state)
-            for topic, queries in parent_queries.items():
-                if topic in all_queries:
-                    all_queries[topic].extend(queries)
         
         results = {
             'utility': utility,
@@ -227,13 +260,33 @@ class UtilityResearchAgent:
             'topics': {}
         }
         
+        # USE GOOGLE SEARCH GROUNDING IF AVAILABLE (Gemini)
+        if self.provider == "gemini":
+            grounded_results = self.research_with_grounding(utility, state, parent_co)
+            if grounded_results:
+                results['topics'] = grounded_results
+                return results
+            # If grounding fails, fall back to manual loop
+        
+        # MANUAL LOOP (Fallback or for Claude)
+        
+        # Generate queries
+        all_queries = generate_utility_research_queries(utility, state)
+        
+        # Add parent company queries if different
+        if parent_co and parent_co.lower() != utility.lower():
+            parent_queries = generate_utility_research_queries(parent_co, state)
+            for topic, queries in parent_queries.items():
+                if topic in all_queries:
+                    all_queries[topic].extend(queries)
+        
         topics_to_research = [
             'queue_and_interconnection',
             'capacity_and_generation',
             'rate_cases',
             'data_center_specific',
-            'transmission_projects', # Added
-            'regulatory_filings'     # Added
+            'transmission_projects',
+            'regulatory_filings'
         ]
         
         for topic in topics_to_research:
