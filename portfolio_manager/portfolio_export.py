@@ -161,10 +161,30 @@ def generate_portfolio_export(
     # Title Slide
     layout = master_prs.slide_layouts[0] 
     slide = master_prs.slides.add_slide(layout)
-    title = slide.shapes.title
-    subtitle = slide.placeholders[1]
-    title.text = "Portfolio Overview"
-    subtitle.text = f"Generated: {datetime.now().strftime('%B %d, %Y')}"
+    
+    # Set Title
+    if slide.shapes.title:
+        slide.shapes.title.text = "Portfolio Overview"
+    
+    # Set Subtitle (handle missing placeholder)
+    subtitle_text = f"Generated: {datetime.now().strftime('%B %d, %Y')}"
+    if len(slide.placeholders) > 1:
+        try:
+            slide.placeholders[1].text = subtitle_text
+        except:
+            pass # Fallback to textbox
+    else:
+        # Fallback: Create a textbox for subtitle
+        left = Inches(1)
+        top = Inches(4)
+        width = Inches(8)
+        height = Inches(1)
+        txBox = slide.shapes.add_textbox(left, top, width, height)
+        p = txBox.text_frame.paragraphs[0]
+        p.text = subtitle_text
+        p.font.size = Pt(24)
+        p.font.color.rgb = RGBColor(128, 128, 128)
+        p.alignment = PP_ALIGN.CENTER
     
     # Metrics Slide
     add_portfolio_metrics_slide(master_prs, sites)
