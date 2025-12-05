@@ -748,7 +748,8 @@ def determine_stage(site: Dict) -> str:
     return 'Pre-Development'
 
 # =============================================================================
-# STREAMLIT APP
+# =============================================================================
+# STREAMLIT APP (Trigger Refresh)
 # =============================================================================
 
 from datetime import datetime, timedelta, timezone
