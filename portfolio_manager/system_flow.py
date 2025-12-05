@@ -3,250 +3,175 @@ import graphviz
 
 def show_system_flow():
     """
-    Displays a comprehensive interactive flow diagram of the application's logic and architecture.
+    Displays a comprehensive 'Command Center' view of the application's logic, architecture, and data flow.
     """
-    st.title("🧩 System Architecture & Logic Flow")
-    st.markdown("""
-    This module visualizes the complex logic flow of the Antigravity Power Tracker, 
-    from deep research to portfolio management and agentic capabilities.
-    **Click on the buttons below the diagram to explore the complexity of each module.**
-    """)
-
-    with st.expander("📋 Comprehensive System Assessment", expanded=True):
-        st.markdown("""
-        ### Current State Assessment
-        The **Antigravity Power Tracker** has evolved into a sophisticated decision-support platform that integrates macro-economic research with micro-level site execution.
-        
-        **Key Strengths:**
-        -   **Vertical Integration**: Connects global supply chain constraints (CoWoS/Chips) directly to local site feasibility.
-        -   **Agentic Automation**: Utilizes LLMs to automate labor-intensive tasks like VDR analysis and utility research.
-        -   **Dynamic Scoring**: The multi-dimensional scoring engine (`State * Power * Execution`) allows for nuanced portfolio ranking.
-        -   **Data Flexibility**: Hybrid schema (Structured Columns + JSON Blobs) enables rapid iteration without database migrations.
-        
-        **System Maturity:**
-        -   **Research Layer**: 🟢 Mature. Detailed bottom-up build and scenario modeling.
-        -   **Data Layer**: 🟢 Mature. Robust Google Sheets integration with caching.
-        -   **Agent Layer**: 🟡 Evolving. VDR processing and Utility Agents are functional but improving.
-        -   **UI/UX**: 🟡 Good. Navigation is expanding; this Flow Module helps manage complexity.
-        """)
-
-    # 1. Visual Flow Diagram using Graphviz
-    st.subheader("High-Level Logic Flow")
+    st.title("🧩 Network Operations Command Center")
+    st.markdown("### System Architecture & Logic Flow")
     
-    # Create a graphviz directed graph
+    # --- 1. System Status Dashboard (Command Center Feel) ---
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("🏭 Active Sites", f"{len(st.session_state.db.get('sites', {}))}", delta="Live Database")
+    with col2:
+        st.metric("🤖 AI Agents", "3 Active", delta="Research, VDR, Profiler")
+    with col3:
+        st.metric("📊 Program Tracker", "Integrated", delta="Fee & Prob. Logic")
+    with col4:
+        st.metric("📤 Export Modules", "PPTX / PDF", delta="Ready")
+        
+    st.divider()
+
+    # --- 2. Comprehensive Network Diagram ---
+    st.subheader("🕸️ Structural Framework & Data Flow")
+    
+    # Create a complex graphviz directed graph
     graph = graphviz.Digraph()
     graph.attr(rankdir='LR')
-    graph.attr('node', shape='box', style='filled', fillcolor='#f0f2f6', fontname='Helvetica')
+    graph.attr('node', shape='box', style='filled, rounded', fontname='Helvetica', fontsize='10')
+    graph.attr('edge', fontname='Helvetica', fontsize='9')
     
-    # Define Nodes
-    graph.node('Research', 'Deep Research\nFramework', fillcolor='#e1f5fe')
-    graph.node('SupplyDemand', 'Supply vs Demand\nAnalysis', fillcolor='#e1f5fe')
-    graph.node('Agents', 'Agentic\nCapabilities', fillcolor='#fff9c4')
-    graph.node('Sites', 'Site Database\n(Core)', fillcolor='#e8f5e9')
-    graph.node('Scoring', 'State & Site\nScoring', fillcolor='#f3e5f5')
-    graph.node('Portfolio', 'Portfolio\nManagement', fillcolor='#fff3e0')
+    # -- Cluster: INPUTS --
+    with graph.subgraph(name='cluster_inputs') as c:
+        c.attr(label='INPUT SOURCES', style='dashed', color='#90caf9', bgcolor='#e3f2fd')
+        c.node('HumanInput', '👤 Human Input\n(Forms & Knowledge)', fillcolor='#bbdefb')
+        c.node('AIChat', '💬 AI Chat\n(New Site Gen)', fillcolor='#bbdefb')
+        c.node('VDR', '📁 VDR Upload\n(PDF/Excel Parsing)', fillcolor='#bbdefb')
+        c.node('UtilityAgent', '🕷️ Utility Agent\n(Web Scraping)', fillcolor='#bbdefb')
+        c.node('MacroResearch', '🔬 Macro Research\n(Supply/Demand)', fillcolor='#bbdefb')
+
+    # -- Cluster: CORE DATA --
+    with graph.subgraph(name='cluster_data') as c:
+        c.attr(label='CORE DATA LAYER', style='dashed', color='#a5d6a7', bgcolor='#e8f5e9')
+        c.node('SiteDB', '🏭 Site Database\n(Google Sheets)', fillcolor='#c8e6c9', shape='cylinder')
+        c.node('StateDB', '🗺️ State Database\n(Policy/Tax/Cost)', fillcolor='#c8e6c9', shape='cylinder')
+        c.node('ProfileData', '📝 Site Profile\n(Structured + JSON)', fillcolor='#c8e6c9')
+
+    # -- Cluster: LOGIC ENGINE --
+    with graph.subgraph(name='cluster_logic') as c:
+        c.attr(label='LOGIC & PROCESSING', style='dashed', color='#ffe082', bgcolor='#fff8e1')
+        c.node('Scoring', '⭐ Scoring Engine\n(State*Power*Exec)', fillcolor='#ffecb3')
+        c.node('ProgramLogic', '📈 Program Tracker\n(Prob. & Fees)', fillcolor='#ffecb3')
+        c.node('GapAnalysis', '⚖️ Gap Analysis\n(Supply vs Demand)', fillcolor='#ffecb3')
+        c.node('ProfileBuilder', '🏗️ Profile Builder\n(Merge Sources)', fillcolor='#ffecb3')
+
+    # -- Cluster: OUTPUTS --
+    with graph.subgraph(name='cluster_outputs') as c:
+        c.attr(label='OUTPUTS & VISUALIZATION', style='dashed', color='#f48fb1', bgcolor='#fce4ec')
+        c.node('Dashboard', '📊 Main Dashboard\n(KPIs & Maps)', fillcolor='#f8bbd0')
+        c.node('PPTX', '📽️ PPT Export\n(Slide Generation)', fillcolor='#f8bbd0')
+        c.node('Rankings', '🏆 Rankings View\n(Weighted Lists)', fillcolor='#f8bbd0')
+        c.node('PDFReport', '📄 PDF Reports\n(Site Summaries)', fillcolor='#f8bbd0')
+
+    # -- EDGES (Connections) --
+    # Inputs -> Logic/Data
+    graph.edge('HumanInput', 'SiteDB', label=' manual entry')
+    graph.edge('AIChat', 'SiteDB', label=' creates sites')
+    graph.edge('VDR', 'ProfileBuilder', label=' extracts data')
+    graph.edge('UtilityAgent', 'StateDB', label=' updates IRPs')
+    graph.edge('MacroResearch', 'GapAnalysis', label=' demand curves')
     
-    # Define Edges
-    graph.edge('Research', 'SupplyDemand', label=' informs')
-    graph.edge('SupplyDemand', 'Scoring', label=' context')
-    graph.edge('Agents', 'Sites', label=' enriches')
-    graph.edge('Agents', 'Research', label=' automates')
-    graph.edge('Sites', 'Scoring', label=' data')
-    graph.edge('Scoring', 'Portfolio', label=' ranks')
-    graph.edge('Sites', 'Portfolio', label=' feeds')
+    # Logic <-> Data
+    graph.edge('SiteDB', 'ProfileBuilder', label=' raw data')
+    graph.edge('ProfileBuilder', 'ProfileData', label=' structured obj')
+    graph.edge('ProfileData', 'Scoring', label=' attributes')
+    graph.edge('StateDB', 'Scoring', label=' multipliers')
+    graph.edge('SiteDB', 'ProgramLogic', label=' stage gates')
+    graph.edge('ProgramLogic', 'SiteDB', label=' probability')
+    
+    # Logic -> Outputs
+    graph.edge('Scoring', 'Rankings', label=' scores')
+    graph.edge('GapAnalysis', 'Dashboard', label=' market context')
+    graph.edge('ProfileData', 'PPTX', label=' slide content')
+    graph.edge('ProfileData', 'PDFReport', label=' report content')
+    graph.edge('ProgramLogic', 'Dashboard', label=' portfolio stats')
     
     st.graphviz_chart(graph, use_container_width=True)
 
     st.divider()
 
-    # 2. Interactive Module Explorer
-    st.subheader("🔍 Explore Module Complexity")
+    # --- 3. Interactive Deep Dive (Command Center Controls) ---
+    st.subheader("🔍 System Component Inspector")
     
-    # Layout for buttons
-    col1, col2, col3 = st.columns(3)
-    
-    selected_module = None
-    
-    with col1:
-        if st.button("🔬 Deep Research Framework", use_container_width=True):
-            selected_module = "Research"
-        if st.button("⚖️ Supply vs Demand Analysis", use_container_width=True):
-            selected_module = "SupplyDemand"
-            
-    with col2:
-        if st.button("🤖 Agentic Capabilities", use_container_width=True):
-            selected_module = "Agents"
-        if st.button("🏭 Site Database", use_container_width=True):
-            selected_module = "Sites"
-            
-    with col3:
-        if st.button("⭐ State & Site Scoring", use_container_width=True):
-            selected_module = "Scoring"
-        if st.button("📊 Portfolio Management", use_container_width=True):
-            selected_module = "Portfolio"
+    tabs = st.tabs([
+        "👤 Human & AI Inputs", 
+        "💾 Core Data Architecture", 
+        "⚙️ Logic & Processing", 
+        "📤 Outputs & Reporting"
+    ])
 
-    # Display Details based on selection
-    if selected_module:
-        display_module_details(selected_module)
-    else:
-        st.info("Select a module above to view its internal logic and complexity.")
-
-def display_module_details(module_key):
-    """Displays detailed information about the selected module."""
-    
-    if module_key == "Research":
-        st.markdown("### 🔬 Deep Research Framework")
-        st.info("The foundational layer that drives market assumptions.")
-        
-        tab1, tab2, tab3 = st.tabs(["Logic Flow", "Key Files", "Capabilities"])
-        
-        with tab1:
-            st.markdown("""
-            **Logic Flow:**
-            1.  **Macro Analysis**: Aggregates global data (e.g., CoWoS capacity, Chip production).
-            2.  **Bottom-Up Build**: Converts chip supply -> Server racks -> MW demand.
-            3.  **Regional Allocation**: Distributes global demand to US regions based on market share.
-            4.  **Forecasting**: Projects demand curves (Linear, Exponential, S-Curve) to 2030+.
+    with tabs[0]:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### 👤 Human Input")
+            st.info("""
+            **Role**: The primary source of truth for deal-specific nuances.
+            - **Forms**: `site_profile_builder.py` generates dynamic forms for Ownership, Utilities, and Risks.
+            - **Overrides**: Human input always takes precedence over AI/Scraped data.
+            - **Fields**: Captures soft data like "Willingness to Sell" or "Political Support".
             """)
-            
-        with tab2:
-            st.code("""
-            portfolio_manager/research_module.py
-            portfolio_manager/research_data.py
-            """, language="text")
-            
-        with tab3:
-            st.markdown("""
-            -   **CoWoS Capacity Tracking**: TSMC/Intel/Samsung wafer capacity.
-            -   **H100/Blackwell Conversion**: Chips per rack, KW per rack calculations.
-            -   **Scenario Modeling**: Conservative vs Aggressive adoption rates.
+        with col2:
+            st.markdown("#### 🤖 AI & VDR Agents")
+            st.info("""
+            **Role**: Automation of data entry and research.
+            - **VDR Processor**: Ingests PDFs, uses OCR + LLM to extract 40+ fields (Phases, CapEx).
+            - **Utility Agent**: Scrapes ISO/Utility sites for Queue data and Tariffs.
+            - **Chat Bot**: Can instantiate new site objects directly from conversation.
             """)
 
-    elif module_key == "SupplyDemand":
-        st.markdown("### ⚖️ Supply vs Demand Analysis")
-        st.info("Matches projected AI power demand against available utility supply.")
-        
-        tab1, tab2 = st.tabs(["Logic Flow", "Key Metrics"])
-        
-        with tab1:
-            st.markdown("""
-            **Logic Flow:**
-            1.  **Demand Input**: Takes outputs from the Research Framework.
-            2.  **Supply Input**: Ingests utility IRPs (Integrated Resource Plans) and queue data.
-            3.  **Gap Analysis**: Identifies regions with power deficits vs surplus.
-            4.  **Constraint Modeling**: Factors in transmission congestion and timeline risks.
+    with tabs[1]:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### 🏭 Site Database")
+            st.info("""
+            **Architecture**: Hybrid SQL-like + NoSQL.
+            - **Storage**: Google Sheets (for easy access/backup).
+            - **Schema**: 
+                - Fixed Columns: ID, Name, MW, State (for fast filtering).
+                - JSON Blobs: `phases_json`, `risks_json` (for flexible, nested data).
             """)
-            
-        with tab2:
-            st.markdown("""
-            -   **Demand/Supply Gap (GW)**
-            -   **Time-to-Power (Months)**
-            -   **Interconnection Queue Depth**
+        with col2:
+            st.markdown("#### 📝 Site Profile Object")
+            st.info("""
+            **Role**: The unified data model (`SiteProfileData`).
+            - **Purpose**: Decouples the UI/Export logic from the raw database storage.
+            - **Builder Pattern**: `SiteProfileBuilder` merges DB data + AI Research + Human Input into this single object.
             """)
 
-    elif module_key == "Agents":
-        st.markdown("### 🤖 Agentic Capabilities")
-        st.info("AI-driven automation for data gathering and processing.")
-        
-        tab1, tab2, tab3 = st.tabs(["Agents", "Workflows", "Files"])
-        
-        with tab1:
-            st.markdown("""
-            -   **Utility Research Agent**: Scrapes utility websites for tariffs, IRPs, and queue data.
-            -   **VDR Processor**: Ingests PDFs/Excel files from Virtual Data Rooms and extracts structured site data.
-            -   **Site Profiler**: Auto-generates site descriptions and SWOT analyses using LLMs.
+    with tabs[2]:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### ⭐ Scoring Engine")
+            st.info("""
+            **Logic**: Multi-factor weighted algorithm.
+            - **Formula**: `(State * 20%) + (Power * 25%) + (Exec * 15%) ...`
+            - **Dynamic**: Weights can be adjusted in real-time via the Rankings page.
+            - **Context**: Pulls state-level data (Tax, Energy Cost) to baseline the site score.
             """)
-            
-        with tab2:
-            st.markdown("""
-            **VDR Workflow:**
-            1.  Upload PDF/Doc.
-            2.  OCR & Text Extraction.
-            3.  LLM Extraction (JSON Schema).
-            4.  Validation & DB Insert.
-            """)
-            
-        with tab3:
-            st.code("""
-            portfolio_manager/utility_agent.py
-            portfolio_manager/llm_integration.py
-            portfolio_manager/vdr_processor.py
-            """, language="text")
-
-    elif module_key == "Sites":
-        st.markdown("### 🏭 Site Database (Core)")
-        st.info("The central repository for all site-specific data.")
-        
-        tab1, tab2 = st.tabs(["Data Structure", "Features"])
-        
-        with tab1:
-            st.markdown("""
-            **Schema:**
-            -   **Core**: ID, Name, Location (Lat/Lon), Acreage.
-            -   **Power**: Target MW, Utility, Voltage, Distance to Sub.
-            -   **Commercial**: Land Status, Price, Contract Terms.
-            -   **JSON Blobs**: Flexible storage for Phases, Risks, Opportunities.
-            """)
-            
-        with tab2:
-            st.markdown("""
-            -   **Google Sheets Integration**: Two-way sync for easy editing.
-            -   **Geospatial Indexing**: Lat/Lon support for mapping.
-            -   **Document Linking**: Association with VDR files.
+        with col2:
+            st.markdown("#### 📈 Program Tracker")
+            st.info("""
+            **Logic**: Probability & Fee Management.
+            - **Probability**: Calculated based on completed "Stage Gates" (Site Control, Power, Zoning).
+            - **Weighted Fee**: `Total Fee Potential * Probability`.
+            - **Drivers**: Configurable weights for each stage (e.g., Power > Zoning).
             """)
 
-    elif module_key == "Scoring":
-        st.markdown("### ⭐ State & Site Scoring")
-        st.info("Multi-dimensional ranking engine to prioritize opportunities.")
-        
-        tab1, tab2, tab3 = st.tabs(["Scoring Logic", "Weights", "Files"])
-        
-        with tab1:
-            st.markdown("""
-            **Algorithm:**
-            `Score = (State * W1) + (Power * W2) + (Relationship * W3) + ...`
-            
-            -   **State Score**: Policy, Energy Cost, Tax Incentives.
-            -   **Power Score**: Timeline, Voltage, Queue Position.
-            -   **Execution Score**: Developer experience, Capital status.
+    with tabs[3]:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### 📽️ PPT Export")
+            st.info("""
+            **Engine**: `python-pptx` based generator.
+            - **Template**: Uses a corporate master slide deck.
+            - **Mapping**: Maps `SiteProfileData` fields to specific placeholders on Slides 2, 6, 8.
+            - **Charts**: Generates native PowerPoint charts for Load Ramps and Scoring Radar.
             """)
-            
-        with tab2:
-            st.markdown("""
-            **Adjustable Weights:**
-            -   State Market: 20%
-            -   Power Pathway: 25%
-            -   Relationship: 20%
-            -   Execution: 15%
+        with col2:
+            st.markdown("#### 📊 Dashboard & Reports")
+            st.info("""
+            **Visualization**: Streamlit + Plotly.
+            - **Maps**: Geospatial scatter plots of sites vs. substations.
+            - **PDFs**: `fpdf2` generates quick 1-pagers for internal review.
+            - **Rankings**: Interactive data tables with progress bars for scores.
             """)
-            
-        with tab3:
-            st.code("""
-            portfolio_manager/state_analysis.py
-            portfolio_manager/streamlit_app.py (calculate_site_score)
-            """, language="text")
 
-    elif module_key == "Portfolio":
-        st.markdown("### 📊 Portfolio Management")
-        st.info("High-level tracking of program health, fees, and probability.")
-        
-        tab1, tab2 = st.tabs(["Metrics", "Logic"])
-        
-        with tab1:
-            st.markdown("""
-            -   **Total Fee Potential**: Sum of all potential fees.
-            -   **Weighted Fee**: Fee * Probability.
-            -   **MW Pipeline**: Total capacity in various stages.
-            """)
-            
-        with tab2:
-            st.markdown("""
-            **Stage Gates:**
-            1.  Site Control
-            2.  Power Secured
-            3.  Zoning/Permitting
-            4.  Marketing/Sales
-            
-            **Probability Calculation**:
-            Derived from stage completion and risk factors.
-            """)
