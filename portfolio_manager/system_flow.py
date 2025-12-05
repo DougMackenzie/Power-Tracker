@@ -116,8 +116,11 @@ def show_system_flow():
         c.attr(label='LAYER 2: PROCESSING & BUILDERS', style='dashed', color='#00e5ff', fontcolor='#00e5ff')
         
         c.node('Builder', html_node('Builder', '🏗️ SiteProfileBuilder', '.map_app_to_profile()', '#01579b'))
-        c.node('Tracker', html_node('Tracker', '📈 ProgramTracker', '.calculate_probability()', '#01579b'))
+        c.node('Tracker', html_node('Tracker', '📈 ProgramTracker', 'Weighted Probabilities', '#01579b'))
         c.node('Scorer', html_node('Scorer', '⭐ ScoringEngine', '.calculate_site_score()', '#01579b'))
+        
+        # New Framework Node
+        c.node('ProbFramework', html_node('ProbFramework', '⚖️ Probability Framework', '(Drivers & Multipliers)', '#006064'))
 
     # -- Cluster: DATA LAYER --
     with graph.subgraph(name='cluster_data') as c:
@@ -140,12 +143,17 @@ def show_system_flow():
     graph.edge('SupplyDemand', 'Scorer', label=' state_scoring_framework', color='#ffffff')
     
     graph.edge('Human', 'Builder', label=' manual_overrides', color='#00ff00')
+    graph.edge('Human', 'Tracker', label=' stage_gates_input', color='#00ff00') # New Human Input
+    
     graph.edge('VDR', 'Builder', label=' extracted_json', color='#ff0000', style='dashed')
     graph.edge('Chat', 'Builder', label=' new_site_obj', color='#ff0000', style='dashed')
     graph.edge('LocAgent', 'Builder', label=' fills_gaps', color='#ff0000', style='dashed')
     graph.edge('UtilAgent', 'Scorer', label=' iso_queue_data', color='#ff0000', style='dashed')
     
     graph.edge('Builder', 'ProfileObj', label=' instantiates', color='#00e5ff')
+    
+    # Framework Logic
+    graph.edge('ProbFramework', 'Tracker', label=' defines_logic', color='#ffffff', style='dotted')
     
     # Two-Way Sync: Tracker <-> ProfileObj
     # Tracker reads state from the Profile/DB and updates probability/fees
