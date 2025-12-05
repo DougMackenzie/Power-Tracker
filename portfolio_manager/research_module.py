@@ -26,35 +26,69 @@ class SupplyScenario(Enum):
     HIGH = "High Supply (Aggressive)"
 
 # Demand Trajectories (GW)
-# Based on ai_dc_forecast_tracking_v2.md and forecast_tracker.py
+# Based on Power Research Framework.pdf
+# Key benchmarks:
+# - Global 2030: 80-180 GW | 2035: 180-400 GW
+# - US Stack 2030: 95-120 GW | 2035: 180-230 GW (Scenario A)
+# - US Located: ~70% of US Stack (Domestic Deployment)
 DEMAND_DATA = {
     DemandScenario.ACCELERATION: {
         'description': "**Most Likely**: AI business case continues to scale. Reasoning inference drives exponential compute. Model sizes continue 10x/2yr scaling.",
-        'global_demand': {2024: 30, 2025: 55, 2026: 85, 2027: 120, 2028: 160, 2029: 210, 2030: 270, 2035: 500},
-        'us_tech_demand': {2024: 12, 2025: 25, 2026: 38, 2027: 50, 2028: 70, 2029: 90, 2030: 115, 2035: 230}, # From forecast_tracker.py
-        'us_located_demand': {2024: 10, 2025: 20, 2026: 30, 2027: 40, 2028: 55, 2029: 70, 2030: 90, 2035: 180}, # Assumed ~80% of US Tech initially, dropping slightly
+        'global_demand': {
+            2024: 14, 2025: 28, 2026: 50, 2027: 80, 2028: 110, 2029: 140, 
+            2030: 180, 2031: 220, 2032: 260, 2033: 300, 2034: 350, 2035: 400
+        },
+        'us_tech_demand': {
+            2024: 12, 2025: 21, 2026: 35, 2027: 55, 2028: 75, 2029: 95, 
+            2030: 115, 2031: 135, 2032: 155, 2033: 180, 2034: 205, 2035: 230
+        },
+        'us_located_demand': {
+            2024: 10, 2025: 15, 2026: 25, 2027: 39, 2028: 53, 2029: 67, 
+            2030: 81, 2031: 95, 2032: 110, 2033: 125, 2034: 143, 2035: 161
+        },
     },
     DemandScenario.PLATEAU: {
         'description': "**Bear Case**: AI business case fails to materialize. Efficiency gains outpace demand. ROI skepticism reduces investment.",
-        'global_demand': {2024: 30, 2025: 45, 2026: 60, 2027: 75, 2028: 90, 2029: 105, 2030: 120, 2035: 150},
-        'us_tech_demand': {2024: 12, 2025: 20, 2026: 28, 2027: 35, 2028: 50, 2029: 65, 2030: 85, 2035: 95},
-        'us_located_demand': {2024: 10, 2025: 16, 2026: 22, 2027: 28, 2028: 40, 2029: 50, 2030: 65, 2035: 75},
+        'global_demand': {
+            2024: 14, 2025: 24, 2026: 35, 2027: 45, 2028: 60, 2029: 80, 
+            2030: 100, 2031: 105, 2032: 110, 2033: 115, 2034: 120, 2035: 125
+        },
+        'us_tech_demand': {
+            2024: 12, 2025: 18, 2026: 24, 2027: 30, 2028: 45, 2029: 65, 
+            2030: 85, 2031: 87, 2032: 89, 2033: 91, 2034: 93, 2035: 95
+        },
+        'us_located_demand': {
+            2024: 10, 2025: 13, 2026: 17, 2027: 21, 2028: 32, 2029: 46, 
+            2030: 60, 2031: 61, 2032: 62, 2033: 64, 2034: 65, 2035: 67
+        },
     }
 }
 
 # Supply Trajectories (GW) - US Deliverable
+# Low Scenario matches "Most Likely" deficit analysis:
+# 2030 Supply ~50 GW (vs 115 GW Stack Demand = -65 GW Gap)
+# 2035 Supply ~140 GW (vs 230 GW Stack Demand = -90 GW Gap)
 SUPPLY_DATA = {
     SupplyScenario.LOW: {
         'description': "**Most Likely**: Utility delivery slippage, minimal GETs/SMR. Queue backlogs persist.",
-        'trajectory': {2024: 10, 2025: 15, 2026: 20, 2027: 25, 2028: 32, 2029: 40, 2030: 50, 2035: 140}
+        'trajectory': {
+            2024: 10, 2025: 15, 2026: 22, 2027: 30, 2028: 36, 2029: 43, 
+            2030: 50, 2031: 65, 2032: 80, 2033: 100, 2034: 120, 2035: 140
+        }
     },
     SupplyScenario.MEDIUM: {
         'description': "Moderate reform impact, some GETs adoption. Queue completion rates improve slightly.",
-        'trajectory': {2024: 10, 2025: 18, 2026: 26, 2027: 35, 2028: 48, 2029: 62, 2030: 75, 2035: 257}
+        'trajectory': {
+            2024: 10, 2025: 18, 2026: 28, 2027: 40, 2028: 55, 2029: 70, 
+            2030: 90, 2031: 115, 2032: 145, 2033: 180, 2034: 220, 2035: 257
+        }
     },
     SupplyScenario.HIGH: {
         'description': "Aggressive reforms + GETs + SMR deployment. Major policy shifts unlock capacity.",
-        'trajectory': {2024: 10, 2025: 20, 2026: 32, 2027: 45, 2028: 62, 2029: 80, 2030: 100, 2035: 418}
+        'trajectory': {
+            2024: 10, 2025: 22, 2026: 38, 2027: 55, 2028: 80, 2029: 110, 
+            2030: 150, 2031: 190, 2032: 240, 2033: 290, 2034: 350, 2035: 418
+        }
     }
 }
 
