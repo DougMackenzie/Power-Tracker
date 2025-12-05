@@ -229,6 +229,9 @@ class UtilityResearchAgent:
             self.client.start_chat("You are an expert utility researcher.", use_search=True)
             response = self.client.send_message(prompt)
             
+            # Debug: Show raw response
+            # st.expander("Raw Agent Response").write(response)
+            
             # Parse JSON from response
             import re
             json_match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
@@ -236,6 +239,13 @@ class UtilityResearchAgent:
                 data = json.loads(json_match.group(1))
                 return data
             else:
+                # Try direct parse
+                try:
+                    data = json.loads(response)
+                    return data
+                except:
+                    pass
+                    
                 # Fallback if no JSON found - wrap text in generic structure
                 return {
                     'queue_and_interconnection': {'summary': response, 'sources': []}
@@ -243,6 +253,7 @@ class UtilityResearchAgent:
                 
         except Exception as e:
             print(f"Grounded research error: {e}")
+            st.error(f"Grounded research failed: {e}")
             return {}
 
     def run_full_research(self, utility: str, state: str) -> Dict:
