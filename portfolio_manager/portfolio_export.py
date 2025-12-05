@@ -319,111 +319,145 @@ def duplicate_slide_in_place(prs, index):
     Uses the SAME LAYOUT as the source slide to preserve structure.
     """
     source = prs.slides[index]
-    # Use the same layout as the source!
     layout = source.slide_layout
     dest = prs.slides.add_slide(layout)
     
     # CRITICAL: Clear existing shapes from the new slide!
-    # The new slide inherits placeholders/shapes from the layout.
-    # Since we are copying the *final* state of the source slide (which already has these filled or removed),
-    # we must remove the defaults to avoid duplicates (e.g. "original template graphs" showing up).
     for shape in list(dest.shapes):
         sp = shape._element
         sp.getparent().remove(sp)
     
     # Copy shapes
     for shape in source.shapes:
-        # 1. Pictures (Type 13)
-        if shape.shape_type == 13: 
-            try:
-                blob = shape.image.blob
-                dest.shapes.add_picture(io.BytesIO(blob), shape.left, shape.top, shape.width, shape.height)
-            except: pass
-            
-        # 2. Tables (Type 19)
-        elif shape.shape_type == 19:
-            try:
-                rows = len(shape.table.rows)
-                cols = len(shape.table.columns)
-                new_table = dest.shapes.add_table(rows, cols, shape.left, shape.top, shape.width, shape.height).table
-                # Copy content
-                for r in range(rows):
-                    for c in range(cols):
-                        source_cell = shape.table.cell(r, c)
-                        dest_cell = new_table.cell(r, c)
-                        dest_cell.text = source_cell.text
-                        # Copy basic font props from first paragraph
-                        if source_cell.text_frame.paragraphs:
-                            p_src = source_cell.text_frame.paragraphs[0]
-                            p_dst = dest_cell.text_frame.paragraphs[0]
-                            if p_src.runs:
-                                r_src = p_src.runs[0]
-                                if p_dst.runs:
-                                    r_dst = p_dst.runs[0]
-                                    r_dst.font.size = r_src.font.size
-                                    r_dst.font.bold = r_src.font.bold
-                                    try:
-                                        r_dst.font.color.rgb = r_src.font.color.rgb
-                                    except: pass
-                                    
-                        # Copy cell fill if possible (basic solid fill)
-                        try:
-                            if source_cell.fill.type == 1: # Solid
-                                dest_cell.fill.solid()
-                                dest_cell.fill.fore_color.rgb = source_cell.fill.fore_color.rgb
-                        except: pass
-            except: pass
-            
-        # 3. AutoShapes (1) / TextBoxes (17) / Placeholders (14)
-        elif shape.shape_type == 1 or shape.shape_type == 17 or shape.shape_type == 14:
-            try:
-                # For placeholders, we treat them as auto shapes to preserve content
-                # We don't want to link them to the new layout's placeholders because that might reset them
-                shape_type = shape.auto_shape_type if hasattr(shape, 'auto_shape_type') else 1 
-                
-                new_shape = dest.shapes.add_shape(shape_type, shape.left, shape.top, shape.width, shape.height)
-                
-                # Copy text
-                if shape.has_text_frame:
-                    new_shape.text_frame.clear()
-                    for p in shape.text_frame.paragraphs:
-                        new_p = new_shape.text_frame.add_paragraph()
-                        new_p.text = p.text
-                        new_p.alignment = p.alignment
-                        new_p.level = p.level
-                        
-                        # Copy runs
-                        for r in p.runs:
-                            new_r = new_p.add_run()
-                            new_r.text = r.text
-                            new_r.font.size = r.font.size
-                            new_r.font.bold = r.font.bold
-                            new_r.font.italic = r.font.italic
-                            new_r.font.underline = r.font.underline
-                            try:
-                                new_r.font.color.rgb = r.font.color.rgb
-                            except: pass
-                            try:
-                                if r.font.color.type == 2: # Theme color
-                                    new_r.font.color.theme_color = r.font.color.theme_color
-                            except: pass
-
-                # Copy fill
-                if shape.fill.type == 1:
-                    new_shape.fill.solid()
-                    try:
-                        new_shape.fill.fore_color.rgb = shape.fill.fore_color.rgb
-                    except: pass
-                    
-                # Copy line
-                if shape.line.fill.type == 1: # Solid line
-                    try:
-                        new_shape.line.color.rgb = shape.line.color.rgb
-                        new_shape.line.width = shape.line.width
-                    except: pass
-            except: pass
+        copy_shape(shape, dest.shapes)
             
     return dest
+
+
+def copy_shape(shape, shapes_collection, group_offset=(0,0)):
+    """
+    Recursively copy a shape to a shapes collection.
+    group_offset: (left, top) adjustment for shapes inside groups.
+    """
+    # 1. Groups (Type 6)
+    if shape.shape_type == 6: 
+        # Create a new group
+        # python-pptx doesn't support creating groups easily from scratch via API
+        # We have to copy members individually.
+        # Note: This "ungroups" the group in the copy, but preserves visual appearance.
+        # To truly preserve grouping would require XML manipulation which is risky.
+        # We will copy members as individual shapes.
+        for member in shape.shapes:
+            # Adjust position by group's position
+            # Actually, member.left/top are absolute in python-pptx
+            copy_shape(member, shapes_collection)
+        return
+
+    # 2. Pictures (Type 13)
+    if shape.shape_type == 13: 
+        try:
+            blob = shape.image.blob
+            shapes_collection.add_picture(io.BytesIO(blob), shape.left, shape.top, shape.width, shape.height)
+        except: pass
+        return
+
+    # 3. Tables (Type 19)
+    if shape.shape_type == 19:
+        try:
+            rows = len(shape.table.rows)
+            cols = len(shape.table.columns)
+            new_table_shape = shapes_collection.add_table(rows, cols, shape.left, shape.top, shape.width, shape.height)
+            new_table = new_table_shape.table
+            
+            # Copy Column Widths
+            for i in range(cols):
+                new_table.columns[i].width = shape.table.columns[i].width
+            # Copy Row Heights
+            for i in range(rows):
+                new_table.rows[i].height = shape.table.rows[i].height
+                
+            # Copy content
+            for r in range(rows):
+                for c in range(cols):
+                    source_cell = shape.table.cell(r, c)
+                    dest_cell = new_table.cell(r, c)
+                    copy_text_frame(source_cell.text_frame, dest_cell.text_frame)
+                    
+                    # Copy cell fill
+                    try:
+                        if source_cell.fill.type == 1: # Solid
+                            dest_cell.fill.solid()
+                            dest_cell.fill.fore_color.rgb = source_cell.fill.fore_color.rgb
+                    except: pass
+                    
+                    # Copy borders (simplified - copying all borders is complex)
+        except: pass
+        return
+
+    # 4. AutoShapes (1) / TextBoxes (17) / Placeholders (14)
+    # Treat placeholders as shapes to preserve their content
+    if shape.shape_type in [1, 17, 14]:
+        try:
+            shape_type = shape.auto_shape_type if hasattr(shape, 'auto_shape_type') else 1 
+            new_shape = shapes_collection.add_shape(shape_type, shape.left, shape.top, shape.width, shape.height)
+            
+            # Copy Text
+            if shape.has_text_frame:
+                copy_text_frame(shape.text_frame, new_shape.text_frame)
+            
+            # Copy Fill
+            if shape.fill.type == 1:
+                new_shape.fill.solid()
+                try:
+                    new_shape.fill.fore_color.rgb = shape.fill.fore_color.rgb
+                except: pass
+                
+            # Copy Line
+            if shape.line.fill.type == 1:
+                try:
+                    new_shape.line.color.rgb = shape.line.color.rgb
+                    new_shape.line.width = shape.line.width
+                except: pass
+        except: pass
+        return
+
+
+def copy_text_frame(source_tf, dest_tf):
+    """Copy text frame content and formatting."""
+    dest_tf.clear()
+    
+    # Copy vertical alignment
+    if source_tf.vertical_anchor:
+        dest_tf.vertical_anchor = source_tf.vertical_anchor
+    
+    for p in source_tf.paragraphs:
+        new_p = dest_tf.add_paragraph()
+        new_p.text = p.text
+        new_p.alignment = p.alignment
+        new_p.level = p.level
+        
+        # Copy paragraph spacing
+        new_p.space_before = p.space_before
+        new_p.space_after = p.space_after
+        new_p.line_spacing = p.line_spacing
+        
+        # Copy runs
+        for r in p.runs:
+            new_r = new_p.add_run()
+            new_r.text = r.text
+            new_r.font.size = r.font.size
+            new_r.font.bold = r.font.bold
+            new_r.font.italic = r.font.italic
+            new_r.font.underline = r.font.underline
+            new_r.font.name = r.font.name # Copy font name!
+            
+            try:
+                new_r.font.color.rgb = r.font.color.rgb
+            except: pass
+            try:
+                if r.font.color.type == 2: # Theme color
+                    new_r.font.color.theme_color = r.font.color.theme_color
+            except: pass
 
 
 def replace_images_with_placeholders(slide, site_data, label="Map Placeholder"):
