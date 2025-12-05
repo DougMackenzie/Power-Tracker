@@ -308,8 +308,6 @@ def duplicate_slide_in_place(prs, index):
     
     # Copy shapes
     for shape in source.shapes:
-        new_shape = None
-        
         # 1. Pictures (Type 13)
         if shape.shape_type == 13: 
             try:
@@ -344,10 +342,13 @@ def duplicate_slide_in_place(prs, index):
                                     except: pass
             except: pass
             
-        # 3. AutoShapes (1) / TextBoxes (17)
-        elif shape.shape_type == 1 or shape.shape_type == 17:
+        # 3. AutoShapes (1) / TextBoxes (17) / Placeholders (14)
+        elif shape.shape_type == 1 or shape.shape_type == 17 or shape.shape_type == 14:
             try:
-                new_shape = dest.shapes.add_shape(shape.auto_shape_type, shape.left, shape.top, shape.width, shape.height)
+                # For placeholders, we treat them as auto shapes
+                shape_type = shape.auto_shape_type if hasattr(shape, 'auto_shape_type') else 1 # Default to rectangle
+                
+                new_shape = dest.shapes.add_shape(shape_type, shape.left, shape.top, shape.width, shape.height)
                 # Copy text
                 if shape.has_text_frame:
                     new_shape.text_frame.clear()
@@ -373,19 +374,32 @@ def duplicate_slide_in_place(prs, index):
                     except: pass
             except: pass
             
+        # 4. Groups (Type 6) - Simplified: Copy members if possible or skip
+        # Deep copying groups is hard, we'll skip for now to avoid errors, 
+        # but if the user needs group content, we'd need recursion.
+            
     return dest
 
 
 def replace_images_with_placeholders(slide, site_data, label="Map Placeholder"):
     """Replace images with gray placeholders."""
-    from pptx.enum.shapes import MSO_SHAPE_TYPE
     
     shapes_to_replace = []
     for shape in slide.shapes:
-        # Identify images to replace (heuristic: large images on right side)
-        if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
-            if shape.left > Inches(4): # Right side images
-                shapes_to_replace.append(shape)
+        # Identify images to replace
+        # Type 13 = Picture
+        if shape.shape_type == 13:
+            # Heuristic: 
+            # 1. If label is "Map Placeholder" (Profile Slide), replace images on right (>4 inches)
+            # 2. If label is "Site Boundary" or "Topography", replace ANY large image (>4 inches width)
+            
+            if label == "Map Placeholder":
+                if shape.left > Inches(4):
+                    shapes_to_replace.append(shape)
+            else:
+                # For boundary/topo, replace main images
+                if shape.width > Inches(4):
+                    shapes_to_replace.append(shape)
                 
     for shape in shapes_to_replace:
         left, top, width, height = shape.left, shape.top, shape.width, shape.height
@@ -394,7 +408,7 @@ def replace_images_with_placeholders(slide, site_data, label="Map Placeholder"):
         sp.getparent().remove(sp)
         
         # Add Placeholder
-        rect = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
+        rect = slide.shapes.add_shape(1, left, top, width, height) # 1 = Rectangle
         rect.fill.solid()
         rect.fill.fore_color.rgb = RGBColor(240, 240, 240)
         rect.line.color.rgb = RGBColor(200, 200, 200)
