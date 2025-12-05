@@ -154,15 +154,17 @@ def map_app_to_profile(site_data: Dict) -> SiteProfileData:
                 # Debug: Print how many fields were restored
                 print(f"[DEBUG] Restored {fields_restored} fields from profile_json")
                 
-                # If we have a saved profile, return it (already enriched)
-                # We still continue below to overlay any NEW data from current site_data
         except (json.JSONDecodeError, Exception) as e:
             print(f"[DEBUG] Failed to load profile_json: {type(e).__name__}: {e}")
             pass  # Ignore errors, fall through to auto-mapping
     else:
         print(f"[DEBUG] No profile_json found in site_data. Keys: {list(site_data.keys())[:10]}")
     
-    # Direct mappings (will override saved data if present)
+    # === CRITICAL: OVERRIDE WITH CORE APP DATA ===
+    # This ensures that if a user updates the main app fields (e.g. Target MW),
+    # it automatically updates the profile, even if an old value was saved in profile_json.
+    
+    # Direct mappings (FORCE OVERRIDE)
     if site_data.get('name'):
         profile.name = site_data.get('name', '')
     if site_data.get('state'):
@@ -174,7 +176,8 @@ def map_app_to_profile(site_data: Dict) -> SiteProfileData:
         profile.total_acres = float(acreage)
     
     # Electricity from utility field
-    profile.electric_utility = site_data.get('utility', '')
+    if site_data.get('utility'):
+        profile.electric_utility = site_data.get('utility', '')
     
     # Estimated capacity from target_mw
     if site_data.get('target_mw'):
@@ -602,12 +605,17 @@ class SiteProfileBuilder:
 # STREAMLIT UI HELPERS
 # =============================================================================
 
-def get_human_input_form_fields() -> List[Dict]:
+def get_human_input_form_fields(exclude_fields: List[str] = None) -> List[Dict]:
     """
     Returns form field definitions for Streamlit UI.
     Each field has: name, label, type, options (if select), help text
+    
+    Args:
+        exclude_fields: List of field names to exclude from the form (e.g. if they exist in main app)
     """
-    return [
+    exclude = set(exclude_fields) if exclude_fields else set()
+    
+    all_sections = [
         # Ownership section
         {'section': 'Ownership & Price', 'fields': [
             {'name': 'owner_name', 'label': 'Owner Name(s)', 'type': 'text', 'help': 'Property owner name(s)'},
@@ -688,3 +696,13 @@ def get_human_input_form_fields() -> List[Dict]:
              'help': 'e.g., 6-9 months for rezoning'},
         ]},
     ]
+    
+    # Filter out excluded fields and empty sections
+    filtered_sections = []
+    for section in all_sections:
+        filtered_fields = [f for f in section['fields'] if f['name'] not in exclude]
+        if filtered_fields:
+            section['fields'] = filtered_fields
+            filtered_sections.append(section)
+            
+    return filtered_sections

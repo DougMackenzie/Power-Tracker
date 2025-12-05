@@ -2372,6 +2372,22 @@ CRITICAL: Return ONLY valid JSON with no explanation. Just the JSON object."""
                         # Apply results
                         builder.apply_ai_research(results)
                         
+                        # === SYNC AI RESULTS TO CORE FIELDS ===
+                        # Update core site fields if AI found better data
+                        if results.get('electric_utility'):
+                            st.session_state.db['sites'][site_id]['utility'] = results['electric_utility']
+                        
+                        if results.get('current_zoning'):
+                            # Map zoning string to stage if possible, or just store in non_power
+                            if 'non_power' not in st.session_state.db['sites'][site_id]:
+                                st.session_state.db['sites'][site_id]['non_power'] = {}
+                            st.session_state.db['sites'][site_id]['non_power']['zoning_status'] = results['current_zoning']
+                            
+                        if results.get('water_provider'):
+                            if 'non_power' not in st.session_state.db['sites'][site_id]:
+                                st.session_state.db['sites'][site_id]['non_power'] = {}
+                            st.session_state.db['sites'][site_id]['non_power']['water_source'] = results['water_provider']
+
                         # Save back to database
                         profile = builder.profile
                         profile_dict = {}
@@ -2747,7 +2763,14 @@ def show_add_edit_site():
                     profile_json = {}
             
             # Get form fields definition
-            form_sections = get_human_input_form_fields()
+            # Get form fields definition with exclusions
+            # These fields are already captured in other tabs, so we hide them here to prevent duplication
+            EXCLUDED_FIELDS = [
+                'electric_utility', 'voltage_kv', 'estimated_capacity_mw', 'total_acres',
+                'water_provider', 'water_capacity_gpd', 'fiber_provider', 'current_zoning',
+                'distance_to_transmission'
+            ]
+            form_sections = get_human_input_form_fields(exclude_fields=EXCLUDED_FIELDS)
             
             # We need to store these inputs to save them later
             human_inputs = {}
