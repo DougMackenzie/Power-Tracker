@@ -234,7 +234,7 @@ def build_system_prompt(sites: Dict[str, Dict]) -> str:
 class GeminiClient:
     """Google Gemini API client."""
     
-    def __init__(self, api_key: str, model: str = "models/gemini-1.5-pro"):
+    def __init__(self, api_key: str, model: str = "models/gemini-1.5-pro-002"):
         if not GEMINI_AVAILABLE:
             raise ImportError("google-generativeai not installed. Run: pip install google-generativeai")
         

@@ -252,7 +252,36 @@ class UtilityResearchAgent:
                 }
                 
         except Exception as e:
-            print(f"Grounded research error: {e}")
+            error_msg = str(e)
+            print(f"Grounded research error: {error_msg}")
+            
+            # Fallback to Flash if Pro fails (e.g. 404 error)
+            if "404" in error_msg or "not found" in error_msg.lower():
+                st.warning("⚠️ Gemini 1.5 Pro not available (404). Falling back to Gemini 1.5 Flash...")
+                try:
+                    # Initialize fallback client
+                    fallback_client = GeminiClient(self.client.model._api_key, model="models/gemini-1.5-flash")
+                    fallback_client.start_chat("You are an expert utility researcher.", use_search=True)
+                    response = fallback_client.send_message(prompt)
+                    
+                    # Parse JSON from fallback response
+                    import re
+                    json_match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
+                    if json_match:
+                        data = json.loads(json_match.group(1))
+                        return data
+                    else:
+                        try:
+                            data = json.loads(response)
+                            return data
+                        except:
+                            pass
+                        return {'queue_and_interconnection': {'summary': response, 'sources': []}}
+                        
+                except Exception as e2:
+                    st.error(f"Fallback failed: {e2}")
+                    return {}
+            
             st.error(f"Grounded research failed: {e}")
             return {}
 
