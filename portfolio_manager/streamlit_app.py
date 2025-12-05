@@ -65,6 +65,14 @@ except ImportError as e:
     PROFILE_BUILDER_AVAILABLE = False
     print(f"Profile builder not available: {e}")
 
+# Import Utility Research Agent
+try:
+    from .utility_agent import UtilityResearchAgent
+    UTILITY_AGENT_AVAILABLE = True
+except ImportError as e:
+    UTILITY_AGENT_AVAILABLE = False
+    print(f"Utility agent not available: {e}")
+
 
 # =============================================================================
 # DATABASE MANAGEMENT - Google Sheets Integration
@@ -293,8 +301,41 @@ def load_database() -> Dict:
                 }
                 meta_ws.append_row([metadata['created'], metadata['last_updated'], metadata['version']])
             
+            # Load Utilities
+            utilities = {}
+            try:
+                try:
+                    utils_ws = sheet.worksheet("Utilities")
+                except:
+                    utils_ws = sheet.add_worksheet(title="Utilities", rows=100, cols=10)
+                    utils_ws.append_row(["utility_name", "state", "last_updated", "research_json"])
+                
+                util_rows = utils_ws.get_all_records()
+                for row in util_rows:
+                    if not row.get('utility_name'): continue
+                    
+                    key = f"{row['utility_name']}_{row['state']}"
+                    
+                    # Parse JSON
+                    research_json = {}
+                    if row.get('research_json'):
+                        try:
+                            research_json = json.loads(row['research_json'])
+                        except:
+                            pass
+                            
+                    utilities[key] = {
+                        'utility_name': row['utility_name'],
+                        'state': row['state'],
+                        'last_updated': row.get('last_updated', ''),
+                        'research_json': research_json
+                    }
+            except Exception as e:
+                print(f"Error loading utilities: {e}")
+
             return {
                 'sites': sites,
+                'utilities': utilities,
                 'metadata': metadata
             }
             
@@ -308,6 +349,7 @@ def load_database() -> Dict:
                 # Return empty database as fallback
                 return {
                     'sites': {},
+                    'utilities': {},
                     'metadata': {
                         'created': datetime.now().isoformat(),
                         'last_updated': datetime.now().isoformat(),
@@ -3100,31 +3142,79 @@ def show_state_analysis():
 
 
 def show_utility_research():
-    """Utility research query generator."""
-    st.title("🔍 Utility Research")
-    st.write("Generate research queries for utility-specific information.")
+    """Utility research agent interface."""
+    st.title("🔍 Utility Research Agent")
+    st.write("Autonomous agent for deep utility research and data collection.")
     
+    if not UTILITY_AGENT_AVAILABLE:
+        st.error("Utility Agent module not available. Please install dependencies.")
+        return
+
     col1, col2 = st.columns(2)
     with col1:
         utility_name = st.text_input("Utility Name", placeholder="e.g., PSO, Georgia Power")
         state = st.selectbox("State", options=[''] + list(STATE_PROFILES.keys()))
-    with col2:
-        iso = st.selectbox("ISO/RTO", options=['', 'SPP', 'ERCOT', 'PJM', 'MISO', 'CAISO', 'WECC', 'SERC'])
     
-    if st.button("🔍 Generate Research Queries"):
-        if utility_name:
-            st.subheader("Utility Research Queries")
-            queries = generate_utility_research_queries(utility_name, state)
-            for category, query_list in queries.items():
-                with st.expander(category.replace('_', ' ').title()):
-                    for q in query_list: st.code(q)
+    # Check if we have existing data
+    existing_data = None
+    if utility_name and state and 'db' in st.session_state:
+        key = f"{utility_name}_{state}"
+        existing_data = st.session_state.db.get('utilities', {}).get(key)
         
-        if iso:
-            st.subheader("ISO Research Queries")
-            iso_queries = get_iso_research_queries(iso)
-            for category, query_list in iso_queries.items():
-                with st.expander(category.replace('_', ' ').title()):
-                    for q in query_list: st.code(q)
+    if existing_data:
+        st.info(f"📅 Last updated: {existing_data.get('last_updated', 'Unknown')}")
+        
+        with st.expander("View Saved Research", expanded=True):
+            data = existing_data.get('research_json', {}).get('topics', {})
+            for topic, content in data.items():
+                st.subheader(topic.replace('_', ' ').title())
+                st.markdown(content.get('summary', 'No summary available.'))
+                if content.get('sources'):
+                    st.caption("Sources:")
+                    for s in content['sources']:
+                        st.caption(f"- [{s['title']}]({s['url']})")
+                st.markdown("---")
+
+    if st.button("🚀 Run Deep Research (Agentic)", type="primary"):
+        if not (utility_name and state):
+            st.error("Please enter Utility Name and State")
+            return
+            
+        status_container = st.status("Starting research agent...", expanded=True)
+        
+        try:
+            # Initialize agent
+            api_key = st.secrets.get("GEMINI_API_KEY")
+            agent = UtilityResearchAgent(provider="gemini", api_key=api_key)
+            
+            status_container.write("🔍 Generating research queries...")
+            
+            # Run research
+            status_container.write("🌐 Searching and analyzing web content...")
+            results = agent.run_full_research(utility_name, state)
+            
+            status_container.write("💾 Saving to database...")
+            
+            # Save to DB
+            if 'utilities' not in st.session_state.db:
+                st.session_state.db['utilities'] = {}
+                
+            key = f"{utility_name}_{state}"
+            st.session_state.db['utilities'][key] = {
+                'utility_name': utility_name,
+                'state': state,
+                'last_updated': datetime.now().strftime("%Y-%m-%d"),
+                'research_json': results
+            }
+            save_database(st.session_state.db)
+            
+            status_container.update(label="✅ Research Complete!", state="complete", expanded=False)
+            st.success("Research completed and saved!")
+            st.rerun()
+            
+        except Exception as e:
+            status_container.update(label="❌ Error", state="error")
+            st.error(f"Research failed: {str(e)}")
 
 
 def show_settings():
