@@ -96,11 +96,16 @@ SUPPLY_DATA = {
 }
 
 # Bottoms-Up Demand Build Data (CoWoS -> GW)
+# Bottoms-Up Demand Build Data (CoWoS -> GW)
+# Based on "35K -> 200K WPM capacity" (2024-2027) from PDF
 COWOS_BASELINE = {
     2024: 35000,
-    2025: 60000,
-    2026: 80000,
-    2027: 100000
+    2025: 65000,
+    2026: 110000,
+    2027: 160000,
+    2028: 200000, # Reaches ~200K capacity
+    2029: 225000,
+    2030: 250000
 }
 
 CONVERSION_FACTORS = {
@@ -213,7 +218,8 @@ def show_bottoms_up_build():
         year = st.slider("Select Year", 2024, 2030, 2027)
         # Default to 100k if year not in baseline, but now baseline covers all slider years
         default_wpm = COWOS_BASELINE.get(year, 200000)
-        cowos_wpm = st.number_input("CoWoS Capacity (Wafers/Month)", value=default_wpm)
+        # Use key to force update when year changes
+        cowos_wpm = st.number_input("CoWoS Capacity (Wafers/Month)", value=default_wpm, key=f"wpm_{year}")
     
     with col2:
         tdp = st.number_input("Avg Chip TDP (kW)", value=1.0, step=0.1)
