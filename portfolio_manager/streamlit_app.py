@@ -13,7 +13,7 @@ Features:
 """
 
 import streamlit as st
-# Force reload: v2.1
+# Force reload: v2.2
 import pandas as pd
 import json
 import os

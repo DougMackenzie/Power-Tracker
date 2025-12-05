@@ -35,8 +35,8 @@ DEMAND_DATA = {
     DemandScenario.ACCELERATION: {
         'description': "**Most Likely**: AI business case continues to scale. Reasoning inference drives exponential compute. Model sizes continue 10x/2yr scaling.",
         'global_demand': {
-            2024: 14, 2025: 28, 2026: 50, 2027: 80, 2028: 110, 2029: 140, 
-            2030: 180, 2031: 220, 2032: 260, 2033: 300, 2034: 350, 2035: 400
+            2024: 14, 2025: 28, 2026: 45, 2027: 70, 2028: 95, 2029: 120, 
+            2030: 150, 2031: 180, 2032: 210, 2033: 245, 2034: 280, 2035: 320
         },
         'us_tech_demand': {
             2024: 12, 2025: 21, 2026: 35, 2027: 55, 2028: 75, 2029: 95, 
@@ -155,7 +155,7 @@ def calculate_bottoms_up_demand(year, cowos_wpm):
 # =============================================================================
 
 def show_research_module():
-    st.title("🔬 Power Research Framework (v2.1)")
+    st.title("🔬 Power Research Framework (v2.2)")
     st.markdown("Dynamic analysis of AI power demand vs. utility supply constraints.")
 
     # --- Sidebar Controls ---
