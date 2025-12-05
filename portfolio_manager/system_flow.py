@@ -2,7 +2,9 @@ import streamlit as st
 import graphviz
 import sys
 import os
+import streamlit.components.v1 as components
 from datetime import datetime
+import json
 
 def show_system_flow():
     """
@@ -10,12 +12,30 @@ def show_system_flow():
     """
     st.title("🧩 Network Operations Command Center")
     
+    # --- 0. Initialize Telemetry State ---
+    if 'node_updates' not in st.session_state:
+        # Simulate initial "boot" times for demonstration
+        now = datetime.now()
+        st.session_state.node_updates = {
+            'DeepResearch': now.strftime("%H:%M:%S"),
+            'Human': now.strftime("%H:%M:%S"),
+            'Chat': now.strftime("%H:%M:%S"),
+            'VDR': now.strftime("%H:%M:%S"),
+            'UtilAgent': now.strftime("%H:%M:%S"),
+            'SupplyDemand': now.strftime("%H:%M:%S"),
+            'Builder': now.strftime("%H:%M:%S"),
+            'Tracker': now.strftime("%H:%M:%S"),
+            'Scorer': now.strftime("%H:%M:%S"),
+            'Sheet': now.strftime("%H:%M:%S"),
+            'Session': now.strftime("%H:%M:%S"),
+            'ProfileObj': now.strftime("%H:%M:%S"),
+            'PPTX': now.strftime("%H:%M:%S"),
+            'PDF': now.strftime("%H:%M:%S"),
+            'Dash': now.strftime("%H:%M:%S"),
+        }
+
     # --- 1. System Health & Status (Live Telemetry) ---
     st.markdown("### 📡 System Telemetry & Health")
-    
-    # Check module availability
-    pptx_status = "🟢 Online" if "pptx" in sys.modules or "python-pptx" in str(sys.modules) else "🔴 Offline"
-    gspread_status = "🟢 Connected" if "gspread" in sys.modules else "🟡 Standby"
     
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
@@ -29,140 +49,148 @@ def show_system_flow():
     with col5:
         st.metric("☁️ Google Sheets", "Synced", delta="2-Way")
         
-    with st.expander("🛠️ Module Diagnostics", expanded=False):
-        st.code(f"""
-        [SYSTEM CHECK]
-        > Python Version: {sys.version.split()[0]}
-        > Streamlit: {st.__version__}
-        > PPTX Export: {pptx_status}
-        > Sheets API: {gspread_status}
-        > Working Dir: {os.getcwd()}
-        """, language="bash")
-
     st.divider()
 
-    # --- 2. Detailed Architecture Blueprint ---
-    col_header, col_zoom = st.columns([3, 1])
-    with col_header:
-        st.subheader("🕸️ Master Architecture Blueprint")
-        st.caption("Detailed mapping of Python modules, data structures, and logic flows.")
-    with col_zoom:
-        # Zoom control (simulated by graph size)
-        zoom_level = st.slider("🔍 Zoom Level", min_value=100, max_value=2000, value=1000, step=100, label_visibility="collapsed")
+    # --- 2. Detailed Architecture Blueprint (Viz.js) ---
+    st.subheader("🕸️ Master Architecture Blueprint")
+    st.caption("Interactive Zoom/Pan Enabled. Live Timestamps on all nodes.")
     
-    # Create a complex graphviz directed graph with "Dark Mode" / Tech style
+    # Create Graphviz Object (for DOT generation only)
     graph = graphviz.Digraph()
-    graph.attr(rankdir='TB') # Top to Bottom for better hierarchy
-    graph.attr(bgcolor='#0e1117') # Streamlit dark bg approximation
-    # Use HTML-like labels for rich formatting
+    graph.attr(rankdir='TB')
+    graph.attr(bgcolor='#0e1117')
     graph.attr('node', shape='plain', fontname='Courier', fontsize='10', fontcolor='white')
     graph.attr('edge', fontname='Courier', fontsize='8', color='#555555', fontcolor='#aaaaaa')
     
-    # Get current time for "Live" timestamps
-    now_str = datetime.now().strftime("%H:%M:%S")
-    
-    # Helper for HTML Node Table
-    def html_node(title, subtitle, color, border_color=None, border_style="solid"):
-        border_color = border_color or color
-        # Dashed border simulation in HTML table is tricky, so we use the graphviz style for the node instead
-        # But here we define the inner content
+    # Helper for HTML Node Table with Timestamp
+    def html_node(key, title, subtitle, color):
+        timestamp = st.session_state.node_updates.get(key, "N/A")
         return f'''<
         <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4">
             <TR><TD BGCOLOR="{color}"><FONT COLOR="white"><B>{title}</B></FONT></TD></TR>
             <TR><TD BGCOLOR="{color}"><FONT COLOR="#e0e0e0" POINT-SIZE="9">{subtitle}</FONT></TD></TR>
+            <TR><TD BGCOLOR="{color}"><FONT COLOR="#00ff00" POINT-SIZE="8">Updated: {timestamp}</FONT></TD></TR>
         </TABLE>
         >'''
 
     # -- Cluster: FOUNDATION --
     with graph.subgraph(name='cluster_foundation') as c:
         c.attr(label='LAYER 0: FOUNDATION', style='dashed', color='#ffffff', fontcolor='#ffffff')
-        
-        # Deep Research Node with explicit timestamp
-        label = f'''<
-        <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" BGCOLOR="#424242">
-            <TR><TD><FONT COLOR="white"><B>📚 Deep Research Report</B></FONT></TD></TR>
-            <TR><TD><FONT COLOR="#cccccc" POINT-SIZE="9">(Manual Bottom-Up Analysis)</FONT></TD></TR>
-            <TR><TD><FONT COLOR="#00ff00" POINT-SIZE="8">Last Updated: {now_str}</FONT></TD></TR>
-        </TABLE>
-        >'''
-        c.node('DeepResearch', label=label)
+        c.node('DeepResearch', html_node('DeepResearch', '📚 Deep Research Report', '(Manual Bottom-Up)', '#424242'))
 
     # -- Cluster: INPUT LAYER --
     with graph.subgraph(name='cluster_inputs') as c:
         c.attr(label='LAYER 1: INPUTS & AGENTS', style='dashed', color='#00ff00', fontcolor='#00ff00')
         
-        c.node('Human', html_node('👤 Human Input', '[Forms/UI]', '#1b5e20'))
+        c.node('Human', html_node('Human', '👤 Human Input', '[Forms/UI]', '#1b5e20'))
         
-        # Agentic Capabilities (Red Dashed Line handled by node attributes)
+        # Agent Styling (Red Dashed)
         agent_attrs = {'style': 'dashed', 'color': '#ff0000', 'penwidth': '2.0'}
         
-        c.node('Chat', html_node('💬 AI Chat', '[llm_integration.py]', '#004d40'), **agent_attrs)
-        c.node('VDR', html_node('📁 VDR Processor', '(OCR + Extraction)', '#004d40'), **agent_attrs)
-        c.node('UtilAgent', html_node('🕷️ Utility Agent', '(Scraper)', '#004d40'), **agent_attrs)
+        c.node('Chat', html_node('Chat', '💬 AI Chat', '[llm_integration.py]', '#004d40'), **agent_attrs)
+        c.node('VDR', html_node('VDR', '📁 VDR Processor', '(OCR + Extraction)', '#004d40'), **agent_attrs)
+        c.node('UtilAgent', html_node('UtilAgent', '🕷️ Utility Agent', '(Scraper)', '#004d40'), **agent_attrs)
         
-        # Supply/Demand Model
-        c.node('SupplyDemand', html_node('⚖️ Supply/Demand Model', '[research_module.py]', '#004d40'))
+        c.node('SupplyDemand', html_node('SupplyDemand', '⚖️ Supply/Demand Model', '[research_module.py]', '#004d40'))
 
     # -- Cluster: PROCESSING LAYER --
     with graph.subgraph(name='cluster_process') as c:
         c.attr(label='LAYER 2: PROCESSING & BUILDERS', style='dashed', color='#00e5ff', fontcolor='#00e5ff')
         
-        c.node('Builder', html_node('🏗️ SiteProfileBuilder', '.map_app_to_profile()', '#01579b'))
-        c.node('Tracker', html_node('📈 ProgramTracker', '.calculate_probability()', '#01579b'))
-        c.node('Scorer', html_node('⭐ ScoringEngine', '.calculate_site_score()', '#01579b'))
+        c.node('Builder', html_node('Builder', '🏗️ SiteProfileBuilder', '.map_app_to_profile()', '#01579b'))
+        c.node('Tracker', html_node('Tracker', '📈 ProgramTracker', '.calculate_probability()', '#01579b'))
+        c.node('Scorer', html_node('Scorer', '⭐ ScoringEngine', '.calculate_site_score()', '#01579b'))
 
     # -- Cluster: DATA LAYER --
     with graph.subgraph(name='cluster_data') as c:
         c.attr(label='LAYER 3: PERSISTENCE & STATE', style='dashed', color='#ffea00', fontcolor='#ffea00')
         
-        c.node('Sheet', html_node('☁️ Google Sheets', '[gspread]', '#f57f17'))
-        c.node('Session', html_node('💾 Session State', '(st.session_state.db)', '#f57f17'))
-        c.node('ProfileObj', html_node('📝 SiteProfileData', '(Dataclass Object)', '#ff6f00'))
+        c.node('Sheet', html_node('Sheet', '☁️ Google Sheets', '[gspread]', '#f57f17'))
+        c.node('Session', html_node('Session', '💾 Session State', '(st.session_state.db)', '#f57f17'))
+        c.node('ProfileObj', html_node('ProfileObj', '📝 SiteProfileData', '(Dataclass Object)', '#ff6f00'))
 
     # -- Cluster: OUTPUT LAYER --
     with graph.subgraph(name='cluster_output') as c:
         c.attr(label='LAYER 4: OUTPUTS & RENDERING', style='dashed', color='#ff00ff', fontcolor='#ff00ff')
         
-        c.node('PPTX', html_node('📽️ PPT Generator', '.export_site_to_pptx()', '#4a148c'))
-        c.node('PDF', html_node('📄 PDF Report', '[fpdf2]', '#4a148c'))
-        c.node('Dash', html_node('📊 Dashboard UI', '[streamlit_app.py]', '#880e4f'))
+        c.node('PPTX', html_node('PPTX', '📽️ PPT Generator', '.export_site_to_pptx()', '#4a148c'))
+        c.node('PDF', html_node('PDF', '📄 PDF Report', '[fpdf2]', '#4a148c'))
+        c.node('Dash', html_node('Dash', '📊 Dashboard UI', '[streamlit_app.py]', '#880e4f'))
 
     # -- EDGES --
-    # Foundation -> Inputs
     graph.edge('DeepResearch', 'SupplyDemand', label=' drives_assumptions', color='#ffffff')
     graph.edge('SupplyDemand', 'Scorer', label=' state_scoring_framework', color='#ffffff')
-
-    # Inputs -> Process
     graph.edge('Human', 'Builder', label=' manual_overrides', color='#00ff00')
     graph.edge('VDR', 'Builder', label=' extracted_json', color='#ff0000', style='dashed')
     graph.edge('Chat', 'Builder', label=' new_site_obj', color='#ff0000', style='dashed')
     graph.edge('UtilAgent', 'Scorer', label=' iso_queue_data', color='#ff0000', style='dashed')
-    
-    # Process -> Data
     graph.edge('Builder', 'ProfileObj', label=' instantiates', color='#00e5ff')
     graph.edge('Tracker', 'Session', label=' updates_prob', color='#00e5ff')
     graph.edge('ProfileObj', 'Session', label=' stores_in_db', color='#ffea00')
     graph.edge('Session', 'Sheet', label=' syncs_json_blobs', color='#ffea00')
-    
-    # Data -> Logic -> Output
     graph.edge('ProfileObj', 'Scorer', label=' provides_attrs', color='#ffea00')
     graph.edge('Scorer', 'Dash', label=' rankings_table', color='#ff00ff')
     graph.edge('ProfileObj', 'PPTX', label=' populates_slides', color='#ff00ff')
     graph.edge('ProfileObj', 'PDF', label=' generates_summary', color='#ff00ff')
+
+    # --- Render with Viz.js (Client-Side) ---
+    # We use a custom HTML component to load viz.js and svg-pan-zoom
+    dot_source = graph.source
     
-    # Render with dynamic width based on zoom slider
-    # Note: use_container_width=False allows the width to exceed the container, creating a scrollbar if needed
-    st.graphviz_chart(graph, use_container_width=False)
+    # Escape backticks and newlines for JS string
+    dot_source_js = dot_source.replace('\n', '\\n').replace('"', '\\"')
     
-    # Inject CSS to force the graph to respect the zoom slider width
-    # This is a bit of a hack since st.graphviz_chart doesn't accept a 'width' pixel argument directly
-    # But we can control the SVG size via graph attributes if we were using pipe, 
-    # or just rely on Streamlit's rendering.
-    # Actually, st.graphviz_chart expands to fit content if use_container_width=False.
-    # So we can control the size by setting graph.attr(size="...")? No, that's inches.
-    # Best bet: The user can scroll if it's big.
+    html_code = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/viz.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/full.render.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/svg-pan-zoom/3.6.1/svg-pan-zoom.min.js"></script>
+        <style>
+            #graph-container {{
+                width: 100%;
+                height: 600px;
+                border: 1px solid #333;
+                background-color: #0e1117;
+                overflow: hidden;
+            }}
+            svg {{
+                width: 100%;
+                height: 100%;
+            }}
+        </style>
+    </head>
+    <body>
+        <div id="graph-container"></div>
+        <script>
+            var viz = new Viz();
+            var dotSource = "{dot_source_js}";
+            
+            viz.renderSVGElement(dotSource)
+                .then(function(element) {{
+                    document.getElementById('graph-container').appendChild(element);
+                    
+                    // Enable Pan/Zoom
+                    svgPanZoom(element, {{
+                        zoomEnabled: true,
+                        controlIconsEnabled: true,
+                        fit: true,
+                        center: true,
+                        minZoom: 0.1,
+                        maxZoom: 10
+                    }});
+                }})
+                .catch(error => {{
+                    console.error(error);
+                    document.getElementById('graph-container').innerHTML = '<p style="color:red">Error rendering graph: ' + error + '</p>';
+                }});
+        </script>
+    </body>
+    </html>
+    """
     
-    st.caption(f"Use the slider above to zoom. Current View Width: {zoom_level}px equivalent.")
+    components.html(html_code, height=620)
 
     st.divider()
 
