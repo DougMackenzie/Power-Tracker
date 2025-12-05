@@ -258,6 +258,14 @@ def copy_slide_from_external(source_slide, dest_prs, source_prs):
     dest_layout = dest_prs.slide_layouts[layout_index]
     dest_slide = dest_prs.slides.add_slide(dest_layout)
     
+    # CRITICAL: Clear existing shapes from the new slide!
+    # The new slide inherits placeholders/shapes from the layout.
+    # Since we are copying the *final* state of the source slide (which already has these filled or removed),
+    # we must remove the defaults to avoid duplicates (e.g. "original template graphs" showing up).
+    for shape in list(dest_slide.shapes):
+        sp = shape._element
+        sp.getparent().remove(sp)
+    
     # 2. Copy Shapes
     for shape in source_slide.shapes:
         # 1. Pictures (Type 13)
