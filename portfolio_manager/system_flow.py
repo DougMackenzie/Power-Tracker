@@ -26,7 +26,7 @@ def show_system_flow():
     """
     Displays a comprehensive 'Command Center' view of the application's logic, architecture, and data flow.
     """
-    st.title("🧩 Network Operations Command Center")
+    st.title("🧩 Network Operations Center (NOC)")
     
     # --- 0. Initialize Telemetry State ---
     if 'node_updates' not in st.session_state:

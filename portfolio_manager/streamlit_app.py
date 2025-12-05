@@ -785,7 +785,7 @@ def run():
     if 'page' not in st.session_state:
         st.session_state.page = "📊 Dashboard"
     
-    st.sidebar.title("⚡ Portfolio Manager")
+    # st.sidebar.title("⚡ Portfolio Manager")
     
     # Check if we need to navigate (from Edit Site button)
     if 'navigation_target' in st.session_state:
@@ -801,7 +801,7 @@ def run():
     page = st.sidebar.radio(
         "Navigation",
         ["📊 Dashboard", "🏭 Site Database", "💬 AI Chat", "📁 VDR Upload", "➕ Add/Edit Site", 
-         "🏆 Rankings", "📊 Program Tracker", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "🧩 System Flow", "⚙️ Settings"],
+         "🏆 Rankings", "📊 Program Tracker", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "🧩 Network Operations Center (NOC)", "⚙️ Settings"],
         key="page"
     )
     
@@ -836,7 +836,7 @@ def run():
     elif page == "🔍 Utility Research": 
         log_activity('UtilAgent')
         show_utility_research()
-    elif page == "🧩 System Flow":
+    elif page == "🧩 Network Operations Center (NOC)":
         # No log needed, we are viewing the logs
         show_system_flow()
     elif page == "⚙️ Settings": 
