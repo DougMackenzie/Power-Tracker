@@ -169,6 +169,15 @@ class ScoreAnalysis:
     water_score: float = 0
     fiber_score: float = 0
 
+    @classmethod
+    def from_dict(cls, data: Dict):
+        """Create ScoreAnalysis from dictionary."""
+        if not data:
+            return cls()
+        # Filter keys to only those in the dataclass
+        valid_keys = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
+        return cls(**valid_keys)
+
 
 @dataclass
 class RiskOpportunity:
