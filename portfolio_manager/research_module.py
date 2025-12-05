@@ -205,35 +205,51 @@ def show_research_module():
 
 def show_bottoms_up_build():
     st.subheader("🏗️ Bottoms-Up Demand Build")
-    st.markdown("Deriving power demand from physical semiconductor supply chain constraints (CoWoS).")
+    st.markdown("Deriving **Global** power demand from physical semiconductor supply chain constraints (CoWoS).")
     
     # Controls
     col1, col2 = st.columns(2)
     with col1:
         year = st.slider("Select Year", 2024, 2030, 2027)
-        cowos_wpm = st.number_input("CoWoS Capacity (Wafers/Month)", value=COWOS_BASELINE.get(year, 100000))
+        # Default to 100k if year not in baseline, but now baseline covers all slider years
+        default_wpm = COWOS_BASELINE.get(year, 200000)
+        cowos_wpm = st.number_input("CoWoS Capacity (Wafers/Month)", value=default_wpm)
     
     with col2:
         tdp = st.number_input("Avg Chip TDP (kW)", value=1.0, step=0.1)
         pue = st.number_input("Avg Data Center PUE", value=1.3, step=0.1)
     
-    # Calculate
+    # Calculate Global
     annual_wafers = cowos_wpm * 12
     total_dies = annual_wafers * CONVERSION_FACTORS['dies_per_wafer']
     good_dies = total_dies * CONVERSION_FACTORS['yield']
     annual_chip_power_gw = (good_dies * tdp) / 1e6
     annual_dc_power_gw = annual_chip_power_gw * pue
     
-    # Display Flow
-    st.markdown("### Conversion Logic")
+    # Calculate US Stack and Domestic
+    us_stack_share = 0.75 # ~75%
+    us_domestic_share = 0.70 # ~70% of Stack
     
-    c1, c2, c3, c4, c5 = st.columns(5)
+    us_stack_gw = annual_dc_power_gw * us_stack_share
+    us_domestic_gw = us_stack_gw * us_domestic_share
+    
+    # Display Flow
+    st.markdown("### Conversion Logic (Global)")
+    
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("1. Wafer Supply", f"{annual_wafers/1e3:.1f}K", "Annual Wafers")
     c2.metric("2. Chip Yield", f"{good_dies/1e6:.1f}M", f"Good Dies (@{CONVERSION_FACTORS['yield']*100:.0f}%)")
-    c3.metric("3. Chip Power", f"{annual_chip_power_gw:.1f} GW", f"@{tdp} kW/chip")
-    c4.metric("4. Facility Power", f"{annual_dc_power_gw:.1f} GW", f"PUE {pue}")
+    c3.metric("3. Global IT Load", f"{annual_chip_power_gw:.1f} GW", f"@{tdp} kW/chip")
+    c4.metric("4. Global Facility Load", f"{annual_dc_power_gw:.1f} GW", f"PUE {pue}")
     
-    st.info(f"**Insight**: In {year}, based on {cowos_wpm:,} WPM CoWoS capacity, the industry can physically deploy **{annual_dc_power_gw:.1f} GW** of new AI data center capacity globally.")
+    st.markdown("### 🇺🇸 US Specific Impact")
+    st.info(f"""
+    **Global Capacity Potential**: **{annual_dc_power_gw:.1f} GW**
+    
+    Based on research shares:
+    *   **US Technology Stack (~75%)**: **{us_stack_gw:.1f} GW** (Chips designed by US firms)
+    *   **US Domestic Deployment (~70% of Stack)**: **{us_domestic_gw:.1f} GW** (Physical power demand in US)
+    """)
     
     # Visual Sankey-like flow
     st.markdown("---")
@@ -242,7 +258,7 @@ def show_bottoms_up_build():
     1. **{cowos_wpm:,}** Wafers/Month × 12 = **{annual_wafers:,}** Wafers/Year
     2. × **{CONVERSION_FACTORS['dies_per_wafer']}** Dies/Wafer × **{CONVERSION_FACTORS['yield']*100}%** Yield = **{good_dies:,.0f}** AI Accelerators
     3. × **{tdp}** kW/Chip = **{annual_chip_power_gw*1e6:,.0f}** kW IT Load
-    4. × **{pue}** PUE = **{annual_dc_power_gw:.2f}** GW Total Facility Load
+    4. × **{pue}** PUE = **{annual_dc_power_gw:.2f}** GW Total Facility Load (Global)
     """)
 
     st.markdown("---")
