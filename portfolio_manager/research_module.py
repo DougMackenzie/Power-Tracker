@@ -27,39 +27,42 @@ class SupplyScenario(Enum):
 
 # Demand Trajectories (GW)
 # Based on Power Research Framework.pdf
-# Key benchmarks:
-# - Global 2030: 80-180 GW | 2035: 180-400 GW
-# - US Stack 2030: 95-120 GW | 2035: 180-230 GW (Scenario A)
-# - US Located: ~70% of US Stack (Domestic Deployment)
+# Scenario A (Acceleration):
+# - Global: 2030 ~150 GW -> 2035 400 GW (Aggressive scaling)
+# - US Stack: 2030 115 GW -> 2035 290 GW
+# - US Located: ~70% of US Stack
+# Scenario B (Plateau):
+# - Global: 2030 ~80 GW -> 2035 180 GW
+# - US Stack: 2030 85 GW -> 2035 110 GW
 DEMAND_DATA = {
     DemandScenario.ACCELERATION: {
-        'description': "**Most Likely**: AI business case continues to scale. Reasoning inference drives exponential compute. Model sizes continue 10x/2yr scaling.",
+        'description': "**Scenario A (Acceleration)**: AI business case scales. Reasoning inference drives exponential compute. Model sizes 10x/2yr.",
         'global_demand': {
-            2024: 14, 2025: 28, 2026: 45, 2027: 70, 2028: 95, 2029: 120, 
-            2030: 150, 2031: 180, 2032: 210, 2033: 245, 2034: 280, 2035: 320
+            2024: 14, 2025: 28, 2026: 48, 2027: 75, 2028: 100, 2029: 125, 
+            2030: 150, 2031: 190, 2032: 235, 2033: 285, 2034: 340, 2035: 400
         },
         'us_tech_demand': {
             2024: 12, 2025: 21, 2026: 35, 2027: 55, 2028: 75, 2029: 95, 
-            2030: 115, 2031: 135, 2032: 155, 2033: 180, 2034: 205, 2035: 230
+            2030: 115, 2031: 145, 2032: 175, 2033: 210, 2034: 250, 2035: 290
         },
         'us_located_demand': {
             2024: 10, 2025: 15, 2026: 25, 2027: 39, 2028: 53, 2029: 67, 
-            2030: 81, 2031: 95, 2032: 110, 2033: 125, 2034: 143, 2035: 161
+            2030: 81, 2031: 102, 2032: 123, 2033: 147, 2034: 175, 2035: 203
         },
     },
     DemandScenario.PLATEAU: {
-        'description': "**Bear Case**: AI business case fails to materialize. Efficiency gains outpace demand. ROI skepticism reduces investment.",
+        'description': "**Scenario B (Plateau)**: AI business case fails to materialize. Efficiency gains outpace demand. ROI skepticism.",
         'global_demand': {
-            2024: 14, 2025: 24, 2026: 35, 2027: 45, 2028: 60, 2029: 80, 
-            2030: 100, 2031: 105, 2032: 110, 2033: 115, 2034: 120, 2035: 125
+            2024: 14, 2025: 24, 2026: 35, 2027: 45, 2028: 55, 2029: 65, 
+            2030: 80, 2031: 95, 2032: 115, 2033: 135, 2034: 155, 2035: 180
         },
         'us_tech_demand': {
             2024: 12, 2025: 18, 2026: 24, 2027: 30, 2028: 45, 2029: 65, 
-            2030: 85, 2031: 87, 2032: 89, 2033: 91, 2034: 93, 2035: 95
+            2030: 85, 2031: 90, 2032: 95, 2033: 100, 2034: 105, 2035: 110
         },
         'us_located_demand': {
             2024: 10, 2025: 13, 2026: 17, 2027: 21, 2028: 32, 2029: 46, 
-            2030: 60, 2031: 61, 2032: 62, 2033: 64, 2034: 65, 2035: 67
+            2030: 60, 2031: 63, 2032: 67, 2033: 70, 2034: 74, 2035: 77
         },
     }
 }
@@ -155,7 +158,7 @@ def calculate_bottoms_up_demand(year, cowos_wpm):
 # =============================================================================
 
 def show_research_module():
-    st.title("🔬 Power Research Framework (v2.2)")
+    st.title("🔬 Power Research Framework (v2.3)")
     st.markdown("Dynamic analysis of AI power demand vs. utility supply constraints.")
 
     # --- Sidebar Controls ---
