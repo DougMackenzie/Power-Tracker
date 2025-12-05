@@ -35,6 +35,7 @@ from .program_tracker import (
 )
 from .program_management_page import show_program_tracker
 from .research_module import show_research_module
+from .system_flow import show_system_flow
 
 # Import PPTX export module
 try:
@@ -777,12 +778,13 @@ def run():
     # Use session state for navigation
     page = st.sidebar.radio(
         "Navigation",
-        ["📊 Dashboard", "🏭 Site Database", "💬 AI Chat", "📁 VDR Upload", "➕ Add/Edit Site", 
+        ["📊 Dashboard", "🧩 System Flow", "🏭 Site Database", "💬 AI Chat", "📁 VDR Upload", "➕ Add/Edit Site", 
          "🏆 Rankings", "📊 Program Tracker", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "⚙️ Settings"],
         key="page"
     )
     
     if page == "📊 Dashboard": show_dashboard()
+    elif page == "🧩 System Flow": show_system_flow()
     elif page == "🏭 Site Database": show_site_database()
     elif page == "💬 AI Chat": show_ai_chat()
     elif page == "📁 VDR Upload": show_vdr_upload()
