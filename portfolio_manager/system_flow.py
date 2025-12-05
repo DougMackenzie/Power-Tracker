@@ -120,7 +120,7 @@ def show_system_flow():
         c.node('Scorer', html_node('Scorer', '⭐ ScoringEngine', '.calculate_site_score()', '#01579b'))
         
         # New Framework Node
-        c.node('ProbFramework', html_node('ProbFramework', '⚖️ Probability Framework', '(Drivers & Multipliers)', '#006064'))
+        c.node('ProbFramework', html_node('ProbFramework', '⚖️ Probability Framework', '(Drivers &amp; Multipliers)', '#006064'))
 
     # -- Cluster: DATA LAYER --
     with graph.subgraph(name='cluster_data') as c:
