@@ -2,6 +2,7 @@ import streamlit as st
 import graphviz
 import sys
 import os
+from datetime import datetime
 
 def show_system_flow():
     """
@@ -51,15 +52,30 @@ def show_system_flow():
     graph.attr('node', shape='note', style='filled', fontname='Courier', fontsize='10', fontcolor='white')
     graph.attr('edge', fontname='Courier', fontsize='8', color='#555555', fontcolor='#aaaaaa')
     
+    # Get current time for "Live" timestamps
+    now_str = datetime.now().strftime("%H:%M")
+    
+    # -- Cluster: FOUNDATION --
+    with graph.subgraph(name='cluster_foundation') as c:
+        c.attr(label='LAYER 0: FOUNDATION', style='dashed', color='#ffffff', fontcolor='#ffffff')
+        c.node('DeepResearch', f'📚 Deep Research Report\n(Manual Bottom-Up)\n[Last Updated: {now_str}]', 
+               fillcolor='#424242', shape='folder')
+
     # -- Cluster: INPUT LAYER --
     with graph.subgraph(name='cluster_inputs') as c:
         c.attr(label='LAYER 1: INPUTS & AGENTS', style='dashed', color='#00ff00', fontcolor='#00ff00')
         
         c.node('Human', '👤 Human Input\n[Forms/UI]', fillcolor='#1b5e20', shape='ellipse')
-        c.node('Chat', '💬 AI Chat\n[llm_integration.py]', fillcolor='#1b5e20', shape='ellipse')
-        c.node('VDR', '📁 VDR Processor\n[vdr_processor.py]\n(OCR + Extraction)', fillcolor='#004d40')
-        c.node('UtilAgent', '🕷️ Utility Agent\n[utility_agent.py]\n(Scraper)', fillcolor='#004d40')
-        c.node('Research', '🔬 Research Module\n[research_module.py]\n(Macro Data)', fillcolor='#004d40')
+        
+        # Agentic Capabilities (Red Dashed Line)
+        agent_style = {'color': '#ff0000', 'style': 'dashed', 'penwidth': '2.0', 'fillcolor': '#004d40'}
+        
+        c.node('Chat', '💬 AI Chat\n[llm_integration.py]', **agent_style)
+        c.node('VDR', '📁 VDR Processor\n[vdr_processor.py]\n(OCR + Extraction)', **agent_style)
+        c.node('UtilAgent', '🕷️ Utility Agent\n[utility_agent.py]\n(Scraper)', **agent_style)
+        
+        # Supply/Demand Model
+        c.node('SupplyDemand', '⚖️ Supply/Demand Model\n[research_module.py]', fillcolor='#004d40')
 
     # -- Cluster: PROCESSING LAYER --
     with graph.subgraph(name='cluster_process') as c:
@@ -86,11 +102,15 @@ def show_system_flow():
         c.node('Dash', '📊 Dashboard UI\n[streamlit_app.py]', fillcolor='#880e4f')
 
     # -- EDGES --
+    # Foundation -> Inputs
+    graph.edge('DeepResearch', 'SupplyDemand', label=' drives_assumptions', color='#ffffff')
+    graph.edge('SupplyDemand', 'Scorer', label=' state_scoring_framework', color='#ffffff')
+
     # Inputs -> Process
     graph.edge('Human', 'Builder', label=' manual_overrides', color='#00ff00')
-    graph.edge('VDR', 'Builder', label=' extracted_json', color='#00ff00')
-    graph.edge('Chat', 'Builder', label=' new_site_obj', color='#00ff00')
-    graph.edge('UtilAgent', 'Scorer', label=' iso_queue_data', color='#00ff00')
+    graph.edge('VDR', 'Builder', label=' extracted_json', color='#ff0000', style='dashed')
+    graph.edge('Chat', 'Builder', label=' new_site_obj', color='#ff0000', style='dashed')
+    graph.edge('UtilAgent', 'Scorer', label=' iso_queue_data', color='#ff0000', style='dashed')
     
     # Process -> Data
     graph.edge('Builder', 'ProfileObj', label=' instantiates', color='#00e5ff')
@@ -103,7 +123,6 @@ def show_system_flow():
     graph.edge('Scorer', 'Dash', label=' rankings_table', color='#ff00ff')
     graph.edge('ProfileObj', 'PPTX', label=' populates_slides', color='#ff00ff')
     graph.edge('ProfileObj', 'PDF', label=' generates_summary', color='#ff00ff')
-    graph.edge('Research', 'Dash', label=' supply_demand_curves', color='#ff00ff')
     
     st.graphviz_chart(graph, use_container_width=True)
 
@@ -117,17 +136,25 @@ def show_system_flow():
     with col1:
         selected_layer = st.radio(
             "Select Layer to Inspect:",
-            ["Input Layer", "Processing Layer", "Data Layer", "Output Layer"],
-            captions=["Forms, Agents, VDR", "Builders, Trackers, Scorers", "State, Sheets, JSON", "PPTX, PDF, UI"]
+            ["Foundation Layer", "Input Layer", "Processing Layer", "Data Layer", "Output Layer"],
+            captions=["Deep Research Report", "Forms, Agents, VDR", "Builders, Trackers, Scorers", "State, Sheets, JSON", "PPTX, PDF, UI"]
         )
         
     with col2:
-        if selected_layer == "Input Layer":
+        if selected_layer == "Foundation Layer":
+            st.info("**Foundation Layer**: The bedrock of all assumptions.")
+            st.markdown("""
+            - **`Deep Research Report`**: A manually driven, bottom-up analysis of global supply (CoWoS, Chips) vs. demand (Data Center MW).
+            - **`Supply/Demand Model`**: Takes the Deep Research inputs and projects regional power deficits.
+            - **Impact**: This foundational data directly informs the **State Scoring Framework**, ensuring that site scores reflect macro-economic realities.
+            """)
+
+        elif selected_layer == "Input Layer":
             st.info("**Input Layer**: Captures raw data from multiple sources.")
             st.markdown("""
             - **`site_profile_builder.py`**: The gatekeeper. It defines `HUMAN_INPUT_FIELDS` (e.g., Willingness to Sell) and `AI_RESEARCHABLE_FIELDS` (e.g., Flood Zone).
-            - **`vdr_processor.py`**: Uses OCR to read PDFs, then an LLM to extract structured JSON matching the `SiteProfileData` schema.
-            - **`utility_agent.py`**: Autonomous scraper that looks for IRP PDFs and Queue Excel files on utility websites.
+            - **`vdr_processor.py`** (Agent): Uses OCR to read PDFs, then an LLM to extract structured JSON matching the `SiteProfileData` schema.
+            - **`utility_agent.py`** (Agent): Autonomous scraper that looks for IRP PDFs and Queue Excel files on utility websites.
             """)
             
         elif selected_layer == "Processing Layer":
