@@ -12,6 +12,8 @@ from typing import Dict, List, Optional
 from duckduckgo_search import DDGS
 import streamlit as st
 import json
+import io
+import PyPDF2
 
 # Import our modules
 from .llm_integration import GeminiClient, ClaudeClient
@@ -69,6 +71,45 @@ class UtilityResearchAgent:
             print(f"Fetch error for {url}: {e}")
             return ""
 
+    def fetch_pdf_content(self, url: str) -> str:
+        """Fetch and parse text content from a PDF URL."""
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=15)
+            response.raise_for_status()
+            
+            f = io.BytesIO(response.content)
+            reader = PyPDF2.PdfReader(f)
+            
+            text = ""
+            # Read first 10 pages to avoid massive processing
+            for i in range(min(len(reader.pages), 10)):
+                text += reader.pages[i].extract_text() + "\n"
+                
+            return text[:20000] # Limit context
+            
+        except Exception as e:
+            print(f"PDF Fetch error for {url}: {e}")
+            return ""
+
+    def fetch_content(self, url: str) -> str:
+        """Smart fetcher that handles HTML and PDF."""
+        if url.lower().endswith('.pdf'):
+            return self.fetch_pdf_content(url)
+        else:
+            return self.fetch_page_content(url)
+
+    def identify_parent_company(self, utility: str) -> str:
+        """Ask LLM to identify the parent company."""
+        try:
+            self.client.start_chat("You are an energy market expert.")
+            response = self.client.send_message(f"Who is the parent company of the utility '{utility}'? Return ONLY the company name (e.g. 'American Electric Power'). If it is independent, return '{utility}'.")
+            return response.strip()
+        except:
+            return utility
+
     def analyze_content(self, topic: str, content: str, utility: str, state: str) -> str:
         """Use LLM to extract specific facts from content."""
         if not content:
@@ -124,7 +165,9 @@ class UtilityResearchAgent:
             title = res['title']
             print(f"  Reading: {title}")
             
-            content = self.fetch_page_content(url)
+            print(f"  Reading: {title}")
+            
+            content = self.fetch_content(url)
             if len(content) < 500: # Skip empty/blocked pages
                 continue
                 
@@ -159,28 +202,47 @@ class UtilityResearchAgent:
     def run_full_research(self, utility: str, state: str) -> Dict:
         """Run full research suite for a utility."""
         
-        # Generate queries
+        # 1. Identify Parent Company
+        parent_co = self.identify_parent_company(utility)
+        print(f"Identified parent company: {parent_co}")
+        
+        # Generate queries (now including parent company context)
+        # We'll manually inject parent company into queries for now or update state_analysis later
+        # For now, let's just append parent company to the utility name for some queries
+        
         all_queries = generate_utility_research_queries(utility, state)
+        
+        # Add parent company queries if different
+        if parent_co and parent_co.lower() != utility.lower():
+            parent_queries = generate_utility_research_queries(parent_co, state)
+            for topic, queries in parent_queries.items():
+                if topic in all_queries:
+                    all_queries[topic].extend(queries)
         
         results = {
             'utility': utility,
+            'parent_company': parent_co,
             'state': state,
             'last_updated': time.strftime("%Y-%m-%d"),
             'topics': {}
         }
         
-        # Progress callback would be nice here, but we'll just return the result
-        # Streamlit app can handle progress bar
-        
         topics_to_research = [
             'queue_and_interconnection',
             'capacity_and_generation',
             'rate_cases',
-            'data_center_specific'
+            'data_center_specific',
+            'transmission_projects', # Added
+            'regulatory_filings'     # Added
         ]
         
         for topic in topics_to_research:
             queries = all_queries.get(topic, [])
+            # Add specific PDF hunting queries for IRPs and RFPs
+            if topic == 'capacity_and_generation':
+                queries.append(f"{utility} Integrated Resource Plan {time.strftime('%Y')} filetype:pdf")
+                queries.append(f"{parent_co} IRP {state} filetype:pdf")
+            
             topic_result = self.research_topic(utility, state, topic, queries)
             results['topics'][topic] = topic_result
             
