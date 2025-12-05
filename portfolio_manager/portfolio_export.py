@@ -194,8 +194,7 @@ def generate_portfolio_export(
     # 3. Generate Slides for Each Site
     # --------------------------------
     from .pptx_export import (
-        populate_site_profile_table, update_overview_textbox, replace_in_table,
-        find_and_replace_text, build_replacements, SiteProfileData,
+        populate_slide, build_replacements, SiteProfileData,
         generate_capacity_trajectory_chart, generate_critical_path_chart,
         generate_score_summary_chart, generate_market_analysis_chart,
         add_critical_path_text, add_score_breakdown_text, add_market_text,
@@ -223,42 +222,22 @@ def generate_portfolio_export(
         source_profile_idx = template_indices['profile']
         profile_slide = duplicate_slide_in_place(prs, source_profile_idx)
         
-        # Populate Profile Slide
-        for shape in profile_slide.shapes:
-            if shape.has_table:
-                if len(shape.table.rows) >= 17:
-                    if profile_data:
-                        populate_site_profile_table(shape.table, profile_data)
-                    else:
-                        replace_in_table(shape.table, replacements)
-                else:
-                    replace_in_table(shape.table, replacements)
-            elif shape.has_text_frame:
-                shape_text = shape.text_frame.text.lower()
-                if 'overview' in shape_text and 'observation' in shape_text:
-                    update_overview_textbox(shape, site_data, profile_data)
-                else:
-                    find_and_replace_text(shape, replacements)
-                    
-        # Handle Image Placeholders on Profile Slide
-        replace_images_with_placeholders(profile_slide, site_data)
+        # Populate Profile Slide using SHARED LOGIC
+        populate_slide(profile_slide, site_data, profile_data, replacements, config, slide_type='site_profile')
 
         # --- 2. Site Boundary Slide ---
         if config.include_site_boundary:
             source_boundary_idx = template_indices['boundary']
             boundary_slide = duplicate_slide_in_place(prs, source_boundary_idx)
-            # Replace placeholders
-            for shape in boundary_slide.shapes:
-                find_and_replace_text(shape, replacements)
-            replace_images_with_placeholders(boundary_slide, site_data, label="Site Boundary Map")
+            # Populate Boundary Slide using SHARED LOGIC
+            populate_slide(boundary_slide, site_data, profile_data, replacements, config, slide_type='site_boundary')
 
         # --- 3. Topography Slide ---
         if config.include_topography:
             source_topo_idx = template_indices['topo']
             topo_slide = duplicate_slide_in_place(prs, source_topo_idx)
-            for shape in topo_slide.shapes:
-                find_and_replace_text(shape, replacements)
-            replace_images_with_placeholders(topo_slide, site_data, label="Topography Map")
+            # Populate Topography Slide using SHARED LOGIC
+            populate_slide(topo_slide, site_data, profile_data, replacements, config, slide_type='topography')
             
         # --- 4. Capacity Trajectory (New Slide) ---
         if config.include_capacity_trajectory:
