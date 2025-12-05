@@ -672,10 +672,10 @@ def show_portfolio_export(sites: Dict):
                     output_path = tmp.name
                 
                 # Template path
-                template_path = "template.pptx" # Assuming in root
+                template_path = "Sample Site Profile Template.pptx" # Located in root
                 if not os.path.exists(template_path):
                     # Fallback or error
-                    st.error("Template file 'template.pptx' not found in root directory.")
+                    st.error(f"Template file '{template_path}' not found in root directory.")
                     return
                 
                 # Generate
