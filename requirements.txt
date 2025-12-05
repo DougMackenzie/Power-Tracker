@@ -5,7 +5,7 @@ gspread
 google-auth
 plotly
 fpdf2
-google-generativeai
+google-generativeai>=0.7.0
 PyPDF2
 python-docx
 openpyxl
