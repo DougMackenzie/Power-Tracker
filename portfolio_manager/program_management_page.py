@@ -651,55 +651,79 @@ def show_portfolio_export(sites: Dict):
         
     st.divider()
     
-    # Generate Button
-    if st.button("🚀 Generate Portfolio Deck", type="primary", disabled=len(selected_sites) == 0):
-        with st.spinner("Generating comprehensive portfolio deck... this may take a minute..."):
-            try:
-                # Create config
-                config = ExportConfig(
-                    include_market_analysis=include_market,
-                    include_capacity_trajectory=include_trajectory,
-                    include_infrastructure=include_infra,
-                    include_site_boundary=include_boundary,
-                    include_topography=include_topo,
-                    include_score_analysis=include_score,
-                    contact_name="Douglas Mackenzie", # Default
-                    contact_email="douglas.mackenzie@jll.com"
-                )
+    if st.button("🚀 Generate Portfolio Deck", type="primary", use_container_width=True):
+        if not selected_sites:
+            st.warning("Please select at least one site.")
+        else:
+            # Check template
+            import os
+            default_template = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Sample Site Profile Template.pptx')
+            if os.path.exists(default_template):
+                template_path = default_template
+            else:
+                template_path = st.session_state.get('export_template_path', '')
                 
-                # Temp file for output
-                with tempfile.NamedTemporaryFile(suffix='.pptx', delete=False) as tmp:
-                    output_path = tmp.name
-                
-                # Template path
-                template_path = "Sample Site Profile Template.pptx" # Located in root
-                if not os.path.exists(template_path):
-                    # Fallback or error
-                    st.error(f"Template file '{template_path}' not found in root directory.")
-                    return
-                
-                # Generate
-                generate_portfolio_export(selected_sites, template_path, output_path, config)
-                
-                # Read for download
-                with open(output_path, "rb") as f:
-                    file_data = f.read()
-                
-                st.success("✅ Portfolio Deck Generated Successfully!")
-                
-                st.download_button(
-                    label="📥 Download Portfolio Deck (.pptx)",
-                    data=file_data,
-                    file_name=f"Portfolio_Export_{datetime.now().strftime('%Y%m%d')}.pptx",
-                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                )
-                
-                # Cleanup
-                os.unlink(output_path)
-                
-            except Exception as e:
-                st.error(f"Export failed: {str(e)}")
-                st.exception(e)
+            if not template_path or not os.path.exists(template_path):
+                st.error("Template not found. Please ensure 'Sample Site Profile Template.pptx' exists.")
+            else:
+                try:
+                    with st.spinner("Generating portfolio export..."):
+                        # Prepare data with full profiles
+                        export_sites = {}
+                        import json
+                        from .pptx_export import SiteProfileData
+                        
+                        for sid, s in selected_sites.items():
+                            site_copy = s.copy()
+                            
+                            # Hydrate SiteProfileData from profile_json if available
+                            if 'profile_json' in s and s['profile_json']:
+                                try:
+                                    p_dict = json.loads(s['profile_json'])
+                                    # Create SiteProfileData object
+                                    # We use from_dict if available, or constructor
+                                    if hasattr(SiteProfileData, 'from_dict'):
+                                        profile_obj = SiteProfileData.from_dict(p_dict)
+                                    else:
+                                        # Fallback: try to match fields
+                                        profile_obj = SiteProfileData(**{
+                                            k: v for k, v in p_dict.items() 
+                                            if k in SiteProfileData.__dataclass_fields__
+                                        })
+                                    
+                                    site_copy['profile'] = profile_obj
+                                    print(f"[DEBUG] Hydrated profile for {sid}")
+                                except Exception as e:
+                                    print(f"[WARNING] Failed to hydrate profile for {sid}: {e}")
+                            
+                            export_sites[sid] = site_copy
+                        
+                        config = ExportConfig(
+                            include_capacity_trajectory=include_trajectory,
+                            include_infrastructure=include_infra,
+                            include_score_analysis=include_score,
+                            include_market_analysis=include_market,
+                            include_site_boundary=include_boundary,
+                            include_topography=include_topo
+                        )
+                        
+                        output_path = f"/tmp/Portfolio_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pptx"
+                        result = generate_portfolio_export(export_sites, template_path, output_path, config)
+                        
+                        with open(result, 'rb') as f:
+                            st.download_button(
+                                "⬇️ Download Portfolio Deck",
+                                f,
+                                file_name=os.path.basename(result),
+                                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                            )
+                        
+                        st.success("✅ Portfolio export generated successfully!")
+                        
+                except Exception as e:
+                    st.error(f"Export failed: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
 
 
 # =============================================================================
