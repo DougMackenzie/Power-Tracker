@@ -310,14 +310,14 @@ def duplicate_slide_in_place(prs, index):
     for shape in source.shapes:
         new_shape = None
         
-        # 1. Pictures
+        # 1. Pictures (Type 13)
         if shape.shape_type == 13: 
             try:
                 blob = shape.image.blob
                 dest.shapes.add_picture(io.BytesIO(blob), shape.left, shape.top, shape.width, shape.height)
             except: pass
             
-        # 2. Tables
+        # 2. Tables (Type 19)
         elif shape.shape_type == 19:
             try:
                 rows = len(shape.table.rows)
@@ -344,8 +344,8 @@ def duplicate_slide_in_place(prs, index):
                                     except: pass
             except: pass
             
-        # 3. AutoShapes / TextBoxes
-        elif shape.shape_type == MSO_SHAPE.AUTO_SHAPE or shape.shape_type == MSO_SHAPE.TEXT_BOX:
+        # 3. AutoShapes (1) / TextBoxes (17)
+        elif shape.shape_type == 1 or shape.shape_type == 17:
             try:
                 new_shape = dest.shapes.add_shape(shape.auto_shape_type, shape.left, shape.top, shape.width, shape.height)
                 # Copy text
