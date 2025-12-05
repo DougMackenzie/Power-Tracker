@@ -155,7 +155,7 @@ def calculate_bottoms_up_demand(year, cowos_wpm):
 # =============================================================================
 
 def show_research_module():
-    st.title("🔬 Power Research Framework")
+    st.title("🔬 Power Research Framework (v2.1)")
     st.markdown("Dynamic analysis of AI power demand vs. utility supply constraints.")
 
     # --- Sidebar Controls ---
