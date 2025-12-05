@@ -267,6 +267,9 @@ def show_gap_analysis(demand_scen, supply_scen, show_global, show_us_tech, show_
     
     st.plotly_chart(fig, use_container_width=True)
     
+    with st.expander("View Raw Data"):
+        st.dataframe(df)
+    
     # Gap Metrics
     st.markdown("### 📉 Gap Metrics (US Located Demand vs. Supply)")
     cols = st.columns(3)
