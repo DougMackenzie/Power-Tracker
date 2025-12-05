@@ -161,12 +161,47 @@ def show_research_module():
     st.title("🔬 Power Research Framework (v2.4)")
     st.markdown("Dynamic analysis of AI power demand vs. utility supply constraints.")
 
-    # ... (rest of function) ...
+    # --- Sidebar Controls ---
+    st.sidebar.header("Scenario Configuration")
+    
+    selected_demand_scenario = st.sidebar.selectbox(
+        "Demand Scenario",
+        options=list(DemandScenario),
+        format_func=lambda x: x.value
+    )
+    
+    selected_supply_scenario = st.sidebar.selectbox(
+        "Supply Scenario",
+        options=list(SupplyScenario),
+        format_func=lambda x: x.value
+    )
+    
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### View Settings")
+    show_global = st.sidebar.checkbox("Show Global Demand", value=True)
+    show_us_tech = st.sidebar.checkbox("Show US Tech Demand", value=True)
+    show_us_located = st.sidebar.checkbox("Show US Located Demand", value=True)
+    
+    # --- Main Content ---
+    
+    # Scenario Description
+    st.info(f"**Current Outlook**: {DEMAND_DATA[selected_demand_scenario]['description']}")
+    if selected_supply_scenario == SupplyScenario.LOW:
+        st.warning(f"**Supply Constraint**: {SUPPLY_DATA[selected_supply_scenario]['description']}")
+    else:
+        st.success(f"**Supply Outlook**: {SUPPLY_DATA[selected_supply_scenario]['description']}")
 
+    # Tabs
+    tab_summary, tab_supply, tab_demand_build = st.tabs(["📊 Gap Analysis", "⚡ Supply Analysis", "🏗️ Bottoms-Up Demand"])
+    
+    with tab_summary:
+        show_gap_analysis(selected_demand_scenario, selected_supply_scenario, show_global, show_us_tech, show_us_located)
+        
+    with tab_supply:
+        show_supply_analysis(selected_supply_scenario)
+        
     with tab_demand_build:
         show_bottoms_up_build()
-
-# ... (skip to show_bottoms_up_build) ...
 
 def show_bottoms_up_build():
     st.subheader("🏗️ Bottoms-Up Demand Build")
