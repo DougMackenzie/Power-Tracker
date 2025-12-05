@@ -33,6 +33,7 @@ from .program_tracker import (
     calculate_portfolio_summary
 )
 from .program_management_page import show_program_tracker
+from .research_module import show_research_module
 
 # Import PPTX export module
 try:
@@ -776,7 +777,7 @@ def run():
     page = st.sidebar.radio(
         "Navigation",
         ["📊 Dashboard", "🏭 Site Database", "💬 AI Chat", "📁 VDR Upload", "➕ Add/Edit Site", 
-         "🏆 Rankings", "📊 Program Tracker", "🗺️ State Analysis", "🔍 Utility Research", "⚙️ Settings"],
+         "🏆 Rankings", "📊 Program Tracker", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "⚙️ Settings"],
         key="page"
     )
     
@@ -788,6 +789,7 @@ def run():
     elif page == "🏆 Rankings": show_rankings()
     elif page == "📊 Program Tracker": show_program_tracker()
     elif page == "🗺️ State Analysis": show_state_analysis()
+    elif page == "🔬 Research Framework": show_research_module()
     elif page == "🔍 Utility Research": show_utility_research()
     elif page == "⚙️ Settings": show_settings()
 
