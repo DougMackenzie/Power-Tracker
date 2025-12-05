@@ -3216,6 +3216,43 @@ def show_utility_research():
             status_container.update(label="❌ Error", state="error")
             st.error(f"Research failed: {str(e)}")
 
+    st.markdown("---")
+    with st.expander("📝 Manual Research Input (Preload Data)"):
+        st.write("Paste a research report from Claude Opus, ChatGPT, or other sources here to preload the database.")
+        manual_text = st.text_area("Paste Report Here", height=300)
+        
+        if st.button("Process & Save Manual Research"):
+            if not (utility_name and state and manual_text):
+                st.error("Please enter Utility, State, and paste the report.")
+            else:
+                with st.spinner("Parsing and structuring data..."):
+                    try:
+                        api_key = st.secrets.get("GEMINI_API_KEY")
+                        agent = UtilityResearchAgent(provider="gemini", api_key=api_key)
+                        
+                        results = agent.parse_manual_research(utility_name, state, manual_text)
+                        
+                        if results:
+                            # Save to DB
+                            if 'utilities' not in st.session_state.db:
+                                st.session_state.db['utilities'] = {}
+                                
+                            key = f"{utility_name}_{state}"
+                            st.session_state.db['utilities'][key] = {
+                                'utility_name': utility_name,
+                                'state': state,
+                                'last_updated': datetime.now().strftime("%Y-%m-%d"),
+                                'research_json': results
+                            }
+                            save_database(st.session_state.db)
+                            st.success("Manual research saved successfully!")
+                            st.rerun()
+                        else:
+                            st.error("Failed to parse the report.")
+                            
+                    except Exception as e:
+                        st.error(f"Error processing manual input: {e}")
+
 
 def show_settings():
     """Settings and configuration."""

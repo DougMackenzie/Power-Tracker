@@ -256,6 +256,64 @@ class UtilityResearchAgent:
             st.error(f"Grounded research failed: {e}")
             return {}
 
+    def parse_manual_research(self, utility: str, state: str, raw_text: str) -> Dict:
+        """
+        Parse manually pasted research text into structured format.
+        """
+        print(f"Parsing manual research for {utility} ({state})...")
+        
+        prompt = f"""
+        I have a raw research report about **{utility}** in **{state}**.
+        Please extract and structure the information into the following JSON format.
+        
+        RAW REPORT:
+        {raw_text[:50000]}
+        
+        REQUIRED JSON STRUCTURE:
+        {{
+            "queue_and_interconnection": {{ "summary": "...", "sources": [] }},
+            "capacity_and_generation": {{ "summary": "...", "sources": [] }},
+            "rate_cases": {{ "summary": "...", "sources": [] }},
+            "data_center_specific": {{ "summary": "...", "sources": [] }},
+            "transmission_projects": {{ "summary": "...", "sources": [] }},
+            "regulatory_filings": {{ "summary": "...", "sources": [] }}
+        }}
+        
+        If a section is missing from the report, leave the summary empty or say "No information provided."
+        """
+        
+        try:
+            # Use standard chat (no search needed for parsing)
+            self.client.start_chat("You are a data structuring assistant.", use_search=False)
+            response = self.client.send_message(prompt)
+            
+            # Parse JSON
+            import re
+            json_match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
+            if json_match:
+                data = json.loads(json_match.group(1))
+            else:
+                try:
+                    data = json.loads(response)
+                except:
+                    # Fallback
+                    return {
+                        'queue_and_interconnection': {'summary': "Failed to parse report.", 'sources': []}
+                    }
+            
+            # Wrap in full result structure
+            return {
+                'utility': utility,
+                'state': state,
+                'last_updated': time.strftime("%Y-%m-%d"),
+                'topics': data
+            }
+                
+        except Exception as e:
+            print(f"Manual parsing error: {e}")
+            st.error(f"Parsing failed: {e}")
+            return {}
+
     def run_full_research(self, utility: str, state: str) -> Dict:
         """Run full research suite for a utility."""
         
