@@ -110,7 +110,9 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
                           xref="paper", yref="paper", showarrow=False)
         return fig
     
-    df = pd.DataFrame(tasks).sort_values(['group', 'subgroup', 'start'])
+    # Sort chronologically (earliest at top) for natural top-down flow
+    # This makes dependency arrows flow downward, easier to follow
+    df = pd.DataFrame(tasks).sort_values(['start', 'group', 'subgroup'])
     
     fig = go.Figure()
     y_pos = 0
