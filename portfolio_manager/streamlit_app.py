@@ -1288,6 +1288,148 @@ def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
     """Generate enhanced portfolio PDF with detailed site information."""
     from fpdf import FPDF
     
+    try:
+        # Try enhanced version first
+        sites = db.get('sites', {})
+        
+        # Calculate site data with scores
+        sites_data = []
+        for site_id in site_ids:
+            if site_id in sites:
+                site = sites[site_id]
+                scores = calculate_site_score(site, weights)
+                stage = determine_stage(site)
+                sites_data.append({
+                    'id': site_id,
+                    'site': site,
+                    'scores': scores,
+                    'stage': stage
+                })
+        
+        # Sort by score
+        sites_data.sort(key=lambda x: x['scores']['overall_score'], reverse=True)
+        
+        class PortfolioPDF(FPDF):
+            def header(self):
+                if self.page_no() > 1:
+                    self.set_font('Helvetica', 'B', 9)
+                    self.set_text_color(100, 100, 100)
+                    try:
+                        self.cell(0, 8, 'Portfolio Export', align='L')
+                    except:
+                        pass
+                    self.ln(1)
+                    self.set_draw_color(200, 200, 200)
+                    self.line(10, 18, 200, 18)
+                    self.ln(6)
+                    
+            def footer(self):
+                self.set_y(-12)
+                self.set_font('Helvetica', 'I', 8)
+                self.set_text_color(128, 128, 128)
+                try:
+                    self.cell(0, 8, f'Page {self.page_no()}', align='R')
+                except:
+                    pass
+        
+        pdf = PortfolioPDF()
+        pdf.add_page()
+        
+        # === COVER PAGE (MINIMAL) ===
+        pdf.set_font('Helvetica', 'B', 24)
+        pdf.multi_cell(0, 15, 'Portfolio Export', align='C')
+        pdf.ln(5)
+        
+        # Portfolio Summary
+        total_sites = len(sites_data)
+        total_mw = sum(sd['site'].get('target_mw', 0) for sd in sites_data)
+        avg_score = sum(sd['scores']['overall_score'] for sd in sites_data) / total_sites if total_sites > 0 else 0
+        
+        pdf.set_font('Helvetica', '', 11)
+        pdf.multi_cell(0, 7, f'Total Sites: {total_sites}')
+        pdf.multi_cell(0, 7, f'Total Pipeline MW: {total_mw:,.0f}')
+        pdf.multi_cell(0, 7, f'Average Score: {avg_score:.1f}')
+        pdf.ln(10)
+        
+        # === INDIVIDUAL SITE SECTIONS ===
+        for idx, sd in enumerate(sites_data, 1):
+            site = sd['site']
+            scores = sd['scores']
+            stage = sd['stage']
+            
+            pdf.add_page()
+            
+            # Site name - truncate heavily for safety
+            site_name = sanitize_text(site.get('name', 'Site'))[:35]
+            pdf.set_font('Helvetica', 'B', 18)
+            pdf.multi_cell(0, 10, site_name)
+            pdf.ln(5)
+            
+            # Basic info
+            pdf.set_font('Helvetica', '', 10)
+            state = sanitize_text(site.get('state', ''))[:10]
+            utility = sanitize_text(site.get('utility', ''))[:20]
+            if state:
+                pdf.multi_cell(0, 6, f'State: {state}')
+            if utility:
+                pdf.multi_cell(0, 6, f'Utility: {utility}')
+            pdf.multi_cell(0, 6, f'MW: {site.get("target_mw", 0)}')
+            pdf.ln(5)
+            
+            # Score
+            pdf.set_font('Helvetica', 'B', 24)
+            pdf.multi_cell(0, 10, f"Score: {scores['overall_score']:.1f}", align='C')
+            pdf.ln(10)
+            
+            # Risks - safe rendering
+            risks = site.get('risks', [])
+            if risks:
+                pdf.set_font('Helvetica', 'B', 11)
+                pdf.multi_cell(0, 7, 'Key Risks:')
+                pdf.set_font('Helvetica', '', 9)
+                for risk in risks[:5]:
+                    risk_text = sanitize_text(str(risk))[:100]
+                    pdf.multi_cell(0, 5, f'- {risk_text}')
+                pdf.ln(3)
+            
+            # Opportunities
+            opps = site.get('opps', [])
+            if opps:
+                pdf.set_font('Helvetica', 'B', 11)
+                pdf.multi_cell(0, 7, 'Opportunities:')
+                pdf.set_font('Helvetica', '', 9)
+                for opp in opps[:5]:
+                    opp_text = sanitize_text(str(opp))[:100]
+                    pdf.multi_cell(0, 5, f'- {opp_text}')
+        
+        return bytes(pdf.output())
+        
+    except Exception as e:
+        # If enhanced version fails, fall back to absolute minimum
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font('Helvetica', 'B', 20)
+        pdf.multi_cell(0, 15, 'Portfolio Export', align='C')
+        pdf.ln(10)
+        
+        sites = db.get('sites', {})
+        pdf.set_font('Helvetica', '', 11)
+        pdf.multi_cell(0, 7, f'Total Sites: {len(site_ids)}')
+        pdf.multi_cell(0, 7, f'Error in detailed generation: {str(e)[:50]}')
+        pdf.ln(10)
+        
+        # List sites minimally
+        for i, sid in enumerate(site_ids, 1):
+            if sid in sites:
+                name = sanitize_text(sites[sid].get('name', 'Site'))[:40]
+                pdf.multi_cell(0, 6, f'{i}. {name}')
+        
+        return bytes(pdf.output())
+
+
+    """Generate enhanced portfolio PDF with detailed site information."""
+    from fpdf import FPDF
+    
     sites = db.get('sites', {})
     
     # Calculate site data with scores
