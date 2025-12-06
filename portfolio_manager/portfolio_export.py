@@ -196,206 +196,139 @@ def generate_portfolio_export(
     config: ExportConfig = None
 ) -> str:
     """
-    Generate a comprehensive portfolio export by iterating through sites and 
-    generating slides directly in the master presentation.
-    This ensures exact fidelity to the individual site exports while keeping everything in one file.
+    Generate portfolio export by creating individual presentations for each site,
+    then merging them together. This guarantees exact fidelity to single-site exports.
     """
+    import tempfile
+    import os
+    from .pptx_export import export_site_to_pptx
+    
     if not Presentation:
         raise ImportError("python-pptx is required")
     
-    print(f"[DEBUG] Generating Portfolio Export for {len(sites)} sites")
+    if config is None:
+        config = ExportConfig()
     
-    # 1. Load Master Presentation
-    prs = Presentation(template_path)
+    print(f"[DEBUG] Generating Portfolio Export for {len(sites)} sites using merge strategy")
     
-    # 2. Add Portfolio Summary Slides (At the beginning)
-    # -------------------------------------------------
-    # The template likely starts with Title (0), Profile (1), Boundary (2), Topo (3), Thank You (4)
-    # We want to insert our summary slides after the Title (0).
+    # 1. Create master presentation (start with template)
+    master_prs = Presentation(template_path)
     
-    # Update Title Slide (Index 0)
-    title_slide = prs.slides[0]
+    # 2. Update Title Slide
+    title_slide = master_prs.slides[0]
     if title_slide.shapes.title:
         title_slide.shapes.title.text = "Portfolio Overview"
     
-    # Subtitle
     subtitle_text = f"Generated: {datetime.now().strftime('%B %d, %Y')}"
     if len(title_slide.placeholders) > 1:
         try:
             title_slide.placeholders[1].text = subtitle_text
         except:
             pass
-            
-    # Add Metrics Slide (Index 1)
-    add_portfolio_metrics_slide(prs, sites, index=1)
     
-    # Add Ranking Slide (Index 2)
-    add_portfolio_ranking_slide(prs, sites, index=2)
+    # 3. Add Portfolio Summary Slides
+    add_portfolio_metrics_slide(master_prs, sites, index=1)
+    add_portfolio_ranking_slide(master_prs, sites, index=2)
     
-    # Now the original template slides are shifted:
-    # Title: 0
-    # Metrics: 1
-    # Ranking: 2
-    # Profile: 3 (was 1)
-    # Boundary: 4 (was 2)
-    # Topo: 5 (was 3)
-    # Thank You: 6 (was 4)
+    # 4. Generate individual presentations for each site and merge
+    temp_files = []
     
-    template_indices = {
-        'profile': 3,
-        'boundary': 4,
-        'topo': 5
-    }
-    
-    # 3. Pre-Calculate Scores for All Sites
-    # ---------------------------------------
-    try:
-        from .site_scoring import calculate_site_score
-        SCORING_AVAILABLE = True
-    except ImportError:
-        SCORING_AVAILABLE = False
-        print("[WARNING] Scoring module not available")
-    
-    if SCORING_AVAILABLE:
-        default_weights = {
-            'state': 0.20, 'power': 0.25, 'relationship': 0.20,
-            'execution': 0.15, 'fundamentals': 0.10, 'financial': 0.10
-        }
-        for site_id, site_data in sites.items():
-            if 'scores' not in site_data or not site_data['scores']:
-                try:
-                    scores = calculate_site_score(site_data, default_weights)
-                    site_data['scores'] = scores
-                    print(f"[DEBUG] Pre-calculated scores for {site_data.get('name', site_id)}")
-                except Exception as e:
-                    print(f"[WARNING] Could not calculate scores for {site_id}: {e}")
-    
-    # 4. Generate Slides for Each Site
-    # --------------------------------
-    from .pptx_export import (
-        populate_site_profile_table, update_overview_textbox, replace_in_table,
-        find_and_replace_text, build_replacements, SiteProfileData,
-        generate_capacity_trajectory_chart, generate_critical_path_chart,
-        generate_score_summary_chart, generate_market_analysis_chart,
-        add_critical_path_text, add_score_breakdown_text, add_market_text,
-        convert_phase_data, PhaseData, CapacityTrajectory, ScoreAnalysis
-    )
-    
-    # We append new slides to the end
     for site_id, site_data in sites.items():
-        print(f"[DEBUG] Processing site: {site_data.get('name', site_id)}")
+        site_name = site_data.get('name', site_id)
+        print(f"[DEBUG] Generating individual export for: {site_name}")
         
-        # Prepare site data (parse JSON fields)
-        site_data_copy = site_data.copy()
-        site_data_copy = prepare_site_for_export(site_data_copy)
-        
-        # Safety net: Calculate scores if still missing
-        if SCORING_AVAILABLE and ('scores' not in site_data_copy or not site_data_copy['scores']):
-            try:
-                scores = calculate_site_score(site_data_copy, default_weights)
-                site_data_copy['scores'] = scores
-            except Exception as e:
-                print(f"[WARNING] Could not calculate scores in loop for {site_id}: {e}")
-        
-        # Prepare Data
-        replacements = build_replacements(site_data_copy, config)
-        
-        # Get Profile Data using robust helper
-        profile_data = get_profile_data(site_data_copy)
-        
-        # --- 1. Site Profile Slide ---
-        # Clone the template profile slide
-        source_profile_idx = template_indices['profile']
-        profile_slide = duplicate_slide_in_place(prs, source_profile_idx)
-        
-        # Populate Profile Slide
-        for shape in profile_slide.shapes:
-            if shape.has_table:
-                if len(shape.table.rows) >= 17:
-                    if profile_data:
-                        populate_site_profile_table(shape.table, profile_data)
-                    else:
-                        replace_in_table(shape.table, replacements)
-                else:
-                    replace_in_table(shape.table, replacements)
-            elif shape.has_text_frame:
-                shape_text = shape.text_frame.text.lower()
-                if 'overview' in shape_text and 'observation' in shape_text:
-                    update_overview_textbox(shape, site_data_copy, profile_data)
-                else:
-                    find_and_replace_text(shape, replacements)
-                    
-        # Handle Image Placeholders on Profile Slide
-        replace_images_with_placeholders(profile_slide, site_data_copy)
-
-        # --- 2. Site Boundary Slide ---
-        if config.include_site_boundary:
-            source_boundary_idx = template_indices['boundary']
-            boundary_slide = duplicate_slide_in_place(prs, source_boundary_idx)
-            # Replace placeholders
-            for shape in boundary_slide.shapes:
-                find_and_replace_text(shape, replacements)
-            replace_images_with_placeholders(boundary_slide, site_data_copy, label="Site Boundary Map")
-
-        # --- 3. Topography Slide ---
-        if config.include_topography:
-            source_topo_idx = template_indices['topo']
-            topo_slide = duplicate_slide_in_place(prs, source_topo_idx)
-            for shape in topo_slide.shapes:
-                find_and_replace_text(shape, replacements)
-            replace_images_with_placeholders(topo_slide, site_data_copy, label="Topography Map")
+        try:
+            # Generate individual presentation using the proven export function
+            temp_path = tempfile.mktemp(suffix='.pptx')
+            temp_files.append(temp_path)
             
-        # --- 4. Capacity Trajectory (New Slide) ---
-        if config.include_capacity_trajectory:
-            add_capacity_slide(prs, site_data_copy, replacements)
-
-        # --- 5. Infrastructure (New Slide) ---
-        if config.include_infrastructure:
-            add_infrastructure_slide(prs, site_data_copy, replacements)
+            export_site_to_pptx(site_data, template_path, temp_path, config)
             
-        # --- 6. Market Analysis (New Slide) ---
-        if config.include_market_analysis:
-            add_market_slide(prs, site_data_copy, replacements)
+            # Load the individual presentation
+            site_prs = Presentation(temp_path)
             
-        # --- 7. Score Analysis (New Slide) ---
-        if config.include_score_analysis:
-            add_score_slide(prs, site_data_copy, replacements)
-
-    # 4. Cleanup
-    # ----------
-    # Delete the original template slides (which are now in the middle)
-    # We must delete from highest index to lowest to avoid shifting issues
-    indices_to_delete = sorted(template_indices.values(), reverse=True)
-    xml_slides = prs.slides._sldIdLst
-    for idx in indices_to_delete:
-        if idx < len(prs.slides):
-            xml_slides.remove(xml_slides[idx])
+            # Copy all slides EXCEPT the title slide (index 0) from the individual presentation
+            # Individual exports have: Title, Profile, Boundary, Topo, Charts...
+            # We want to copy everything except the title
+            for slide_idx in range(1, len(site_prs.slides)):
+                source_slide = site_prs.slides[slide_idx]
+                
+                # Get the layout from source
+                slide_layout = source_slide.slide_layout
+                
+                # Add a new slide with the same layout
+                new_slide = master_prs.slides.add_slide(slide_layout)
+                
+                # Copy all shapes from source to new slide
+                copy_slide_content(source_slide, new_slide)
             
-    # Move Thank You slide to end (it was at index 6, but indices shifted after deletion)
-    # Actually, if we deleted 3, 4, 5, the Thank You slide (was 6) is now at 3.
-    # We want it at the very end.
-    # Let's just find the Thank You slide by content or assume it's the one after the deleted block.
-    # Easier: Just move the last slide (if it's Thank You) to the end?
-    # Or, we can just let it be. If we deleted the templates, the Thank You slide is likely in the middle now if we appended new slides.
-    # Wait, we appended new slides to the END.
-    # So the order was: [Title, Metrics, Ranking, Profile, Boundary, Topo, ThankYou, Site1Slides..., Site2Slides...]
-    # We deleted Profile, Boundary, Topo.
-    # Order is now: [Title, Metrics, Ranking, ThankYou, Site1Slides..., Site2Slides...]
-    # We want ThankYou at the end.
+            print(f"[DEBUG] Merged {len(site_prs.slides) - 1} slides from {site_name}")
+            
+        except Exception as e:
+            print(f"[ERROR] Failed to export/merge {site_name}: {e}")
+            import traceback
+            traceback.print_exc()
     
-    # Find Thank You slide (it should be at index 3 now)
-    thank_you_idx = 3
-    if thank_you_idx < len(prs.slides):
-        # Move it to end
-        xml_slides = prs.slides._sldIdLst
-        slides = list(xml_slides)
-        thank_you_slide = slides[thank_you_idx]
-        xml_slides.remove(thank_you_slide)
-        xml_slides.append(thank_you_slide)
-            
-    # 5. Save
-    prs.save(output_path)
+    # 5. Add Thank You slide at the end
+    try:
+        blank_layout = master_prs.slide_layouts[6]  # Blank layout
+        thank_you_slide = master_prs.slides.add_slide(blank_layout)
+        
+        # Add centered text
+        left = Inches(1)
+        top = Inches(3)
+        width = Inches(8)
+        height = Inches(1)
+        
+        textbox = thank_you_slide.shapes.add_textbox(left, top, width, height)
+        text_frame = textbox.text_frame
+        text_frame.text = "Thank You"
+        
+        paragraph = text_frame.paragraphs[0]
+        paragraph.alignment = 1  # Center
+        paragraph.font.size = Pt(44)
+        paragraph.font.bold = True
+    except:
+        pass
+    
+    # 6. Clean up temp files
+    for temp_file in temp_files:
+        try:
+            if os.path.exists(temp_file):
+                os.unlink(temp_file)
+        except:
+            pass
+    
+    # 7. Save master portfolio
+    master_prs.save(output_path)
+    print(f"[DEBUG] Portfolio export saved to: {output_path}")
+    
     return output_path
+
+
+def copy_slide_content(source_slide, dest_slide):
+    """
+    Copy all shapes from source slide to destination slide.
+    Uses deep copy for complete fidelity.
+    """
+    import copy
+    from pptx.enum.shapes import MSO_SHAPE_TYPE
+    
+    # Clear any existing shapes in destination
+    for shape in list(dest_slide.shapes):
+        sp = shape.element
+        sp.getparent().remove(sp)
+    
+    # Copy all shapes from source
+    for shape in source_slide.shapes:
+        try:
+            # Use deep copy of the XML element for complete fidelity
+            new_el = copy.deepcopy(shape.element)
+            dest_slide.shapes._spTree.append(new_el)
+        except Exception as e:
+            print(f"[WARNING] Failed to copy shape: {e}")
+    
+    return dest_slide
 
 
 def duplicate_slide_in_place(prs, index):
