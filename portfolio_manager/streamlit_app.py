@@ -1405,6 +1405,9 @@ def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
                 pdf.multi_cell(0, 6, f'{i}. {name}')
         
         return bytes(pdf.output())
+
+
+def get_or_create_template(template_dir: str = "/tmp/pptx_templates") -> str:
     """Get existing template or create a new one."""
     from portfolio_manager.pptx_export import TEMPLATE_VERSION
     
