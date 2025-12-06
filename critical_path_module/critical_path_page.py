@@ -293,7 +293,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
             'yanchor': 'top'
         },
         barmode='overlay',
-        height=max(800, len(y_labels) * 40),  # Increased from 32px to 40px per row
+        height=max(900, len(y_labels) * 50),  # Increased to 50px per row for better spacing
         margin=dict(l=220, r=100, t=100, b=50),
         paper_bgcolor='white',
         plot_bgcolor='#f9fafb',
@@ -349,7 +349,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
         line=dict(color="#6b7280", width=2, dash="dash")
     )
     fig.add_annotation(
-        x=today_str, y=1.02, yref="paper",
+        x=today_str, y=-0.05, yref="paper",  # Move below chart
         text="<b>Today</b>", showarrow=False,
         font=dict(size=10, color="#374151"),
         bgcolor="white",
@@ -368,7 +368,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
             line=dict(color="#f59e0b", width=3)
         )
         fig.add_annotation(
-            x=data.calculated_energization, y=1.02, yref="paper",
+            x=data.calculated_energization, y=-0.05, yref="paper",  # Move below chart
             text="<b>⚡ Energization</b>", showarrow=False,
             font=dict(size=10, color="#f59e0b", weight="bold"),
             bgcolor="white",
