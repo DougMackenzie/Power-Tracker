@@ -1480,17 +1480,26 @@ def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
         # Profile JSON (AI Research Data)
         profile_json = site.get('profile_json', {})
         if profile_json:
-            pdf.set_x(10)
-            pdf.set_font('Helvetica', 'B', 11)
-            pdf.multi_cell(190, 7, 'AI Research Insights:')
-            pdf.set_font('Helvetica', '', 9)
-            for key, value in list(profile_json.items())[:10]:
-                if value:
-                    k = str(key)[:30].encode('ascii', 'ignore').decode('ascii')
-                    v = str(value)[:80].encode('ascii', 'ignore').decode('ascii')
-                    pdf.set_x(10)
-                    pdf.multi_cell(190, 5, f"  {k}: {v}")
-            pdf.ln(5)
+            # Handle both string (JSON) and dict formats
+            if isinstance(profile_json, str):
+                try:
+                    import json
+                    profile_json = json.loads(profile_json)
+                except:
+                    profile_json = {}
+            
+            if isinstance(profile_json, dict) and profile_json:
+                pdf.set_x(10)
+                pdf.set_font('Helvetica', 'B', 11)
+                pdf.multi_cell(190, 7, 'AI Research Insights:')
+                pdf.set_font('Helvetica', '', 9)
+                for key, value in list(profile_json.items())[:10]:
+                    if value:
+                        k = str(key)[:30].encode('ascii', 'ignore').decode('ascii')
+                        v = str(value)[:80].encode('ascii', 'ignore').decode('ascii')
+                        pdf.set_x(10)
+                        pdf.multi_cell(190, 5, f"  {k}: {v}")
+                pdf.ln(5)
         
         # Risks
         risks = site.get('risks', [])
