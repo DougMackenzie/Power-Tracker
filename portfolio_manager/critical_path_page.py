@@ -76,6 +76,8 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner") -> go.Fi
             color = "#3b82f6"
         elif instance.status == MilestoneStatus.BLOCKED:
             color = "#ef4444"
+        elif instance.on_critical_path:
+            color = "#f97316"  # Orange for critical path
         else:
             owner = Owner(instance.owner_override) if instance.owner_override else tmpl.owner
             color = OWNER_COLORS.get(owner, "#888888")
@@ -100,33 +102,99 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner") -> go.Fi
     y_pos = 0
     y_labels = []
     current_group = None
+    group_positions = []
     
     for _, row in df.iterrows():
         if row['group'] != current_group:
             if current_group is not None:
-                y_pos += 0.5
+                # Add spacing between groups
+                y_pos += 0.8
             current_group = row['group']
+            # Track group position for separators
+            group_positions.append({'group': current_group, 'y': y_pos})
         
-        border_color = '#f97316' if row['critical'] else row['color']
-        border_width = 3 if row['critical'] else 1
+        border_color = '#d97706' if row['critical'] else row['color']
+        border_width = 3 if row['critical'] else 0.5
         
         fig.add_trace(go.Bar(
             x=[row['duration']], y=[y_pos], base=[row['start']], orientation='h',
-            marker=dict(color=row['color'], line=dict(color=border_color, width=border_width), opacity=0.85),
+            marker=dict(
+                color=row['color'], 
+                line=dict(color=border_color, width=border_width), 
+                opacity=0.9
+            ),
             hovertemplate=f"<b>{row['name']}</b><br>Owner: {row['owner']}<br>Status: {row['status']}<br>{'🔴 CRITICAL PATH' if row['critical'] else ''}<extra></extra>",
             showlegend=False,
         ))
         
-        y_labels.append({'y': y_pos, 'label': row['name'][:25] + '...' if len(row['name']) > 25 else row['name']})
+        y_labels.append({
+            'y': y_pos, 
+            'label': row['name'][:30] + '...' if len(row['name']) > 30 else row['name']
+        })
         y_pos += 1
     
+    # Calculate date range for better x-axis formatting
+    all_dates = [row['start'] for _, row in df.iterrows()] + [row['end'] for _, row in df.iterrows()]
+    min_date = min(all_dates)
+    max_date = max(all_dates)
+    
+    # Enhanced layout with clearer timeline
     fig.update_layout(
-        title="Critical Path to Energization", barmode='overlay',
-        height=max(600, len(y_labels) * 24), margin=dict(l=200, r=50, t=50, b=50),
-        xaxis=dict(type='date', tickformat='%b %Y'),
-        yaxis=dict(tickmode='array', tickvals=[l['y'] for l in y_labels], 
-                   ticktext=[l['label'] for l in y_labels], autorange='reversed'),
+        title={
+            'text': "Critical Path to Energization",
+            'font': {'size': 20, 'color': '#1f2937', 'family': 'Arial, sans-serif'},
+            'x': 0.5,
+            'xanchor': 'center'
+        },
+        barmode='overlay',
+        height=max(700, len(y_labels) * 28),
+        margin=dict(l=250, r=80, t=100, b=80),
+        paper_bgcolor='white',
+        plot_bgcolor='#f9fafb',
+        xaxis=dict(
+            type='date',
+            tickformat='%b %Y',
+            tickmode='auto',
+            nticks=20,
+            tickangle=-45,
+            tickfont=dict(size=11, color='#374151'),
+            title=dict(text='Timeline', font=dict(size=13, color='#1f2937')),
+            gridcolor='#e5e7eb',
+            gridwidth=1,
+            showgrid=True,
+            range=[min_date, max_date]
+        ),
+        yaxis=dict(
+            tickmode='array',
+            tickvals=[l['y'] for l in y_labels],
+            ticktext=[l['label'] for l in y_labels],
+            tickfont=dict(size=10, color='#374151'),
+            autorange='reversed',
+            showgrid=False
+        ),
     )
+    
+    # Add group separators
+    for i, gp in enumerate(group_positions):
+        if i > 0:  # Don't add separator before first group
+            fig.add_shape(
+                type="line",
+                x0=0, x1=1, xref="paper",
+                y0=gp['y'] - 0.4, y1=gp['y'] - 0.4,
+                line=dict(color="#9ca3af", width=1.5, dash="dot")
+            )
+        
+        # Add group label
+        fig.add_annotation(
+            x=-0.02, xref="paper",
+            y=gp['y'], yref="y",
+            text=f"<b>{gp['group']}</b>",
+            showarrow=False,
+            xanchor="right",
+            font=dict(size=11, color='#4b5563'),
+            bgcolor='#e5e7eb',
+            borderpad=4
+        )
     
     # Add vertical line for today using shapes (more reliable than add_vline)
     today_str = date.today().isoformat()
@@ -135,12 +203,16 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner") -> go.Fi
         x0=today_str, x1=today_str,
         y0=0, y1=1,
         yref="paper",
-        line=dict(color="gray", width=2, dash="dash")
+        line=dict(color="#6b7280", width=2, dash="dash")
     )
     fig.add_annotation(
-        x=today_str, y=1, yref="paper",
-        text="Today", showarrow=False,
-        yshift=10, font=dict(size=10, color="gray")
+        x=today_str, y=1.02, yref="paper",
+        text="<b>Today</b>", showarrow=False,
+        font=dict(size=11, color="#374151"),
+        bgcolor="white",
+        bordercolor="#6b7280",
+        borderwidth=1,
+        borderpad=4
     )
     
     # Add vertical line for energization date
@@ -150,12 +222,16 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner") -> go.Fi
             x0=data.calculated_energization, x1=data.calculated_energization,
             y0=0, y1=1,
             yref="paper",
-            line=dict(color="#fbbf24", width=3)
+            line=dict(color="#f59e0b", width=3)
         )
         fig.add_annotation(
-            x=data.calculated_energization, y=1, yref="paper",
-            text="⚡ Energization", showarrow=False,
-            yshift=10, font=dict(size=10, color="#fbbf24", weight="bold")
+            x=data.calculated_energization, y=1.02, yref="paper",
+            text="<b>⚡ Energization</b>", showarrow=False,
+            font=dict(size=11, color="#f59e0b", weight="bold"),
+            bgcolor="white",
+            bordercolor="#f59e0b",
+            borderwidth=2,
+            borderpad=4
         )
     
     return fig
