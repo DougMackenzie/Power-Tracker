@@ -1285,6 +1285,345 @@ def sanitize_text(text):
 
 
 def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
+    """Generate comprehensive portfolio PDF with all site details, visualizations, and complete profiles."""
+    from fpdf import FPDF
+    from datetime import datetime
+    import math
+    import json as json_module
+    
+    sites = db.get('sites', {})
+    
+    # Calculate site data
+    sites_data = []
+    for site_id in site_ids:
+        if site_id in sites:
+            site = sites[site_id]
+            scores = calculate_site_score(site, weights)
+            stage = determine_stage(site)
+            sites_data.append({'id': site_id, 'site': site, 'scores': scores, 'stage': stage})
+    
+    sites_data.sort(key=lambda x: x['scores']['overall_score'], reverse=True)
+    
+    class PortfolioPDF(FPDF):
+        def draw_spider_graph(self, x, y, radius, data, labels):
+            """Draw a spider graph at (x,y) with given radius."""
+            self.set_line_width(0.1)
+            self.set_draw_color(200, 200, 200)
+            self.set_text_color(100, 100, 100)
+            self.set_font('Helvetica', size=8)
+            
+            n_points = len(data)
+            angle_step = 2 * math.pi / n_points
+            
+            # Draw axes and labels
+            for i in range(n_points):
+                angle = i * angle_step - math.pi / 2
+                ax_x = x + radius * math.cos(angle)
+                ax_y = y + radius * math.sin(angle)
+                self.line(x, y, ax_x, ax_y)
+                
+                # Labels
+                lbl_x = x + (radius + 5) * math.cos(angle)
+                lbl_y = y + (radius + 5) * math.sin(angle)
+                
+                align = 'C'
+                if lbl_x < x - 5: align = 'R'
+                elif lbl_x > x + 5: align = 'L'
+                
+                self.set_xy(lbl_x - 10, lbl_y - 3)
+                self.cell(20, 6, labels[i], align=align)
+            
+            # Draw concentric polygons
+            for r_step in [0.2, 0.4, 0.6, 0.8, 1.0]:
+                curr_r = radius * r_step
+                for i in range(n_points):
+                    angle1 = i * angle_step - math.pi / 2
+                    angle2 = ((i + 1) % n_points) * angle_step - math.pi / 2
+                    x1 = x + curr_r * math.cos(angle1)
+                    y1 = y + curr_r * math.sin(angle1)
+                    x2 = x + curr_r * math.cos(angle2)
+                    y2 = y + curr_r * math.sin(angle2)
+                    self.line(x1, y1, x2, y2)
+            
+            # Draw data polygon
+            self.set_line_width(0.5)
+            self.set_draw_color(0, 102, 204)
+            self.set_fill_color(0, 102, 204)
+            
+            points = []
+            for i, val in enumerate(data):
+                angle = i * angle_step - math.pi / 2
+                r_val = radius * (val / 100.0)
+                px = x + r_val * math.cos(angle)
+                py = y + r_val * math.sin(angle)
+                points.append((px, py))
+            
+            with self.local_context(fill_opacity=0.2):
+                self.polygon(points, style='DF')
+            
+            for px, py in points:
+                self.circle(px, py, 1, style='F')
+    
+    pdf = PortfolioPDF()
+    pdf.set_margins(10, 10, 10)
+    pdf.add_page()
+    
+    # === COVER PAGE ===
+    pdf.set_xy(10, 30)
+    pdf.set_font('Helvetica', 'B', 24)
+    pdf.multi_cell(190, 12, 'Portfolio Export', align='C')
+    pdf.set_xy(10, 50)
+    pdf.set_font('Helvetica', '', 12)
+    pdf.multi_cell(190, 8, 'Data Center Development Sites', align='C')
+    pdf.ln(20)
+    
+    total_mw = sum(sd['site'].get('target_mw', 0) for sd in sites_data)
+    avg_score = sum(sd['scores']['overall_score'] for sd in sites_data) / len(sites_data) if sites_data else 0
+    
+    pdf.set_x(10)
+    pdf.set_font('Helvetica', 'B', 14)
+    pdf.multi_cell(190, 8, 'Portfolio Summary')
+    pdf.ln(3)
+    pdf.set_x(10)
+    pdf.set_font('Helvetica', '', 11)
+    pdf.multi_cell(190, 7, f'Total Sites: {len(sites_data)}')
+    pdf.set_x(10)
+    pdf.multi_cell(190, 7, f'Total Pipeline MW: {total_mw:,.0f}')
+    pdf.set_x(10)
+    pdf.multi_cell(190, 7, f'Average Score: {avg_score:.1f}')
+    pdf.ln(10)
+    
+    # Top 3 sites
+    pdf.set_x(10)
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.multi_cell(190, 7, 'Top 3 Sites by Score:')
+    pdf.set_font('Helvetica', '', 10)
+    for i, sd in enumerate(sites_data[:3], 1):
+        name = str(sd['site'].get('name', 'Site'))[:40].encode('ascii', 'ignore').decode('ascii')
+        score = sd['scores']['overall_score']
+        pdf.set_x(10)
+        pdf.multi_cell(190, 6, f"{i}. {name} - Score: {score:.1f}")
+    
+    pdf.ln(10)
+    pdf.set_x(10)
+    pdf.set_font('Helvetica', 'I', 9)
+    pdf.multi_cell(190, 6, f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}")
+    
+    # === TABLE OF CONTENTS ===
+    pdf.add_page()
+    pdf.set_xy(10, 20)
+    pdf.set_font('Helvetica', 'B', 18)
+    pdf.multi_cell(190, 10, 'Table of Contents')
+    pdf.ln(5)
+    
+    pdf.set_x(10)
+    pdf.set_font('Helvetica', '', 10)
+    for i, sd in enumerate(sites_data, 1):
+        name = str(sd['site'].get('name', 'Site'))[:45].encode('ascii', 'ignore').decode('ascii')
+        state = str(sd['site'].get('state', ''))[:10].encode('ascii', 'ignore').decode('ascii')
+        mw = sd['site'].get('target_mw', 0)
+        pdf.set_x(10)
+        pdf.multi_cell(190, 6, f"{i}. {name} ({state}, {mw} MW)")
+    
+    # === PORTFOLIO RANKINGS ===
+    pdf.add_page()
+    pdf.set_xy(10, 20)
+    pdf.set_font('Helvetica', 'B', 16)
+    pdf.multi_cell(190, 10, 'Portfolio Rankings')
+    pdf.ln(5)
+    
+    pdf.set_x(10)
+    pdf.set_font('Helvetica', 'B', 11)
+    pdf.multi_cell(190, 7, 'Sites Ranked by Overall Score:')
+    pdf.set_font('Helvetica', '', 9)
+    
+    for i, sd in enumerate(sites_data, 1):
+        name = str(sd['site'].get('name', 'Site'))[:35].encode('ascii', 'ignore').decode('ascii')
+        score = sd['scores']['overall_score']
+        mw = sd['site'].get('target_mw', 0)
+        pdf.set_x(10)
+        pdf.multi_cell(190, 5, f"{i}. {name} - Score: {score:.1f} ({mw} MW)")
+    
+    # === INDIVIDUAL SITE SECTIONS ===
+    for sd in sites_data:
+        site = sd['site']
+        scores = sd['scores']
+        
+        pdf.add_page()
+        
+        # Site Header
+        pdf.set_xy(10, 20)
+        pdf.set_font('Helvetica', 'B', 18)
+        name = str(site.get('name', 'Site'))[:50].encode('ascii', 'ignore').decode('ascii')
+        pdf.multi_cell(190, 10, name)
+        pdf.ln(3)
+        
+        # Basic Info - Complete
+        pdf.set_x(10)
+        pdf.set_font('Helvetica', '', 10)
+        state = str(site.get('state', 'N/A'))[:15].encode('ascii', 'ignore').decode('ascii')
+        utility = str(site.get('utility', 'N/A'))[:25].encode('ascii', 'ignore').decode('ascii')
+        iso = str(site.get('iso', 'N/A'))[:10].encode('ascii', 'ignore').decode('ascii')
+        county = str(site.get('county', 'N/A'))[:20].encode('ascii', 'ignore').decode('ascii')
+        
+        pdf.multi_cell(190, 6, f'State: {state} | Utility: {utility} | ISO: {iso}')
+        pdf.set_x(10)
+        pdf.multi_cell(190, 6, f'County: {county} | MW: {site.get("target_mw", 0)} | Acreage: {site.get("acreage", 0)}')
+        pdf.set_x(10)
+        
+        developer = str(site.get('developer', 'N/A'))[:30].encode('ascii', 'ignore').decode('ascii')
+        land_status = str(site.get('land_status', 'N/A'))[:25].encode('ascii', 'ignore').decode('ascii')
+        community_support = str(site.get('community_support', 'N/A'))[:20].encode('ascii', 'ignore').decode('ascii')
+        political_support = str(site.get('political_support', 'N/A'))[:20].encode('ascii', 'ignore').decode('ascii')
+        
+        pdf.multi_cell(190, 6, f'Developer: {developer} | Land: {land_status}')
+        pdf.set_x(10)
+        pdf.multi_cell(190, 6, f'Community: {community_support} | Political: {political_support}')
+        pdf.ln(5)
+        
+        # Spider Graph - Score Breakdown Visualization
+        pdf.set_x(10)
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.multi_cell(190, 7, 'Score Analysis:')
+        pdf.ln(3)
+        
+        spider_data = [scores['state_score'], scores['power_score'], scores['relationship_score']]
+        spider_labels = ['State', 'Power', 'Relationship']
+        pdf.draw_spider_graph(105, pdf.get_y() + 25, 20, spider_data, spider_labels)
+        pdf.ln(55)
+        
+        # Score Display
+        pdf.set_x(10)
+        pdf.set_font('Helvetica', 'B', 28)
+        pdf.multi_cell(190, 14, f"Overall Score: {scores['overall_score']:.1f}/100", align='C')
+        pdf.ln(10)
+        
+        # Complete Profile JSON Structure
+        pdf.set_x(10)
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.multi_cell(190, 8, 'Complete Site Profile:')
+        pdf.ln(3)
+        
+        # Parse profile_json
+        profile_json = site.get('profile_json', {})
+        if isinstance(profile_json, str):
+            try:
+                profile_json = json_module.loads(profile_json)
+            except:
+                profile_json = {}
+        
+        # Define complete profile structure with placeholders
+        profile_fields = {
+            'utility_name': 'Utility Name',
+            'utility_contact': 'Utility Contact',
+            'regulatory_environment': 'Regulatory Environment',
+            'interconnection_process': 'Interconnection Process',
+            'rate_structure': 'Rate Structure',
+            'demand_forecast': 'Local Demand Forecast',
+            'competitor_analysis': 'Competitor Analysis',
+            'political_climate': 'Political Climate',
+            'environmental_constraints': 'Environmental Constraints',
+            'labor_availability': 'Labor Availability'
+        }
+        
+        pdf.set_font('Helvetica', '', 9)
+        for key, label in profile_fields.items():
+            value = profile_json.get(key, '[Not yet researched]') if isinstance(profile_json, dict) else '[Not yet researched]'
+            val_str = str(value)[:100].encode('ascii', 'ignore').decode('ascii')
+            pdf.set_x(10)
+            pdf.multi_cell(190, 5, f'{label}: {val_str}')
+        pdf.ln(5)
+        
+        # Development Phases
+        phases = site.get('phases', [])
+        if phases:
+            pdf.set_x(10)
+            pdf.set_font('Helvetica', 'B', 11)
+            pdf.multi_cell(190, 7, f'Development Phases ({len(phases)}):')
+            pdf.set_font('Helvetica', '', 9)
+            for i, phase in enumerate(phases, 1):
+                pdf.set_x(10)
+                mw = phase.get('mw', 0)
+                voltage = str(phase.get('voltage', 'N/A'))[:10]
+                status = str(phase.get('screening_status', 'N/A'))[:25].encode('ascii', 'ignore').decode('ascii')
+                contract = str(phase.get('contract_study_status', 'N/A'))[:25].encode('ascii', 'ignore').decode('ascii')
+                pdf.multi_cell(190, 5, f'  Phase {i}: {mw} MW @ {voltage}kV - Screening: {status}, Contract: {contract}')
+            pdf.ln(5)
+        
+        # Onsite Generation
+        onsite_gen = site.get('onsite_gen', {})
+        if onsite_gen and any(onsite_gen.values()):
+            pdf.set_x(10)
+            pdf.set_font('Helvetica', 'B', 11)
+            pdf.multi_cell(190, 7, 'Onsite Generation:')
+            pdf.set_font('Helvetica', '', 9)
+            if onsite_gen.get('gas_mw'):
+                pdf.set_x(10)
+                pdf.multi_cell(190, 5, f"  Natural Gas: {onsite_gen.get('gas_mw', 0)} MW")
+            if onsite_gen.get('solar_mw'):
+                pdf.set_x(10)
+                pdf.multi_cell(190, 5, f"  Solar: {onsite_gen.get('solar_mw', 0)} MW")
+            if onsite_gen.get('batt_mw'):
+                pdf.set_x(10)
+                pdf.multi_cell(190, 5, f"  Battery: {onsite_gen.get('batt_mw', 0)} MW / {onsite_gen.get('batt_mwh', 0)} MWh")
+            pdf.ln(5)
+        
+        # Non-Power Infrastructure
+        non_power = site.get('non_power', {})
+        if non_power and any(non_power.values()):
+            pdf.set_x(10)
+            pdf.set_font('Helvetica', 'B', 11)
+            pdf.multi_cell(190, 7, 'Infrastructure:')
+            pdf.set_font('Helvetica', '', 9)
+            for key in ['zoning_status', 'water_source', 'fiber_status']:
+                if non_power.get(key):
+                    val = str(non_power.get(key, ''))[:40].encode('ascii', 'ignore').decode('ascii')
+                    label = key.replace('_', ' ').title()
+                    pdf.set_x(10)
+                    pdf.multi_cell(190, 5, f"  {label}: {val}")
+            pdf.ln(5)
+        
+        # Risks
+        risks = site.get('risks', [])
+        if risks:
+            pdf.set_x(10)
+            pdf.set_font('Helvetica', 'B', 11)
+            pdf.multi_cell(190, 7, 'Key Risks:')
+            pdf.set_font('Helvetica', '', 9)
+            for risk in risks[:10]:
+                pdf.set_x(10)
+                risk_text = str(risk)[:150].encode('ascii', 'ignore').decode('ascii')
+                pdf.multi_cell(190, 5, f'- {risk_text}')
+            pdf.ln(5)
+        
+        # Opportunities
+        opps = site.get('opps', [])
+        if opps:
+            pdf.set_x(10)
+            pdf.set_font('Helvetica', 'B', 11)
+            pdf.multi_cell(190, 7, 'Acceleration Opportunities:')
+            pdf.set_font('Helvetica', '', 9)
+            for opp in opps[:10]:
+                pdf.set_x(10)
+                opp_text = str(opp)[:150].encode('ascii', 'ignore').decode('ascii')
+                pdf.multi_cell(190, 5, f'- {opp_text}')
+            pdf.ln(5)
+        
+        # Questions
+        questions = site.get('questions', [])
+        if questions:
+            pdf.set_x(10)
+            pdf.set_font('Helvetica', 'B', 11)
+            pdf.multi_cell(190, 7, 'Open Questions:')
+            pdf.set_font('Helvetica', '', 9)
+            for q in questions[:8]:
+                pdf.set_x(10)
+                q_text = str(q)[:150].encode('ascii', 'ignore').decode('ascii')
+                pdf.multi_cell(190, 5, f'- {q_text}')
+    
+    return bytes(pdf.output())
+
+
     """Generate comprehensive portfolio PDF with all site details and analytics."""
     from fpdf import FPDF
     from datetime import datetime
