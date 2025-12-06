@@ -1285,6 +1285,29 @@ def sanitize_text(text):
 
 
 def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
+    """Generate minimal portfolio PDF."""
+    from fpdf import FPDF
+    
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Title only
+    pdf.set_font('Helvetica', 'B', 18)
+    pdf.multi_cell(0, 10, 'Portfolio Export')
+    pdf.ln(10)
+    
+    # Sites list only
+    sites = db.get('sites', {})
+    pdf.set_font('Helvetica', '', 10)
+    
+    for sid in site_ids:
+        if sid in sites:
+            name = str(sites[sid].get('name', 'Site'))[:50].encode('ascii', 'ignore').decode('ascii')
+            pdf.multi_cell(0, 6, name)
+    
+    return bytes(pdf.output())
+
+
     """Generate enhanced portfolio PDF with detailed site information."""
     from fpdf import FPDF
     
