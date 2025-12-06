@@ -421,6 +421,74 @@ def show_critical_path_page():
             st.rerun()
         return
     
+    # Auto-sync: Check if site properties have changed
+    needs_recalc = False
+    config_updates = {}
+    
+    # Check target MW
+    current_mw = site.get('target_mw', 200)
+    if cp_data.config.target_mw != current_mw:
+        config_updates['target_mw'] = current_mw
+        needs_recalc = True
+    
+    # Check voltage (affects transformer lead times)
+    current_voltage = site.get('voltage_kv', 138)
+    if current_voltage is None:
+        # Infer from target_mw if not set
+        if current_mw >= 500:
+            current_voltage = 345
+        elif current_mw >= 200:
+            current_voltage = 230
+        elif current_mw >= 100:
+            current_voltage = 138
+        else:
+            current_voltage = 69
+    
+    if cp_data.config.voltage_kv != current_voltage:
+        config_updates['voltage_kv'] = current_voltage
+        needs_recalc = True
+    
+    # Check ISO
+    current_iso = site.get('iso', 'SPP')
+    if cp_data.config.iso != current_iso:
+        config_updates['iso'] = current_iso
+        needs_recalc = True
+    
+    # Auto-recalculate if properties changed
+    if needs_recalc:
+        st.info(f"🔄 Site properties changed. Auto-updating critical path...")
+        
+        # Update config
+        for key, value in config_updates.items():
+            setattr(cp_data.config, key, value)
+        
+        # Recalculate with new lead times based on updated voltage/ISO
+        for ms_id, instance in cp_data.milestones.values():
+            instance.target_start = None
+            instance.target_end = None
+        
+        # Re-apply voltage-adjusted lead times
+        for ms_id, instance in cp_data.milestones.items():
+            tmpl = templates.get(ms_id)
+            if tmpl and tmpl.lead_time_key:
+                new_duration = engine._get_adjusted_duration(tmpl, cp_data.config)
+                if new_duration != tmpl.duration_typical:
+                    instance.duration_override = new_duration
+        
+        # Recalculate schedule
+        cp_data = engine.calculate_schedule(cp_data)
+        cp_data.critical_path = engine.identify_critical_path(cp_data)
+        
+        # Save updates
+        site = save_critical_path_to_site(site, cp_data)
+        sites[selected_site_id] = site
+        from .streamlit_app import save_database
+        save_database(db)
+        
+        st.success(f"✅ Auto-synced! Updated: {', '.join(config_updates.keys())}")
+        st.rerun()
+    
+    
     # Sidebar info
     st.sidebar.markdown("---")
     st.sidebar.metric("Target MW", cp_data.config.target_mw)
