@@ -1314,9 +1314,9 @@ def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
                 safe_name = safe_name.encode('ascii', 'ignore').decode('ascii')
                 if not safe_name.strip():
                     safe_name = f'Site {i}'
-                pdf.multi_cell(0, 5, f'{i}. {safe_name}')
+                pdf.multi_cell(0, 8, f'{i}. {safe_name}')  # Increased height from 5 to 8
             except:
-                pdf.multi_cell(0, 5, f'{i}. Site')
+                pdf.multi_cell(0, 8, f'{i}. Site')  # Increased height from 5 to 8
     
     return bytes(pdf.output())
 
