@@ -414,7 +414,10 @@ def show_critical_path_page():
             cp_data = initialize_critical_path_for_site(site)
             site = save_critical_path_to_site(site, cp_data)
             sites[selected_site_id] = site
-            st.success("Initialized!")
+            # Save to Google Sheets
+            from .streamlit_app import save_database
+            save_database(db)
+            st.success("Initialized and saved!")
             st.rerun()
         return
     
@@ -431,6 +434,9 @@ def show_critical_path_page():
         cp_data.critical_path = engine.identify_critical_path(cp_data)
         site = save_critical_path_to_site(site, cp_data)
         sites[selected_site_id] = site
+        # Save to Google Sheets
+        from .streamlit_app import save_database
+        save_database(db)
         st.rerun()
     
     # Tabs
@@ -522,7 +528,10 @@ def show_critical_path_page():
                     instance.duration_override = new_dur if new_dur != tmpl.duration_typical else None
                     site = save_critical_path_to_site(site, cp_data)
                     sites[selected_site_id] = site
-                    st.success("Updated")
+                    # Save to Google Sheets
+                    from .streamlit_app import save_database
+                    save_database(db)
+                    st.success("Updated and saved!")
     
     with tab4:
         st.subheader("Equipment Lead Times")
@@ -544,6 +553,9 @@ def show_critical_path_page():
             cp_data.critical_path = engine.identify_critical_path(cp_data)
             site = save_critical_path_to_site(site, cp_data)
             sites[selected_site_id] = site
+            # Save to Google Sheets
+            from .streamlit_app import save_database
+            save_database(db)
             st.rerun()
     
     with tab5:
