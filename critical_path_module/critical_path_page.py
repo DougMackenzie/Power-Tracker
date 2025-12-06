@@ -279,10 +279,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
                 else l['label']
                 for l in y_labels
             ],
-            tickfont=dict(
-                size=[11 if l.get('is_header') else 10 if l.get('is_subheader') else 9 for l in y_labels],
-                color='#1f2937'
-            ),
+            tickfont=dict(size=10, color='#1f2937'),
             autorange='reversed',
             showgrid=False
         ),
