@@ -605,7 +605,6 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                     
                     try:
                         scores = calculate_site_score(site_data, weights)
-                        print(f"[DEBUG] Calculated scores: {scores}")
                         export_data['scores'] = scores
                         # Also populate top-level score keys that pptx_export might look for as fallback
                         export_data['overall_score'] = scores['overall_score']
@@ -617,13 +616,6 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                     except Exception as e:
                         print(f"[ERROR] Error calculating scores for export: {e}")
 
-                print(f"[DEBUG] Exporting site: {site_data.get('name')}")
-                print(f"[DEBUG] Has schedule? {'schedule' in site_data}")
-                if 'schedule' in site_data:
-                    print(f"[DEBUG] Schedule keys: {list(site_data['schedule'].keys())}")
-                    print(f"[DEBUG] Sample schedule data: {list(site_data['schedule'].values())[0] if site_data['schedule'] else 'Empty'}")
-                print(f"[DEBUG] Has capacity_trajectory? {'capacity_trajectory' in site_data}")
-                
                 config = ExportConfig(
                     include_capacity_trajectory=inc_trajectory,
                     include_infrastructure=inc_infrastructure,
@@ -634,29 +626,31 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                 output_path = f"/tmp/{output_name}"
                 result = export_site_to_pptx(export_data, template_path, output_path, config)
                 
-                # Read into session state
+                # ✅ FIX: Read file as bytes BEFORE the download button
                 with open(result, 'rb') as f:
-                    st.session_state['single_site_export_data'] = f.read()
-                    st.session_state['single_site_export_name'] = output_name
+                    pptx_bytes = f.read()
                 
-                st.success(f"✅ Export complete: {output_name}")
+                st.success(f"Export complete: {output_name}")
+                
+                # ✅ FIX: Pass bytes and unique key
+                st.download_button(
+                    "⬇️ Download PPTX",
+                    data=pptx_bytes,
+                    file_name=output_name,
+                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    key=f"pptx_download_{site_id}"
+                )
+                
+                # Cleanup temp file
+                try:
+                    os.unlink(result)
+                except: pass
                 
             except Exception as e:
                 st.error(f"Export failed: {e}")
                 import traceback
                 with st.expander("Error Details"):
                     st.code(traceback.format_exc())
-
-    # Show download button if data exists
-    if 'single_site_export_data' in st.session_state:
-        fname = st.session_state.get('single_site_export_name', 'Site_Profile.pptx')
-        st.download_button(
-            "⬇️ Download PPTX",
-            data=st.session_state['single_site_export_data'],
-            file_name=fname,
-            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            key="download_single_site_pptx"
-        )
                 
 
 
