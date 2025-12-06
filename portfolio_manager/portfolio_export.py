@@ -282,10 +282,29 @@ def generate_portfolio_export(
     for site_id, site_data in sites.items():
         print(f"[DEBUG] Processing site: {site_data.get('name', site_id)}")
         
-        # Prepare Site Data (Parse JSONs)
-        site_data = prepare_site_for_export(site_data)
+        # Prepare Site Data (Use copy to avoid side effects)
+        site_data = prepare_site_for_export(site_data.copy())
         
-        # Prepare Data
+        # Calculate scores if missing (Safety net)
+        if 'scores' not in site_data:
+            weights = {
+                'state': 0.20, 'power': 0.25, 'relationship': 0.20,
+                'execution': 0.15, 'fundamentals': 0.10, 'financial': 0.10
+            }
+            try:
+                calculated = calculate_site_score(site_data, weights)
+                site_data['scores'] = {
+                    'overall': calculated['overall_score'],
+                    'power_pathway': calculated['power_score'],
+                    'site_specific': calculated.get('fundamentals_score', 70),
+                    'execution': calculated['execution_score'],
+                    'relationship_capital': calculated['relationship_score'],
+                    'financial': calculated['financial_score'],
+                }
+            except Exception as e:
+                print(f"[WARNING] Failed to calculate score for {site_id}: {e}")
+        
+        # Prepare Data for Replacements
         replacements = build_replacements(site_data, config)
         
         # Get Profile Data
