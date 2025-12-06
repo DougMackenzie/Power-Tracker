@@ -214,7 +214,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
         })
         y_pos += 1
     
-    # Add dependency arrows
+    # Add dependency arrows with MS Project-style orthogonal routing
     for task_id, pos_info in task_positions.items():
         task = df[df['id'] == task_id].iloc[0] if len(df[df['id'] == task_id]) > 0 else None
         if task is None:
@@ -224,19 +224,48 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
             if pred_id in task_positions:
                 pred_pos = task_positions[pred_id]
                 
-                # Draw arrow from predecessor end to task start
+                # MS Project style: Horizontal from pred end, then vertical drop, then horizontal to task start
+                # Calculate intermediate points for right-angle routing
+                pred_end_x = pred_pos['end']
+                pred_y = pred_pos['y']
+                task_start_x = pos_info['start']
+                task_y = pos_info['y']
+                
+                # Mid-point for the horizontal segment (extend a bit from predecessor)
+                mid_x = pred_end_x + timedelta(days=7)  # Small extension
+                
+                # Draw three connected lines for orthogonal routing:
+                # 1. Horizontal line extending from predecessor end
                 fig.add_shape(
                     type="line",
-                    x0=pred_pos['end'], y0=pred_pos['y'],
-                    x1=pos_info['start'], y1=pos_info['y'],
-                    line=dict(color="#94a3b8", width=1.5, dash="dot"),
+                    x0=pred_end_x, y0=pred_y,
+                    x1=mid_x, y1=pred_y,
+                    line=dict(color="#94a3b8", width=1.5),
                     opacity=0.6
                 )
                 
-                # Add arrowhead
+                # 2. Vertical drop line
+                fig.add_shape(
+                    type="line",
+                    x0=mid_x, y0=pred_y,
+                    x1=mid_x, y1=task_y,
+                    line=dict(color="#94a3b8", width=1.5),
+                    opacity=0.6
+                )
+                
+                # 3. Horizontal line to task start
+                fig.add_shape(
+                    type="line",
+                    x0=mid_x, y0=task_y,
+                    x1=task_start_x, y1=task_y,
+                    line=dict(color="#94a3b8", width=1.5),
+                    opacity=0.6
+                )
+                
+                # Add arrowhead at the end
                 fig.add_annotation(
-                    x=pos_info['start'], y=pos_info['y'],
-                    ax=pred_pos['end'], ay=pred_pos['y'],
+                    x=task_start_x, y=task_y,
+                    ax=mid_x, ay=task_y,
                     xref="x", yref="y",
                     axref="x", ayref="y",
                     showarrow=True,
