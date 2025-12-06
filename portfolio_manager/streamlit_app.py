@@ -1286,20 +1286,45 @@ def sanitize_text(text):
 
 def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
     """
-    Generate comprehensive portfolio PDF with all sites, analytics, and visualizations.
-    
-    This is a wrapper that calls the comprehensive PDF generation function.
-    
-    Args:
-        site_ids: List of site IDs to include in the portfolio
-        db: The database dictionary containing all sites
-        weights: Scoring weights dictionary
-        
-    Returns:
-        PDF bytes
+    Generate portfolio PDF - using BASIC version temporarily while debugging comprehensive version.
     """
-    from .comprehensive_pdf import generate_comprehensive_portfolio_pdf
-    return generate_comprehensive_portfolio_pdf(site_ids, db, weights)
+    from fpdf import FPDF
+    
+    # Use basic PDF for now
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font('Helvetica', 'B', 24)
+    pdf.cell(0, 20, 'Portfolio Export', new_x="LMARGIN", new_y="NEXT", align='C')
+    pdf.ln(10)
+    
+    # Summary
+    sites = db.get('sites', {})
+    total_sites = len(site_ids)
+    total_mw = sum(sites[sid].get('target_mw', 0) for sid in site_ids if sid in sites)
+    
+    pdf.set_font('Helvetica', '', 12)
+    pdf.cell(0, 8, f'Total Sites: {total_sites}', new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, f'Total MW: {total_mw:,.0f}', new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(10)
+    
+    # List sites
+    pdf.set_font('Helvetica', 'B', 14)
+    pdf.cell(0, 10, 'Sites:', new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font('Helvetica', '', 11)
+    
+    for i, sid in enumerate(site_ids, 1):
+        if sid in sites:
+            site = sites[sid]
+            name = sanitize_text(site.get('name', 'Unnamed'))
+            state = sanitize_text(site.get('state', 'N/A'))
+            mw = site.get('target_mw', 0)
+            pdf.cell(0, 7, f'{i}. {name} ({state}) - {mw} MW', new_x="LMARGIN", new_y="NEXT")
+    
+    return bytes(pdf.output())
+    
+    # COMMENTED OUT - Comprehensive version has rendering issues
+    # from .comprehensive_pdf import generate_comprehensive_portfolio_pdf
+    # return generate_comprehensive_portfolio_pdf(site_ids, db, weights)
 
 def get_or_create_template(template_dir: str = "/tmp/pptx_templates") -> str:
     """Get existing template or create a new one."""
