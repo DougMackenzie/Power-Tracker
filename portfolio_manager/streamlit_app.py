@@ -1399,17 +1399,18 @@ def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
         
         pdf.set_font('Helvetica', '', 10)
         pdf.set_text_color(100, 100, 100)
-        state = sanitize_text(site.get('state', 'N/A'))
-        utility = sanitize_text(site.get('utility', 'N/A'))
-        iso = sanitize_text(site.get('iso', 'N/A'))
-        county = sanitize_text(site.get('county', 'N/A'))
+        state = sanitize_text(site.get('state', 'N/A'))[:20]
+        utility = sanitize_text(site.get('utility', 'N/A'))[:25]
+        iso = sanitize_text(site.get('iso', 'N/A'))[:15]
+        county = sanitize_text(site.get('county', 'N/A'))[:20]
         
-        pdf.cell(0, 6, f'State: {state} | Utility: {utility} | ISO: {iso} | County: {county}', new_x="LMARGIN", new_y="NEXT")
-        pdf.cell(0, 6, f'Target: {site.get("target_mw", 0)} MW | Acreage: {site.get("acreage", 0)} | Stage: {stage}', new_x="LMARGIN", new_y="NEXT")
+        # Use multi_cell for long text to avoid width issues
+        pdf.multi_cell(0, 6, f'State: {state} | Utility: {utility} | ISO: {iso} | County: {county}')
+        pdf.multi_cell(0, 6, f'Target: {site.get("target_mw", 0)} MW | Acreage: {site.get("acreage", 0)} | Stage: {stage}')
         
-        developer = sanitize_text(site.get('developer', 'N/A'))
-        land_status = sanitize_text(site.get('land_status', 'N/A'))
-        pdf.cell(0, 6, f'Developer: {developer} | Land Status: {land_status}', new_x="LMARGIN", new_y="NEXT")
+        developer = sanitize_text(site.get('developer', 'N/A'))[:30]
+        land_status = sanitize_text(site.get('land_status', 'N/A'))[:25]
+        pdf.multi_cell(0, 6, f'Developer: {developer} | Land Status: {land_status}')
         pdf.set_text_color(0, 0, 0)
         pdf.ln(8)
         
