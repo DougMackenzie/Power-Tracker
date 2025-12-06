@@ -1224,22 +1224,24 @@ def parse_document_for_updates(text: str, site_id: str) -> List[Dict]:
 def serialize_critical_path(data: CriticalPathData) -> str:
     """Serialize critical path data to JSON string for storage."""
     
-    def serialize_obj(obj):
-        if hasattr(obj, '__dict__'):
-            d = {}
-            for k, v in obj.__dict__.items():
-                d[k] = serialize_obj(v)
-            return d
-        elif isinstance(obj, dict):
-            return {k: serialize_obj(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [serialize_obj(v) for v in obj]
-        elif isinstance(obj, Enum):
+    def convert_to_dict(obj):
+        """Convert object to dict, handling dataclasses and enums."""
+        if isinstance(obj, Enum):
             return obj.value
+        elif hasattr(obj, '__dataclass_fields__'):
+            # It's a dataclass - use asdict
+            result = {}
+            for key, value in asdict(obj).items():
+                result[key] = convert_to_dict(value)
+            return result
+        elif isinstance(obj, dict):
+            return {k: convert_to_dict(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [convert_to_dict(item) for item in obj]
         else:
             return obj
     
-    return json.dumps(serialize_obj(data), indent=None)
+    return json.dumps(convert_to_dict(data), indent=None)
 
 
 def deserialize_critical_path(json_str: str) -> Optional[CriticalPathData]:
