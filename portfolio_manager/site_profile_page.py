@@ -630,17 +630,11 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                 
                 result = export_site_to_pptx(export_data, template_path, output_path, config)
                 
-                # Read file as bytes and store in session state
-                with open(result, 'rb') as f:
-                    st.session_state[f'pptx_bytes_{site_id}'] = f.read()
-                    st.session_state[f'pptx_name_{site_id}'] = safe_name
+                # Store file path instead of bytes (fixes UUID filename issue)
+                st.session_state[f'pptx_path_{site_id}'] = result
+                st.session_state[f'pptx_name_{site_id}'] = safe_name
                 
                 st.success(f"Export complete: {safe_name}")
-                
-                # Cleanup temp file
-                try:
-                    os.unlink(result)
-                except: pass
                 
             except Exception as e:
                 st.error(f"Export failed: {e}")
@@ -648,15 +642,18 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                 with st.expander("Error Details"):
                     st.code(traceback.format_exc())
 
-    # Show download button if data exists (Outside the button block)
-    if f'pptx_bytes_{site_id}' in st.session_state:
-        st.download_button(
-            "⬇️ Download PPTX",
-            data=st.session_state[f'pptx_bytes_{site_id}'],
-            file_name=st.session_state[f'pptx_name_{site_id}'],
-            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            key=f"pptx_download_btn_{site_id}"
-        )
+    # Show download button if file exists (Outside the button block)
+    if f'pptx_path_{site_id}' in st.session_state:
+        file_path = st.session_state[f'pptx_path_{site_id}']
+        if os.path.exists(file_path):
+            with open(file_path, 'rb') as f:
+                st.download_button(
+                    "⬇️ Download PPTX",
+                    data=f.read(),
+                    file_name=st.session_state[f'pptx_name_{site_id}'],
+                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    key=f"pptx_download_btn_{site_id}"
+                )
 
 
 # =============================================================================

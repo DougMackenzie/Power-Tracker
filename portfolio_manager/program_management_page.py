@@ -714,32 +714,29 @@ def show_portfolio_export(sites: Dict):
                         
                         result = generate_portfolio_export(export_sites, template_path, output_path, config)
                         
-                        # Read into session state
-                        with open(result, 'rb') as f:
-                            st.session_state['portfolio_export_data'] = f.read()
-                            st.session_state['portfolio_export_name'] = safe_name
+                        # Store file path instead of bytes (fixes UUID filename issue)
+                        st.session_state['portfolio_export_path'] = result
+                        st.session_state['portfolio_export_name'] = safe_name
                         
                         st.success("✅ Portfolio export generated successfully!")
-                        
-                        # Cleanup
-                        try:
-                            os.unlink(result)
-                        except: pass
                         
                 except Exception as e:
                     st.error(f"Export failed: {e}")
                     import traceback
                     st.code(traceback.format_exc())
 
-    # Show download button if data exists
-    if 'portfolio_export_data' in st.session_state:
-        st.download_button(
-            "⬇️ Download Portfolio Deck",
-            data=st.session_state['portfolio_export_data'],
-            file_name=st.session_state['portfolio_export_name'],
-            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            key="download_portfolio_pptx"
-        )
+    # Show download button if file exists
+    if 'portfolio_export_path' in st.session_state:
+        file_path = st.session_state['portfolio_export_path']
+        if os.path.exists(file_path):
+            with open(file_path, 'rb') as f:
+                st.download_button(
+                    "⬇️ Download Portfolio Deck",
+                    data=f.read(),
+                    file_name=st.session_state['portfolio_export_name'],
+                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    key="download_portfolio_pptx"
+                )
 
 
 # =============================================================================
