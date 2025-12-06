@@ -1285,46 +1285,222 @@ def sanitize_text(text):
 
 
 def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
-    """
-    Generate portfolio PDF - using BASIC version temporarily while debugging comprehensive version.
-    """
+    """Generate enhanced portfolio PDF with detailed site information."""
     from fpdf import FPDF
     
-    # Use basic PDF for now
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font('Helvetica', 'B', 24)
-    pdf.cell(0, 20, 'Portfolio Export', new_x="LMARGIN", new_y="NEXT", align='C')
-    pdf.ln(10)
-    
-    # Summary
     sites = db.get('sites', {})
-    total_sites = len(site_ids)
-    total_mw = sum(sites[sid].get('target_mw', 0) for sid in site_ids if sid in sites)
+    
+    # Calculate site data with scores
+    sites_data = []
+    for site_id in site_ids:
+        if site_id in sites:
+            site = sites[site_id]
+            scores = calculate_site_score(site, weights)
+            stage = determine_stage(site)
+            sites_data.append({
+                'id': site_id,
+                'site': site,
+                'scores': scores,
+                'stage': stage
+            })
+    
+    # Sort by score
+    sites_data.sort(key=lambda x: x['scores']['overall_score'], reverse=True)
+    
+    class PortfolioPDF(FPDF):
+        def header(self):
+            if self.page_no() > 1:
+                self.set_font('Helvetica', 'B', 9)
+                self.set_text_color(100, 100, 100)
+                self.cell(0, 8, 'Portfolio Export | Power Tracker', align='L')
+                self.ln(1)
+                self.set_draw_color(200, 200, 200)
+                self.line(10, 18, 200, 18)
+                self.ln(6)
+                
+        def footer(self):
+            self.set_y(-12)
+            self.set_font('Helvetica', 'I', 8)
+            self.set_text_color(128, 128, 128)
+            self.cell(0, 8, f'Page {self.page_no()}', align='R')
+    
+    pdf = PortfolioPDF()
+    pdf.add_page()
+    
+    # === COVER PAGE ===
+    pdf.set_font('Helvetica', 'B', 24)
+    pdf.cell(0, 15, 'Portfolio Export', new_x="LMARGIN", new_y="NEXT", align='C')
+    pdf.ln(5)
     
     pdf.set_font('Helvetica', '', 12)
-    pdf.cell(0, 8, f'Total Sites: {total_sites}', new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 8, f'Total MW: {total_mw:,.0f}', new_x="LMARGIN", new_y="NEXT")
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 8, 'Data Center Development Sites', new_x="LMARGIN", new_y="NEXT", align='C')
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(15)
+    
+    # Portfolio Summary
+    total_sites = len(sites_data)
+    total_mw = sum(sd['site'].get('target_mw', 0) for sd in sites_data)
+    avg_score = sum(sd['scores']['overall_score'] for sd in sites_data) / total_sites if total_sites > 0 else 0
+    
+    pdf.set_font('Helvetica', 'B', 14)
+    pdf.cell(0, 10, 'Portfolio Summary', new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(3)
+    
+    pdf.set_font('Helvetica', '', 11)
+    pdf.cell(0, 7, f'Total Sites: {total_sites}', new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 7, f'Total Pipeline MW: {total_mw:,.0f}', new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 7, f'Average Score: {avg_score:.1f}', new_x="LMARGIN", new_y="NEXT")
     pdf.ln(10)
     
-    # List sites
-    pdf.set_font('Helvetica', 'B', 14)
-    pdf.cell(0, 10, 'Sites:', new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font('Helvetica', '', 11)
+    # Top 3 Sites
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 8, 'Top Sites by Score:', new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font('Helvetica', '', 10)
+    for i, sd in enumerate(sites_data[:3], 1):
+        site = sd['site']
+        name = sanitize_text(site.get('name', 'Unnamed'))
+        state = sanitize_text(site.get('state', 'N/A'))
+        score = sd['scores']['overall_score']
+        pdf.cell(0, 6, f'{i}. {name} ({state}) - Score: {score:.1f}', new_x="LMARGIN", new_y="NEXT")
     
-    for i, sid in enumerate(site_ids, 1):
-        if sid in sites:
-            site = sites[sid]
-            name = sanitize_text(site.get('name', 'Unnamed'))
-            state = sanitize_text(site.get('state', 'N/A'))
-            mw = site.get('target_mw', 0)
-            pdf.cell(0, 7, f'{i}. {name} ({state}) - {mw} MW', new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(10)
+    pdf.set_font('Helvetica', 'I', 9)
+    pdf.set_text_color(128, 128, 128)
+    from datetime import datetime
+    pdf.cell(0, 6, f"Generated: {datetime.now().strftime('%B %d, %Y')}", align='C')
+    pdf.set_text_color(0, 0, 0)
+    
+    # === TABLE OF CONTENTS ===
+    pdf.add_page()
+    pdf.set_font('Helvetica', 'B', 18)
+    pdf.cell(0, 12, 'Table of Contents', new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+    
+    pdf.set_font('Helvetica', '', 11)
+    for i, sd in enumerate(sites_data, 1):
+        site = sd['site']
+        name = sanitize_text(site.get('name', 'Unnamed'))
+        state = sanitize_text(site.get('state', 'N/A'))
+        mw = site.get('target_mw', 0)
+        pdf.cell(0, 7, f'{i}. {name} ({state}, {mw} MW)', new_x="LMARGIN", new_y="NEXT")
+    
+    # === INDIVIDUAL SITE SECTIONS ===
+    for idx, sd in enumerate(sites_data, 1):
+        site = sd['site']
+        scores = sd['scores']
+        stage = sd['stage']
+        
+        pdf.add_page()
+        
+        # Site Header
+        pdf.set_font('Helvetica', 'B', 20)
+        pdf.cell(0, 12, sanitize_text(site.get('name', 'Unnamed Site')), new_x="LMARGIN", new_y="NEXT")
+        
+        pdf.set_font('Helvetica', '', 10)
+        pdf.set_text_color(100, 100, 100)
+        state = sanitize_text(site.get('state', 'N/A'))
+        utility = sanitize_text(site.get('utility', 'N/A'))
+        iso = sanitize_text(site.get('iso', 'N/A'))
+        county = sanitize_text(site.get('county', 'N/A'))
+        
+        pdf.cell(0, 6, f'State: {state} | Utility: {utility} | ISO: {iso} | County: {county}', new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, f'Target: {site.get("target_mw", 0)} MW | Acreage: {site.get("acreage", 0)} | Stage: {stage}', new_x="LMARGIN", new_y="NEXT")
+        
+        developer = sanitize_text(site.get('developer', 'N/A'))
+        land_status = sanitize_text(site.get('land_status', 'N/A'))
+        pdf.cell(0, 6, f'Developer: {developer} | Land Status: {land_status}', new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(8)
+        
+        # Overall Score
+        pdf.set_font('Helvetica', 'B', 28)
+        pdf.set_text_color(52, 152, 219)
+        pdf.cell(0, 12, f"Score: {scores['overall_score']:.1f}/100", align='C')
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(12)
+        
+        # Score Breakdown
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.cell(0, 8, 'Score Breakdown:', new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font('Helvetica', '', 10)
+        pdf.cell(0, 6, f"State Score: {scores['state_score']:.1f}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, f"Power Score: {scores['power_score']:.1f}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, f"Relationship Score: {scores['relationship_score']:.1f}", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(8)
+        
+        # Phases
+        phases = site.get('phases', [])
+        if phases:
+            pdf.set_font('Helvetica', 'B', 12)
+            pdf.cell(0, 8, f'Development Phases ({len(phases)}):', new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font('Helvetica', '', 9)
+            for i, phase in enumerate(phases, 1):
+                mw = phase.get('mw', 0)
+                voltage = phase.get('voltage', 'N/A')
+                status = sanitize_text(phase.get('screening_status', 'N/A'))
+                pdf.cell(0, 5, f'  Phase {i}: {mw} MW @ {voltage}kV - {status}', new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(5)
+        
+        # Onsite Generation
+        onsite_gen = site.get('onsite_gen', {})
+        if onsite_gen:
+            pdf.set_font('Helvetica', 'B', 12)
+            pdf.cell(0, 8, 'Onsite Generation:', new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font('Helvetica', '', 9)
+            if onsite_gen.get('gas_mw'):
+                pdf.cell(0, 5, f"  Natural Gas: {onsite_gen.get('gas_mw', 0)} MW", new_x="LMARGIN", new_y="NEXT")
+            if onsite_gen.get('solar_mw'):
+                pdf.cell(0, 5, f"  Solar: {onsite_gen.get('solar_mw', 0)} MW", new_x="LMARGIN", new_y="NEXT")
+            if onsite_gen.get('batt_mw'):
+                pdf.cell(0, 5, f"  Battery: {onsite_gen.get('batt_mw', 0)} MW / {onsite_gen.get('batt_mwh', 0)} MWh", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(5)
+        
+        # Non-Power Infrastructure
+        non_power = site.get('non_power', {})
+        if non_power:
+            pdf.set_font('Helvetica', 'B', 12)
+            pdf.cell(0, 8, 'Non-Power Infrastructure:', new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font('Helvetica', '', 9)
+            pdf.cell(0, 5, f"  Zoning: {sanitize_text(non_power.get('zoning_status', 'N/A'))}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 5, f"  Water: {sanitize_text(non_power.get('water_source', 'N/A'))}", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 5, f"  Fiber: {sanitize_text(non_power.get('fiber_status', 'N/A'))}", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(5)
+        
+        # Risks
+        risks = site.get('risks', [])
+        if risks:
+            pdf.set_font('Helvetica', 'B', 12)
+            pdf.set_fill_color(255, 220, 220)
+            pdf.cell(0, 8, 'Key Risks:', new_x="LMARGIN", new_y="NEXT", fill=True)
+            pdf.set_font('Helvetica', '', 9)
+            for risk in risks[:8]:
+                pdf.multi_cell(0, 5, sanitize_text(f'- {str(risk)[:120]}'))
+            pdf.ln(3)
+        
+        # Opportunities
+        opps = site.get('opps', [])
+        if opps:
+            pdf.set_font('Helvetica', 'B', 12)
+            pdf.set_fill_color(220, 255, 220)
+            pdf.cell(0, 8, 'Acceleration Opportunities:', new_x="LMARGIN", new_y="NEXT", fill=True)
+            pdf.set_font('Helvetica', '', 9)
+            for opp in opps[:8]:
+                pdf.multi_cell(0, 5, sanitize_text(f'- {str(opp)[:120]}'))
+            pdf.ln(3)
+        
+        # Questions
+        questions = site.get('questions', [])
+        if questions:
+            pdf.set_font('Helvetica', 'B', 12)
+            pdf.set_fill_color(220, 235, 255)
+            pdf.cell(0, 8, 'Open Questions:', new_x="LMARGIN", new_y="NEXT", fill=True)
+            pdf.set_font('Helvetica', '', 9)
+            for q in questions[:5]:
+                pdf.multi_cell(0, 5, sanitize_text(f'- {str(q)[:120]}'))
     
     return bytes(pdf.output())
-    
-    # COMMENTED OUT - Comprehensive version has rendering issues
-    # from .comprehensive_pdf import generate_comprehensive_portfolio_pdf
-    # return generate_comprehensive_portfolio_pdf(site_ids, db, weights)
+
 
 def get_or_create_template(template_dir: str = "/tmp/pptx_templates") -> str:
     """Get existing template or create a new one."""
