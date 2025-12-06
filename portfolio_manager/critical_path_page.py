@@ -209,6 +209,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
         y_labels.append({
             'y': y_pos,
             'label': f"    {row['name'][:35]}{'...' if len(row['name']) > 35 else ''}",
+            'owner': row['owner'],
             'is_header': False,
             'is_subheader': False
         })
@@ -291,7 +292,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
         },
         barmode='overlay',
         height=max(750, len(y_labels) * 32),
-        margin=dict(l=320, r=100, t=100, b=80),
+        margin=dict(l=220, r=100, t=120, b=50),  # Reduced left margin, increased top for timeline
         paper_bgcolor='white',
         plot_bgcolor='#f9fafb',
         xaxis=dict(
@@ -305,7 +306,8 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
             gridcolor='#e5e7eb',
             gridwidth=1,
             showgrid=True,
-            range=[min_date - timedelta(days=30), max_date + timedelta(days=30)]
+            range=[min_date - timedelta(days=30), max_date + timedelta(days=30)],
+            side='top'  # Move timeline to top
         ),
         yaxis=dict(
             tickmode='array',
@@ -313,10 +315,10 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
             ticktext=[
                 f"<b>{l['label']}</b>" if l.get('is_header') 
                 else f"<i>{l['label']}</i>" if l.get('is_subheader')
-                else l['label']
+                else f"{l['label']} [{l.get('owner', '')}]"  # Add owner after task name
                 for l in y_labels
             ],
-            tickfont=dict(size=10, color='#1f2937'),
+            tickfont=dict(size=9, color='#1f2937'),
             autorange='reversed',
             showgrid=False
         ),
