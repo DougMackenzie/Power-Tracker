@@ -1310,27 +1310,7 @@ def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
         sites_data.sort(key=lambda x: x['scores']['overall_score'], reverse=True)
         
         class PortfolioPDF(FPDF):
-            def header(self):
-                if self.page_no() > 1:
-                    self.set_font('Helvetica', 'B', 9)
-                    self.set_text_color(100, 100, 100)
-                    try:
-                        self.cell(0, 8, 'Portfolio Export', align='L')
-                    except:
-                        pass
-                    self.ln(1)
-                    self.set_draw_color(200, 200, 200)
-                    self.line(10, 18, 200, 18)
-                    self.ln(6)
-                    
-            def footer(self):
-                self.set_y(-12)
-                self.set_font('Helvetica', 'I', 8)
-                self.set_text_color(128, 128, 128)
-                try:
-                    self.cell(0, 8, f'Page {self.page_no()}', align='R')
-                except:
-                    pass
+            pass  # No header/footer to avoid any cell() calls
         
         pdf = PortfolioPDF()
         pdf.add_page()
