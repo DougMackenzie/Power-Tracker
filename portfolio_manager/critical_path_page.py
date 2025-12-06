@@ -463,7 +463,7 @@ def show_critical_path_page():
             setattr(cp_data.config, key, value)
         
         # Recalculate with new lead times based on updated voltage/ISO
-        for ms_id, instance in cp_data.milestones.values():
+        for ms_id, instance in cp_data.milestones.items():
             instance.target_start = None
             instance.target_end = None
         
