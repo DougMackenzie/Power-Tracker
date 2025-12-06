@@ -127,21 +127,31 @@ def generate_comprehensive_portfolio_pdf(site_ids: List[str], db: Dict, weights:
             def metric_box(self, x: float, y: float, w: float, h: float, 
                           label: str, value: str, color: tuple = (52, 152, 219)):
                 """Draw a colored metric box."""
+                # Ensure minimum width
+                w = max(w, 35)
+                
                 self.set_xy(x, y)
                 self.set_fill_color(*color)
                 self.set_draw_color(0, 0, 0)
                 self.rect(x, y, w, h, 'FD')
                 
-                # Value (large)
-                self.set_xy(x, y + 5)
-                self.set_font('Helvetica', 'B', 20)
+                # Value (large) - use multi_cell for safety
+                self.set_xy(x + 2, y + 5)
+                self.set_font('Helvetica', 'B', 18)
                 self.set_text_color(255, 255, 255)
-                self.cell(w, 10, sanitize_text(str(value)), align='C')
+                value_text = sanitize_text(str(value))
+                # Truncate if too long
+                if len(value_text) > 8:
+                    value_text = value_text[:8]
+                self.cell(w - 4, 10, value_text, align='C')
                 
                 # Label (small)
-                self.set_xy(x, y + h - 8)
-                self.set_font('Helvetica', '', 9)
-                self.cell(w, 5, sanitize_text(label), align='C')
+                self.set_xy(x + 2, y + h - 8)
+                self.set_font('Helvetica', '', 8)
+                label_text = sanitize_text(label)
+                if len(label_text) > 15:
+                    label_text = label_text[:15]
+                self.cell(w - 4, 5, label_text, align='C')
                 
                 self.set_text_color(0, 0, 0)
         
