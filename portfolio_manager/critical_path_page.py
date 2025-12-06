@@ -282,17 +282,19 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
     min_date = min(all_dates)
     max_date = max(all_dates)
     
-    # Enhanced layout
+    # Enhanced layout with better spacing for readability
     fig.update_layout(
         title={
             'text': f"Critical Path to Energization - {show_detail.replace('_', ' ').title()} View",
             'font': {'size': 18, 'color': '#1f2937', 'family': 'Arial, sans-serif'},
             'x': 0.5,
-            'xanchor': 'center'
+            'xanchor': 'center',
+            'y': 0.98,  # Move title up slightly to avoid overlap
+            'yanchor': 'top'
         },
         barmode='overlay',
-        height=max(750, len(y_labels) * 32),
-        margin=dict(l=220, r=100, t=120, b=50),  # Reduced left margin, increased top for timeline
+        height=max(800, len(y_labels) * 40),  # Increased from 32px to 40px per row
+        margin=dict(l=220, r=100, t=100, b=50),
         paper_bgcolor='white',
         plot_bgcolor='#f9fafb',
         xaxis=dict(
@@ -302,12 +304,12 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
             nticks=24,
             tickangle=-45,
             tickfont=dict(size=10, color='#374151'),
-            title=dict(text='Timeline', font=dict(size=12, color='#1f2937')),
+            title=None,  # Remove "Timeline" text to avoid overlap
             gridcolor='#e5e7eb',
             gridwidth=1,
             showgrid=True,
             range=[min_date - timedelta(days=30), max_date + timedelta(days=30)],
-            side='top'  # Move timeline to top
+            side='top'  # Timeline at top
         ),
         yaxis=dict(
             tickmode='array',
