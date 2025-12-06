@@ -1285,6 +1285,110 @@ def sanitize_text(text):
 
 
 def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
+    """Generate enhanced portfolio PDF with site details."""
+    from fpdf import FPDF
+    
+    sites = db.get('sites', {})
+    
+    # Calculate site data
+    sites_data = []
+    for site_id in site_ids:
+        if site_id in sites:
+            site = sites[site_id]
+            scores = calculate_site_score(site, weights)
+            stage = determine_stage(site)
+            sites_data.append({'id': site_id, 'site': site, 'scores': scores, 'stage': stage})
+    
+    sites_data.sort(key=lambda x: x['scores']['overall_score'], reverse=True)
+    
+    pdf = FPDF()
+    pdf.set_margins(10, 10, 10)
+    pdf.add_page()
+    
+    # === COVER PAGE ===
+    pdf.set_xy(10, 20)
+    pdf.set_font('Helvetica', 'B', 20)
+    pdf.multi_cell(190, 10, 'Portfolio Export', align='C')
+    pdf.ln(10)
+    
+    total_mw = sum(sd['site'].get('target_mw', 0) for sd in sites_data)
+    avg_score = sum(sd['scores']['overall_score'] for sd in sites_data) / len(sites_data) if sites_data else 0
+    
+    pdf.set_x(10)
+    pdf.set_font('Helvetica', '', 11)
+    pdf.multi_cell(190, 7, f'Total Sites: {len(sites_data)}')
+    pdf.set_x(10)
+    pdf.multi_cell(190, 7, f'Total MW: {total_mw:,.0f}')
+    pdf.set_x(10)
+    pdf.multi_cell(190, 7, f'Average Score: {avg_score:.1f}')
+    
+    # === INDIVIDUAL SITES ===
+    for sd in sites_data:
+        site = sd['site']
+        scores = sd['scores']
+        
+        pdf.add_page()
+        
+        # Site name
+        pdf.set_xy(10, 20)
+        pdf.set_font('Helvetica', 'B', 16)
+        name = str(site.get('name', 'Site'))[:50].encode('ascii', 'ignore').decode('ascii')
+        pdf.multi_cell(190, 10, name)
+        pdf.ln(5)
+        
+        # Basic info
+        pdf.set_x(10)
+        pdf.set_font('Helvetica', '', 10)
+        state = str(site.get('state', 'N/A'))[:20].encode('ascii', 'ignore').decode('ascii')
+        utility = str(site.get('utility', 'N/A'))[:30].encode('ascii', 'ignore').decode('ascii')
+        pdf.multi_cell(190, 6, f'State: {state} | Utility: {utility}')
+        pdf.set_x(10)
+        pdf.multi_cell(190, 6, f'Target MW: {site.get("target_mw", 0)} | Stage: {sd["stage"]}')
+        pdf.ln(8)
+        
+        # Score
+        pdf.set_x(10)
+        pdf.set_font('Helvetica', 'B', 24)
+        pdf.multi_cell(190, 12, f"Score: {scores['overall_score']:.1f}/100", align='C')
+        pdf.ln(10)
+        
+        # Score breakdown
+        pdf.set_x(10)
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.multi_cell(190, 7, 'Score Breakdown:')
+        pdf.set_x(10)
+        pdf.set_font('Helvetica', '', 9)
+        pdf.multi_cell(190, 6, f"State: {scores['state_score']:.1f} | Power: {scores['power_score']:.1f} | Relationship: {scores['relationship_score']:.1f}")
+        pdf.ln(8)
+        
+        # Risks
+        risks = site.get('risks', [])
+        if risks:
+            pdf.set_x(10)
+            pdf.set_font('Helvetica', 'B', 11)
+            pdf.multi_cell(190, 7, 'Key Risks:')
+            pdf.set_font('Helvetica', '', 9)
+            for risk in risks[:5]:
+                pdf.set_x(10)
+                risk_text = str(risk)[:100].encode('ascii', 'ignore').decode('ascii')
+                pdf.multi_cell(190, 5, f'- {risk_text}')
+            pdf.ln(5)
+        
+        # Opportunities
+        opps = site.get('opps', [])
+        if opps:
+            pdf.set_x(10)
+            pdf.set_font('Helvetica', 'B', 11)
+            pdf.multi_cell(190, 7, 'Opportunities:')
+            pdf.set_font('Helvetica', '', 9)
+            for opp in opps[:5]:
+                pdf.set_x(10)
+                opp_text = str(opp)[:100].encode('ascii', 'ignore').decode('ascii')
+                pdf.multi_cell(190, 5, f'- {opp_text}')
+    
+    return bytes(pdf.output())
+
+
     """Generate minimal portfolio PDF - v2024.12.06.4"""
     from fpdf import FPDF
     
