@@ -1,14 +1,8 @@
 """
-Critical Path Streamlit Page
-============================
-Add this file to your portfolio_manager folder.
-
-Usage in streamlit_app.py:
-    from .critical_path_page import show_critical_path_page
-    
-    # In navigation:
-    if page == "⚡ Critical Path":
-        show_critical_path_page()
+Critical Path Streamlit Page - MS Project Style
+=================================================
+Enhanced Gantt chart with hierarchical grouping, dependency arrows,
+and toggleable detail levels.
 """
 
 import streamlit as st
@@ -39,18 +33,25 @@ from .critical_path import (
 )
 
 
-def create_gantt_chart(data: CriticalPathData, group_by: str = "owner") -> go.Figure:
-    """Create interactive Gantt chart with swimlanes."""
+def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_detail: str = "all") -> go.Figure:
+    """Create MS Project-style Gantt chart with dependencies and hierarchy."""
     
     templates = get_milestone_templates()
     tasks = []
     
+    # Filter based on detail level
     for ms_id, instance in data.milestones.items():
         if not instance.is_active:
             continue
         
         tmpl = templates.get(ms_id)
         if not tmpl:
+            continue
+        
+        # Filter by detail level
+        if show_detail == "critical_only" and not instance.on_critical_path:
+            continue
+        elif show_detail == "major_only" and not tmpl.is_critical_default:
             continue
         
         start = instance.target_start or instance.actual_start
@@ -60,18 +61,21 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner") -> go.Fi
         
         start_date = date.fromisoformat(start)
         end_date = date.fromisoformat(end)
-        duration = (end_date - start_date).days
+        duration_days = (end_date - start_date).days
         
         if group_by == "owner":
             group = (instance.owner_override or tmpl.owner.value)
+            subgroup = tmpl.workstream.value
         elif group_by == "phase":
             group = tmpl.phase.value
+            subgroup = tmpl.workstream.value
         else:
             group = tmpl.workstream.value
+            subgroup = tmpl.owner.value
         
-        # Color by status
+        # Color by status with critical path override
         if instance.status == MilestoneStatus.COMPLETE:
-            color = "#22c55e"
+            color = "#10b981"
         elif instance.status == MilestoneStatus.IN_PROGRESS:
             color = "#3b82f6"
         elif instance.status == MilestoneStatus.BLOCKED:
@@ -80,123 +84,224 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner") -> go.Fi
             color = "#f97316"  # Orange for critical path
         else:
             owner = Owner(instance.owner_override) if instance.owner_override else tmpl.owner
-            color = OWNER_COLORS.get(owner, "#888888")
+            color = OWNER_COLORS.get(owner, "#64748b")
         
         tasks.append({
-            'id': ms_id, 'name': tmpl.name, 'start': start_date, 'end': end_date,
-            'duration': duration, 'group': group, 'color': color,
-            'status': instance.status.value, 'owner': instance.owner_override or tmpl.owner.value,
-            'phase': tmpl.phase.value, 'critical': instance.on_critical_path,
+            'id': ms_id,
+            'name': tmpl.name,
+            'start': start_date,
+            'end': end_date,
+            'duration_days': duration_days,
+            'group': group,
+            'subgroup': subgroup,
+            'color': color,
+            'status': instance.status.value,
+            'owner': instance.owner_override or tmpl.owner.value,
+            'phase': tmpl.phase.value,
+            'critical': instance.on_critical_path,
             'workstream': tmpl.workstream.value,
+            'predecessors': tmpl.predecessors,
+            'is_milestone': tmpl.is_critical_default,
         })
     
     if not tasks:
         fig = go.Figure()
-        fig.add_annotation(text="No milestones scheduled", x=0.5, y=0.5, 
+        fig.add_annotation(text="No milestones to display", x=0.5, y=0.5, 
                           xref="paper", yref="paper", showarrow=False)
         return fig
     
-    df = pd.DataFrame(tasks).sort_values(['group', 'start'])
+    df = pd.DataFrame(tasks).sort_values(['group', 'subgroup', 'start'])
     
     fig = go.Figure()
     y_pos = 0
     y_labels = []
+    task_positions = {}  # Track y-position for each task ID (for arrows)
     current_group = None
+    current_subgroup = None
     group_positions = []
     
+    # Build hierarchical structure
     for _, row in df.iterrows():
+        # Major group header
         if row['group'] != current_group:
             if current_group is not None:
-                # Add spacing between groups
-                y_pos += 0.8
+                y_pos += 1.2  # Extra space between major groups
             current_group = row['group']
-            # Track group position for separators
-            group_positions.append({'group': current_group, 'y': y_pos})
+            current_subgroup = None
+            
+            # Add group header
+            group_positions.append({
+                'group': current_group, 
+                'y': y_pos,
+                'is_header': True
+            })
+            y_labels.append({
+                'y': y_pos,
+                'label': f"▼ {current_group}",
+                'is_header': True
+            })
+            y_pos += 1
         
-        border_color = '#d97706' if row['critical'] else row['color']
-        border_width = 3 if row['critical'] else 0.5
+        # Sub-group (workstream/owner)
+        if row['subgroup'] != current_subgroup:
+            current_subgroup = row['subgroup']
+            y_labels.append({
+                'y': y_pos,
+                'label': f"  ▸ {current_subgroup}",
+                'is_subheader': True
+            })
+            y_pos += 0.8
+        
+        # Task bar
+        border_width = 2.5 if row['critical'] else 0.5
+        opacity = 1.0 if row['is_milestone'] else 0.85
         
         fig.add_trace(go.Bar(
-            x=[row['duration']], y=[y_pos], base=[row['start']], orientation='h',
+            x=[row['duration_days']],
+            y=[y_pos],
+            base=[row['start']],
+            orientation='h',
             marker=dict(
-                color=row['color'], 
-                line=dict(color=border_color, width=border_width), 
-                opacity=0.9
+                color=row['color'],
+                line=dict(color='#1f2937' if row['critical'] else row['color'], width=border_width),
+                opacity=opacity
             ),
-            hovertemplate=f"<b>{row['name']}</b><br>Owner: {row['owner']}<br>Status: {row['status']}<br>{'🔴 CRITICAL PATH' if row['critical'] else ''}<extra></extra>",
+            hovertemplate=(
+                f"<b>{row['name']}</b><br>"
+                f"Start: {row['start'].strftime('%Y-%m-%d')}<br>"
+                f"End: {row['end'].strftime('%Y-%m-%d')}<br>"
+                f"Duration: {row['duration_days']} days<br>"
+                f"Owner: {row['owner']}<br>"
+                f"Status: {row['status']}<br>"
+                f"{'🔴 CRITICAL PATH' if row['critical'] else ''}"
+                "<extra></extra>"
+            ),
             showlegend=False,
         ))
         
+        # Add diamond marker for major milestones
+        if row['is_milestone']:
+            fig.add_trace(go.Scatter(
+                x=[row['end']],
+                y=[y_pos],
+                mode='markers',
+                marker=dict(
+                    symbol='diamond',
+                    size=12,
+                    color=row['color'],
+                    line=dict(color='#1f2937', width=2)
+                ),
+                showlegend=False,
+                hoverinfo='skip'
+            ))
+        
+        # Track position for dependency arrows
+        task_positions[row['id']] = {'y': y_pos, 'start': row['start'], 'end': row['end']}
+        
         y_labels.append({
-            'y': y_pos, 
-            'label': row['name'][:30] + '...' if len(row['name']) > 30 else row['name']
+            'y': y_pos,
+            'label': f"    {row['name'][:35]}{'...' if len(row['name']) > 35 else ''}",
+            'is_header': False,
+            'is_subheader': False
         })
         y_pos += 1
     
-    # Calculate date range for better x-axis formatting
+    # Add dependency arrows
+    for task_id, pos_info in task_positions.items():
+        task = df[df['id'] == task_id].iloc[0] if len(df[df['id'] == task_id]) > 0 else None
+        if task is None:
+            continue
+        
+        for pred_id in task['predecessors']:
+            if pred_id in task_positions:
+                pred_pos = task_positions[pred_id]
+                
+                # Draw arrow from predecessor end to task start
+                fig.add_shape(
+                    type="line",
+                    x0=pred_pos['end'], y0=pred_pos['y'],
+                    x1=pos_info['start'], y1=pos_info['y'],
+                    line=dict(color="#94a3b8", width=1.5, dash="dot"),
+                    opacity=0.6
+                )
+                
+                # Add arrowhead
+                fig.add_annotation(
+                    x=pos_info['start'], y=pos_info['y'],
+                    ax=pred_pos['end'], ay=pred_pos['y'],
+                    xref="x", yref="y",
+                    axref="x", ayref="y",
+                    showarrow=True,
+                    arrowhead=2,
+                    arrowsize=1,
+                    arrowwidth=1.5,
+                    arrowcolor="#94a3b8",
+                    opacity=0.6
+                )
+    
+    # Calculate date range
     all_dates = [row['start'] for _, row in df.iterrows()] + [row['end'] for _, row in df.iterrows()]
     min_date = min(all_dates)
     max_date = max(all_dates)
     
-    # Enhanced layout with clearer timeline
+    # Enhanced layout
     fig.update_layout(
         title={
-            'text': "Critical Path to Energization",
-            'font': {'size': 20, 'color': '#1f2937', 'family': 'Arial, sans-serif'},
+            'text': f"Critical Path to Energization - {show_detail.replace('_', ' ').title()} View",
+            'font': {'size': 18, 'color': '#1f2937', 'family': 'Arial, sans-serif'},
             'x': 0.5,
             'xanchor': 'center'
         },
         barmode='overlay',
-        height=max(700, len(y_labels) * 28),
-        margin=dict(l=250, r=80, t=100, b=80),
+        height=max(750, len(y_labels) * 32),
+        margin=dict(l=320, r=100, t=100, b=80),
         paper_bgcolor='white',
         plot_bgcolor='#f9fafb',
         xaxis=dict(
             type='date',
             tickformat='%b %Y',
             tickmode='auto',
-            nticks=20,
+            nticks=24,
             tickangle=-45,
-            tickfont=dict(size=11, color='#374151'),
-            title=dict(text='Timeline', font=dict(size=13, color='#1f2937')),
+            tickfont=dict(size=10, color='#374151'),
+            title=dict(text='Timeline', font=dict(size=12, color='#1f2937')),
             gridcolor='#e5e7eb',
             gridwidth=1,
             showgrid=True,
-            range=[min_date, max_date]
+            range=[min_date - timedelta(days=30), max_date + timedelta(days=30)]
         ),
         yaxis=dict(
             tickmode='array',
             tickvals=[l['y'] for l in y_labels],
-            ticktext=[l['label'] for l in y_labels],
-            tickfont=dict(size=10, color='#374151'),
+            ticktext=[
+                f"<b>{l['label']}</b>" if l.get('is_header') 
+                else f"<i>{l['label']}</i>" if l.get('is_subheader')
+                else l['label']
+                for l in y_labels
+            ],
+            tickfont=dict(
+                size=[11 if l.get('is_header') else 10 if l.get('is_subheader') else 9 for l in y_labels],
+                color='#1f2937'
+            ),
             autorange='reversed',
             showgrid=False
         ),
     )
     
     # Add group separators
-    for i, gp in enumerate(group_positions):
-        if i > 0:  # Don't add separator before first group
+    for gp in group_positions:
+        if gp.get('is_header'):
+            # Major group separator
             fig.add_shape(
-                type="line",
+                type="rect",
                 x0=0, x1=1, xref="paper",
-                y0=gp['y'] - 0.4, y1=gp['y'] - 0.4,
-                line=dict(color="#9ca3af", width=1.5, dash="dot")
+                y0=gp['y'] - 0.3, y1=gp['y'] + 0.5,
+                fillcolor="#e5e7eb",
+                opacity=0.3,
+                line_width=0
             )
-        
-        # Add group label
-        fig.add_annotation(
-            x=-0.02, xref="paper",
-            y=gp['y'], yref="y",
-            text=f"<b>{gp['group']}</b>",
-            showarrow=False,
-            xanchor="right",
-            font=dict(size=11, color='#4b5563'),
-            bgcolor='#e5e7eb',
-            borderpad=4
-        )
     
-    # Add vertical line for today using shapes (more reliable than add_vline)
+    # Add "Today" marker
     today_str = date.today().isoformat()
     fig.add_shape(
         type="line",
@@ -208,14 +313,14 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner") -> go.Fi
     fig.add_annotation(
         x=today_str, y=1.02, yref="paper",
         text="<b>Today</b>", showarrow=False,
-        font=dict(size=11, color="#374151"),
+        font=dict(size=10, color="#374151"),
         bgcolor="white",
         bordercolor="#6b7280",
-        borderwidth=1,
-        borderpad=4
+        borderwidth=1.5,
+        borderpad=3
     )
     
-    # Add vertical line for energization date
+    # Add "Energization" marker
     if data.calculated_energization:
         fig.add_shape(
             type="line",
@@ -227,18 +332,18 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner") -> go.Fi
         fig.add_annotation(
             x=data.calculated_energization, y=1.02, yref="paper",
             text="<b>⚡ Energization</b>", showarrow=False,
-            font=dict(size=11, color="#f59e0b", weight="bold"),
+            font=dict(size=10, color="#f59e0b", weight="bold"),
             bgcolor="white",
             bordercolor="#f59e0b",
             borderwidth=2,
-            borderpad=4
+            borderpad=3
         )
     
     return fig
 
 
 def show_critical_path_page():
-    """Main Critical Path page."""
+    """Main Critical Path page with MS Project-style Gantt chart."""
     
     st.header("⚡ Critical Path to Energization")
     
@@ -300,8 +405,37 @@ def show_critical_path_page():
     ])
     
     with tab1:
-        group_by = st.radio("Group By", ["owner", "phase", "workstream"], horizontal=True)
-        fig = create_gantt_chart(cp_data, group_by)
+        # Controls for Gantt chart
+        col1, col2 = st.columns(2)
+        with col1:
+            group_by = st.radio(
+                "Group By", 
+                ["owner", "phase", "workstream"], 
+                horizontal=True,
+                help="Organize milestones by responsible party, project phase, or workstream"
+            )
+        with col2:
+            show_detail = st.radio(
+                "Detail Level",
+                ["all", "major_only", "critical_only"],
+                format_func=lambda x: {
+                    "all": "📋 All Tasks",
+                    "major_only": "◆ Major Milestones",
+                    "critical_only": "🔴 Critical Path Only"
+                }[x],
+                horizontal=True,
+                help="Toggle between detailed and simplified views"
+            )
+        
+        st.markdown("---")
+        
+        # Legend
+        st.markdown("""
+        **Legend:** 
+        🟢 Complete | 🔵 In Progress | 🔴 Blocked | 🟠 Critical Path | ◆ Major Milestone | ⤷ Dependencies
+        """)
+        
+        fig = create_gantt_chart(cp_data, group_by, show_detail)
         st.plotly_chart(fig, use_container_width=True)
     
     with tab2:
