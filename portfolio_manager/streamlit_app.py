@@ -1285,6 +1285,47 @@ def sanitize_text(text):
 
 
 def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
+    """Generate minimal portfolio PDF - v2024.12.06.4"""
+    from fpdf import FPDF
+    
+    pdf = FPDF()
+    pdf.set_margins(10, 10, 10)  # Explicit margins: left, top, right
+    pdf.add_page()
+    
+    # Title
+    pdf.set_xy(10, 20)  # Explicit position
+    pdf.set_font('Helvetica', 'B', 18)
+    pdf.multi_cell(190, 10, 'Portfolio Export - Minimal Version')  # Explicit width 190 (210-20 for margins)
+    pdf.ln(10)
+    
+    # Just count
+    pdf.set_x(10)  # Reset X position
+    pdf.set_font('Helvetica', '', 11)
+    pdf.multi_cell(190, 8, f'Total Sites: {len(site_ids)}')
+    pdf.ln(5)
+    
+    # Site names - very safe
+    sites = db.get('sites', {})
+    pdf.set_font('Helvetica', '', 9)
+    
+    for i, sid in enumerate(site_ids, 1):
+        if sid in sites:
+            # Ultra-safe name extraction
+            try:
+                pdf.set_x(10)  # Reset X position for each line
+                raw_name = sites[sid].get('name', f'Site {i}')
+                safe_name = str(raw_name)[:40]
+                safe_name = safe_name.encode('ascii', 'ignore').decode('ascii')
+                if not safe_name.strip():
+                    safe_name = f'Site {i}'
+                pdf.multi_cell(190, 8, f'{i}. {safe_name}')
+            except Exception as e:
+                pdf.set_x(10)  # Reset X position
+                pdf.multi_cell(190, 8, f'{i}. Site')
+    
+    return bytes(pdf.output())
+
+
     """Generate minimal portfolio PDF - v2024.12.06.3"""
     from fpdf import FPDF
     
