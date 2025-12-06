@@ -202,6 +202,31 @@ def generate_portfolio_export(
     )
     
     # We append new slides to the end
+    
+    # ADD THIS before the "for site_id, site_data in sites.items():" loop
+    from .streamlit_app import calculate_site_score
+
+    # Pre-calculate scores for all sites
+    for site_id, site_data in sites.items():
+        if 'scores' not in site_data:
+            weights = {
+                'state': 0.20, 'power': 0.25, 'relationship': 0.20,
+                'execution': 0.15, 'fundamentals': 0.10, 'financial': 0.10
+            }
+            try:
+                calculated = calculate_site_score(site_data, weights)
+                # Map to export format
+                site_data['scores'] = {
+                    'overall': calculated['overall_score'],
+                    'power_pathway': calculated['power_score'],
+                    'site_specific': calculated.get('fundamentals_score', 70),
+                    'execution': calculated['execution_score'],
+                    'relationship_capital': calculated['relationship_score'],
+                    'financial': calculated['financial_score'],
+                }
+            except Exception as e:
+                print(f"[WARNING] Failed to calculate score for {site_id}: {e}")
+
     for site_id, site_data in sites.items():
         print(f"[DEBUG] Processing site: {site_data.get('name', site_id)}")
         
