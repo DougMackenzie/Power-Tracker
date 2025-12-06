@@ -714,29 +714,24 @@ def show_portfolio_export(sites: Dict):
                         
                         result = generate_portfolio_export(export_sites, template_path, output_path, config)
                         
-                        # Store file path instead of bytes (fixes UUID filename issue)
-                        st.session_state['portfolio_export_path'] = result
-                        st.session_state['portfolio_export_name'] = safe_name
-                        
                         st.success("✅ Portfolio export generated successfully!")
+                        
+                        # Read file and provide download immediately
+                        with open(result, 'rb') as f:
+                            file_bytes = f.read()
+                        
+                        st.download_button(
+                            label="⬇️ Download Portfolio Deck",
+                            data=file_bytes,
+                            file_name=safe_name,
+                            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                            key=f"portfolio_download_{safe_name}"
+                        )
                         
                 except Exception as e:
                     st.error(f"Export failed: {e}")
                     import traceback
                     st.code(traceback.format_exc())
-
-    # Show download button if file exists
-    if 'portfolio_export_path' in st.session_state:
-        file_path = st.session_state['portfolio_export_path']
-        if os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                st.download_button(
-                    "⬇️ Download Portfolio Deck",
-                    data=f.read(),
-                    file_name=st.session_state['portfolio_export_name'],
-                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    key="download_portfolio_pptx"
-                )
 
 
 # =============================================================================

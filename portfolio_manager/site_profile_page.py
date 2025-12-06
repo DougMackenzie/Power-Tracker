@@ -630,30 +630,25 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                 
                 result = export_site_to_pptx(export_data, template_path, output_path, config)
                 
-                # Store file path instead of bytes (fixes UUID filename issue)
-                st.session_state[f'pptx_path_{site_id}'] = result
-                st.session_state[f'pptx_name_{site_id}'] = safe_name
+                st.success(f"✅ Export complete: {safe_name}")
                 
-                st.success(f"Export complete: {safe_name}")
+                # Read file and provide download immediately
+                with open(result, 'rb') as f:
+                    file_bytes = f.read()
+                
+                st.download_button(
+                    label="⬇️ Download PPTX",
+                    data=file_bytes,
+                    file_name=safe_name,
+                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    key=f"download_{site_id}_{safe_name}"
+                )
                 
             except Exception as e:
                 st.error(f"Export failed: {e}")
                 import traceback
                 with st.expander("Error Details"):
                     st.code(traceback.format_exc())
-
-    # Show download button if file exists (Outside the button block)
-    if f'pptx_path_{site_id}' in st.session_state:
-        file_path = st.session_state[f'pptx_path_{site_id}']
-        if os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                st.download_button(
-                    "⬇️ Download PPTX",
-                    data=f.read(),
-                    file_name=st.session_state[f'pptx_name_{site_id}'],
-                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    key=f"pptx_download_btn_{site_id}"
-                )
 
 
 # =============================================================================
