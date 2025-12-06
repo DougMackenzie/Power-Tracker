@@ -133,6 +133,39 @@ def copy_slide_from_external(source_slide, dest_prs):
                 print(f"Failed to copy shape: {e}")
 
 
+def get_profile_data(site_data):
+    """Extract profile data from site, handling JSON storage."""
+    profile_data = None
+    
+    # Check for SiteProfileData object
+    if 'profile' in site_data:
+        p = site_data['profile']
+        if hasattr(p, 'to_description_dict'):
+            return p
+        elif isinstance(p, dict):
+            return SiteProfileData.from_dict(p)
+    
+    # Check for profile_json (common storage format)
+    if 'profile_json' in site_data:
+        profile_json = site_data['profile_json']
+        if isinstance(profile_json, str):
+            import json
+            try:
+                profile_json = json.loads(profile_json)
+            except: pass
+        if isinstance(profile_json, dict):
+            return SiteProfileData.from_dict(profile_json)
+    
+    # Build from site data using SiteProfileBuilder
+    try:
+        from .site_profile_builder import map_app_to_profile
+        return map_app_to_profile(site_data)
+    except ImportError:
+        pass
+    
+    return profile_data
+
+
 def generate_portfolio_export(
     sites: Dict[str, Dict],
     template_path: str,
@@ -234,13 +267,7 @@ def generate_portfolio_export(
         replacements = build_replacements(site_data, config)
         
         # Get Profile Data
-        profile_data = None
-        if 'profile' in site_data:
-            p = site_data['profile']
-            if hasattr(p, 'overview') and hasattr(p, 'to_description_dict'):
-                profile_data = p
-            elif isinstance(p, dict):
-                profile_data = SiteProfileData.from_dict(p)
+        profile_data = get_profile_data(site_data)
         
         # --- 1. Site Profile Slide ---
         # Clone the template profile slide
