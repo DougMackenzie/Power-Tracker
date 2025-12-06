@@ -133,58 +133,6 @@ def copy_slide_from_external(source_slide, dest_prs):
                 print(f"Failed to copy shape: {e}")
 
 
-def prepare_site_for_export(site_data):
-    """Parse JSON fields and prepare site for export."""
-    import json
-    
-    json_fields = ['phases_json', 'schedule_json', 'non_power_json', 
-                   'risks_json', 'opps_json', 'capacity_trajectory_json']
-    
-    for field in json_fields:
-        if field in site_data and isinstance(site_data[field], str):
-            try:
-                # Convert to target field name (remove _json suffix)
-                target = field.replace('_json', '')
-                site_data[target] = json.loads(site_data[field])
-            except json.JSONDecodeError:
-                pass
-    
-    return site_data
-
-
-def get_profile_data(site_data):
-    """Extract profile data from site, handling JSON storage."""
-    profile_data = None
-    
-    # Check for SiteProfileData object
-    if 'profile' in site_data:
-        p = site_data['profile']
-        if hasattr(p, 'to_description_dict'):
-            return p
-        elif isinstance(p, dict):
-            return SiteProfileData.from_dict(p)
-    
-    # Check for profile_json (common storage format)
-    if 'profile_json' in site_data:
-        profile_json = site_data['profile_json']
-        if isinstance(profile_json, str):
-            import json
-            try:
-                profile_json = json.loads(profile_json)
-            except: pass
-        if isinstance(profile_json, dict):
-            return SiteProfileData.from_dict(profile_json)
-    
-    # Build from site data using SiteProfileBuilder
-    try:
-        from .site_profile_builder import map_app_to_profile
-        return map_app_to_profile(site_data)
-    except ImportError:
-        pass
-    
-    return profile_data
-
-
 def generate_portfolio_export(
     sites: Dict[str, Dict],
     template_path: str,
@@ -246,7 +194,8 @@ def generate_portfolio_export(
     # 3. Generate Slides for Each Site
     # --------------------------------
     from .pptx_export import (
-        populate_slide, build_replacements, SiteProfileData,
+        populate_site_profile_table, update_overview_textbox, replace_in_table,
+        find_and_replace_text, build_replacements, SiteProfileData,
         generate_capacity_trajectory_chart, generate_critical_path_chart,
         generate_score_summary_chart, generate_market_analysis_chart,
         add_critical_path_text, add_score_breakdown_text, add_market_text,
@@ -254,83 +203,62 @@ def generate_portfolio_export(
     )
     
     # We append new slides to the end
-    
-    # ADD THIS before the "for site_id, site_data in sites.items():" loop
-    from .streamlit_app import calculate_site_score
-
-    # Pre-calculate scores for all sites
-    for site_id, site_data in sites.items():
-        if 'scores' not in site_data:
-            weights = {
-                'state': 0.20, 'power': 0.25, 'relationship': 0.20,
-                'execution': 0.15, 'fundamentals': 0.10, 'financial': 0.10
-            }
-            try:
-                calculated = calculate_site_score(site_data, weights)
-                # Map to export format
-                site_data['scores'] = {
-                    'overall': calculated['overall_score'],
-                    'power_pathway': calculated['power_score'],
-                    'site_specific': calculated.get('fundamentals_score', 70),
-                    'execution': calculated['execution_score'],
-                    'relationship_capital': calculated['relationship_score'],
-                    'financial': calculated['financial_score'],
-                }
-            except Exception as e:
-                print(f"[WARNING] Failed to calculate score for {site_id}: {e}")
-
     for site_id, site_data in sites.items():
         print(f"[DEBUG] Processing site: {site_data.get('name', site_id)}")
         
-        # Prepare Site Data (Use copy to avoid side effects)
-        site_data = prepare_site_for_export(site_data.copy())
-        
-        # Calculate scores if missing (Safety net)
-        if 'scores' not in site_data:
-            weights = {
-                'state': 0.20, 'power': 0.25, 'relationship': 0.20,
-                'execution': 0.15, 'fundamentals': 0.10, 'financial': 0.10
-            }
-            try:
-                calculated = calculate_site_score(site_data, weights)
-                site_data['scores'] = {
-                    'overall': calculated['overall_score'],
-                    'power_pathway': calculated['power_score'],
-                    'site_specific': calculated.get('fundamentals_score', 70),
-                    'execution': calculated['execution_score'],
-                    'relationship_capital': calculated['relationship_score'],
-                    'financial': calculated['financial_score'],
-                }
-            except Exception as e:
-                print(f"[WARNING] Failed to calculate score for {site_id}: {e}")
-        
-        # Prepare Data for Replacements
+        # Prepare Data
         replacements = build_replacements(site_data, config)
         
         # Get Profile Data
-        profile_data = get_profile_data(site_data)
+        profile_data = None
+        if 'profile' in site_data:
+            p = site_data['profile']
+            if hasattr(p, 'overview') and hasattr(p, 'to_description_dict'):
+                profile_data = p
+            elif isinstance(p, dict):
+                profile_data = SiteProfileData.from_dict(p)
         
         # --- 1. Site Profile Slide ---
         # Clone the template profile slide
         source_profile_idx = template_indices['profile']
         profile_slide = duplicate_slide_in_place(prs, source_profile_idx)
         
-        # Populate Profile Slide using SHARED LOGIC
-        populate_slide(profile_slide, site_data, profile_data, replacements, config, slide_type='site_profile')
+        # Populate Profile Slide
+        for shape in profile_slide.shapes:
+            if shape.has_table:
+                if len(shape.table.rows) >= 17:
+                    if profile_data:
+                        populate_site_profile_table(shape.table, profile_data)
+                    else:
+                        replace_in_table(shape.table, replacements)
+                else:
+                    replace_in_table(shape.table, replacements)
+            elif shape.has_text_frame:
+                shape_text = shape.text_frame.text.lower()
+                if 'overview' in shape_text and 'observation' in shape_text:
+                    update_overview_textbox(shape, site_data, profile_data)
+                else:
+                    find_and_replace_text(shape, replacements)
+                    
+        # Handle Image Placeholders on Profile Slide
+        replace_images_with_placeholders(profile_slide, site_data)
 
         # --- 2. Site Boundary Slide ---
         if config.include_site_boundary:
             source_boundary_idx = template_indices['boundary']
             boundary_slide = duplicate_slide_in_place(prs, source_boundary_idx)
-            # Populate Boundary Slide using SHARED LOGIC
-            populate_slide(boundary_slide, site_data, profile_data, replacements, config, slide_type='site_boundary')
+            # Replace placeholders
+            for shape in boundary_slide.shapes:
+                find_and_replace_text(shape, replacements)
+            replace_images_with_placeholders(boundary_slide, site_data, label="Site Boundary Map")
 
         # --- 3. Topography Slide ---
         if config.include_topography:
             source_topo_idx = template_indices['topo']
             topo_slide = duplicate_slide_in_place(prs, source_topo_idx)
-            # Populate Topography Slide using SHARED LOGIC
-            populate_slide(topo_slide, site_data, profile_data, replacements, config, slide_type='topography')
+            for shape in topo_slide.shapes:
+                find_and_replace_text(shape, replacements)
+            replace_images_with_placeholders(topo_slide, site_data, label="Topography Map")
             
         # --- 4. Capacity Trajectory (New Slide) ---
         if config.include_capacity_trajectory:
@@ -387,13 +315,9 @@ def generate_portfolio_export(
 
 def duplicate_slide_in_place(prs, index):
     """
-    Duplicate a slide within the same presentation using a Hybrid approach:
-    - XML Cloning: For shapes with NO external relationships (Tables, simple Text). Preserves 100% formatting.
-    - API Copying: For shapes WITH relationships (Pictures, Hyperlinks). Prevents corruption.
+    Duplicate a slide within the same presentation.
+    Uses the SAME LAYOUT as the source slide to preserve structure.
     """
-    import copy
-    from pptx.enum.shapes import MSO_SHAPE_TYPE
-    
     source = prs.slides[index]
     layout = source.slide_layout
     dest = prs.slides.add_slide(layout)
@@ -405,51 +329,28 @@ def duplicate_slide_in_place(prs, index):
     
     # Copy shapes
     for shape in source.shapes:
-        if has_relationships(shape):
-            # Fallback to API copy for safety (prevents corruption)
-            copy_shape_api(shape, dest.shapes)
-        else:
-            # Use XML clone for fidelity (preserves formatting)
-            try:
-                new_el = copy.deepcopy(shape.element)
-                dest.shapes._spTree.append(new_el)
-            except Exception as e:
-                print(f"[WARNING] Failed to clone shape XML: {e}")
-                # Fallback
-                copy_shape_api(shape, dest.shapes)
+        copy_shape(shape, dest.shapes)
             
     return dest
 
 
-def has_relationships(shape):
-    """Check if a shape has external relationships (images, links) that would break if XML cloned."""
-    # 1. Pictures always have relationships
-    if shape.shape_type == 13: # PICTURE
-        return True
-        
-    # 2. Groups: Check recursively
-    if shape.shape_type == 6: # GROUP
-        for member in shape.shapes:
-            if has_relationships(member):
-                return True
-                
-    # 3. Check XML for relationship attributes (r:embed, r:id, r:link)
-    xml = shape.element.xml
-    if 'r:embed="' in xml or 'r:id="' in xml or 'r:link="' in xml:
-        return True
-        
-    return False
-
-
-def copy_shape_api(shape, shapes_collection):
+def copy_shape(shape, shapes_collection, group_offset=(0,0)):
     """
-    Recursively copy a shape using the API. 
-    Used when XML cloning is unsafe.
+    Recursively copy a shape to a shapes collection.
+    group_offset: (left, top) adjustment for shapes inside groups.
     """
     # 1. Groups (Type 6)
     if shape.shape_type == 6: 
+        # Create a new group
+        # python-pptx doesn't support creating groups easily from scratch via API
+        # We have to copy members individually.
+        # Note: This "ungroups" the group in the copy, but preserves visual appearance.
+        # To truly preserve grouping would require XML manipulation which is risky.
+        # We will copy members as individual shapes.
         for member in shape.shapes:
-            copy_shape_api(member, shapes_collection)
+            # Adjust position by group's position
+            # Actually, member.left/top are absolute in python-pptx
+            copy_shape(member, shapes_collection)
         return
 
     # 2. Pictures (Type 13)
@@ -468,9 +369,10 @@ def copy_shape_api(shape, shapes_collection):
             new_table_shape = shapes_collection.add_table(rows, cols, shape.left, shape.top, shape.width, shape.height)
             new_table = new_table_shape.table
             
-            # Copy dimensions
+            # Copy Column Widths
             for i in range(cols):
                 new_table.columns[i].width = shape.table.columns[i].width
+            # Copy Row Heights
             for i in range(rows):
                 new_table.rows[i].height = shape.table.rows[i].height
                 
@@ -480,45 +382,66 @@ def copy_shape_api(shape, shapes_collection):
                     source_cell = shape.table.cell(r, c)
                     dest_cell = new_table.cell(r, c)
                     copy_text_frame(source_cell.text_frame, dest_cell.text_frame)
-                    # Basic fill copy
-                    if source_cell.fill.type == 1:
-                        dest_cell.fill.solid()
-                        dest_cell.fill.fore_color.rgb = source_cell.fill.fore_color.rgb
+                    
+                    # Copy cell fill
+                    try:
+                        if source_cell.fill.type == 1: # Solid
+                            dest_cell.fill.solid()
+                            dest_cell.fill.fore_color.rgb = source_cell.fill.fore_color.rgb
+                    except: pass
+                    
+                    # Copy borders (simplified - copying all borders is complex)
         except: pass
         return
 
-    # 4. AutoShapes / TextBoxes
-    try:
-        shape_type = shape.auto_shape_type if hasattr(shape, 'auto_shape_type') else 1 
-        new_shape = shapes_collection.add_shape(shape_type, shape.left, shape.top, shape.width, shape.height)
-        
-        if shape.has_text_frame:
-            copy_text_frame(shape.text_frame, new_shape.text_frame)
+    # 4. AutoShapes (1) / TextBoxes (17) / Placeholders (14)
+    # Treat placeholders as shapes to preserve their content
+    if shape.shape_type in [1, 17, 14]:
+        try:
+            shape_type = shape.auto_shape_type if hasattr(shape, 'auto_shape_type') else 1 
+            new_shape = shapes_collection.add_shape(shape_type, shape.left, shape.top, shape.width, shape.height)
             
-        if shape.fill.type == 1:
-            new_shape.fill.solid()
-            try:
-                new_shape.fill.fore_color.rgb = shape.fill.fore_color.rgb
-            except: pass
-    except: pass
+            # Copy Text
+            if shape.has_text_frame:
+                copy_text_frame(shape.text_frame, new_shape.text_frame)
+            
+            # Copy Fill
+            if shape.fill.type == 1:
+                new_shape.fill.solid()
+                try:
+                    new_shape.fill.fore_color.rgb = shape.fill.fore_color.rgb
+                except: pass
+                
+            # Copy Line
+            if shape.line.fill.type == 1:
+                try:
+                    new_shape.line.color.rgb = shape.line.color.rgb
+                    new_shape.line.width = shape.line.width
+                except: pass
+        except: pass
+        return
 
 
 def copy_text_frame(source_tf, dest_tf):
     """Copy text frame content and formatting."""
     dest_tf.clear()
+    
     # Copy vertical alignment
     if source_tf.vertical_anchor:
         dest_tf.vertical_anchor = source_tf.vertical_anchor
-        
+    
     for p in source_tf.paragraphs:
         new_p = dest_tf.add_paragraph()
+        new_p.text = p.text
         new_p.alignment = p.alignment
         new_p.level = p.level
-        # Copy spacing
+        
+        # Copy paragraph spacing
         new_p.space_before = p.space_before
         new_p.space_after = p.space_after
         new_p.line_spacing = p.line_spacing
         
+        # Copy runs
         for r in p.runs:
             new_r = new_p.add_run()
             new_r.text = r.text
@@ -526,9 +449,14 @@ def copy_text_frame(source_tf, dest_tf):
             new_r.font.bold = r.font.bold
             new_r.font.italic = r.font.italic
             new_r.font.underline = r.font.underline
-            new_r.font.name = r.font.name
+            new_r.font.name = r.font.name # Copy font name!
+            
             try:
                 new_r.font.color.rgb = r.font.color.rgb
+            except: pass
+            try:
+                if r.font.color.type == 2: # Theme color
+                    new_r.font.color.theme_color = r.font.color.theme_color
             except: pass
 
 
