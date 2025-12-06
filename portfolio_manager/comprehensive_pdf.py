@@ -164,35 +164,36 @@ def generate_comprehensive_portfolio_pdf(site_ids: List[str], db: Dict, weights:
         pdf.set_auto_page_break(auto=True, margin=15)
         
         # ================================================================
-        # SECTION 1: ENHANCED COVER PAGE
+        # SECTION 1: COVER PAGE (SIMPLIFIED)
         # ================================================================
         
         pdf.add_page()
         
         # Title
-        pdf.set_font('Helvetica', 'B', 32)
+        pdf.set_font('Helvetica', 'B', 28)
         pdf.set_text_color(44, 62, 80)
-        pdf.cell(0, 20, 'Portfolio Export', new_x="LMARGIN", new_y="NEXT", align='C')
+        pdf.cell(0, 15, 'Portfolio Export', new_x="LMARGIN", new_y="NEXT", align='C')
+        pdf.ln(5)
         
-        pdf.set_font('Helvetica', '', 14)
+        pdf.set_font('Helvetica', '', 12)
         pdf.set_text_color(100, 100, 100)
         pdf.cell(0, 8, 'Data Center Development Sites', new_x="LMARGIN", new_y="NEXT", align='C')
-        pdf.ln(10)
+        pdf.ln(15)
         
-        # Portfolio Summary Metrics
+        # Portfolio Summary
         total_sites = len(sites_data)
         total_mw = sum(sd['site'].get('target_mw', 0) for sd in sites_data)
         avg_score = sum(sd['scores']['overall_score'] for sd in sites_data) / total_sites if total_sites > 0 else 0
         
-        # Metric boxes
-        box_w = 45
-        box_h = 25
-        start_x = 35
-        pdf.metric_box(start_x, 80, box_w, box_h, 'Total Sites', str(total_sites), (52, 152, 219))
-        pdf.metric_box(start_x + 50, 80, box_w, box_h, 'Total MW', f'{total_mw:,.0f}', (46, 204, 113))
-        pdf.metric_box(start_x + 100, 80, box_w, box_h, 'Avg Score', f'{avg_score:.1f}', (241, 196, 15))
+        pdf.set_font('Helvetica', 'B', 14)
+        pdf.cell(0, 10, 'Portfolio Summary', new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(5)
         
-        pdf.set_xy(10, 110)
+        pdf.set_font('Helvetica', '', 11)
+        pdf.cell(0, 7, f"Total Sites: {total_sites}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 7, f"Total Pipeline MW: {total_mw:,.0f}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 7, f"Average Score: {avg_score:.1f}", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(10)
         
         # Stage breakdown
         stages = {}
@@ -200,60 +201,47 @@ def generate_comprehensive_portfolio_pdf(site_ids: List[str], db: Dict, weights:
             stage = sd['stage']
             stages[stage] = stages.get(stage, 0) + 1
         
-        pdf.ln(5)
         pdf.set_font('Helvetica', 'B', 12)
-        pdf.cell(0, 8, 'Portfolio Breakdown by Stage:', new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 8, 'Sites by Stage:', new_x="LMARGIN", new_y="NEXT")
         pdf.set_font('Helvetica', '', 10)
         for stage, count in sorted(stages.items(), key=lambda x: -x[1])[:5]:
-            pdf.cell(0, 6, sanitize_text(f"- {stage}: {count} sites"), new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 6, sanitize_text(f"  {stage}: {count} sites"), new_x="LMARGIN", new_y="NEXT")
         
-        # Create and embed charts
         pdf.ln(10)
         
-        # MW by State chart
-        state_mw = {}
-        for sd in sites_data:
-            state = sd['site'].get('state', 'Unknown')
-            state_mw[state] = state_mw.get(state, 0) + sd['site'].get('target_mw', 0)
-        
-        if state_mw:
-            chart_file = create_pie_chart(state_mw, "MW Distribution by State")
-            temp_files.append(chart_file)
-            pdf.image(chart_file, x=15, y=pdf.get_y(), w=85)
-        
-        # Stage distribution chart  
-        if stages:
-            chart_file = create_bar_chart(
-                list(stages.keys())[:6],
-                list(stages.values())[:6],
-                "Site Count by Stage",
-                ylabel="Sites"
-            )
-            temp_files.append(chart_file)
-            pdf.image(chart_file, x=110, y=pdf.get_y(), w=85)
-        
-        pdf.ln(70)
-        
-        # Timeline heatmap
-        years = list(range(2025, 2036))
-        mw_by_year = []
-        for year in years:
-            year_mw = 0
+        # Try to create charts (wrapped in try-catch)
+        try:
+            # MW by State chart
+            state_mw = {}
             for sd in sites_data:
-                schedule = sd['site'].get('schedule', {})
-                year_data = schedule.get(str(year), {})
-                year_mw += year_data.get('ic_mw', 0)
-            mw_by_year.append(year_mw)
-        
-        if any(mw_by_year):
-            chart_file = create_timeline_heatmap(years, mw_by_year, "Capacity Coming Online Timeline")
-            temp_files.append(chart_file)
-            pdf.image(chart_file, x=10, y=pdf.get_y(), w=190)
-        
-        pdf.ln(20)
+                state = sd['site'].get('state', 'Unknown')
+                state_mw[state] = state_mw.get(state, 0) + sd['site'].get('target_mw', 0)
+            
+            if state_mw:
+                chart_file = create_pie_chart(state_mw, "MW Distribution by State")
+                temp_files.append(chart_file)
+                pdf.image(chart_file, x=15, y=pdf.get_y(), w=85)
+            
+            # Stage distribution chart  
+            if stages:
+                chart_file = create_bar_chart(
+                    list(stages.keys())[:6],
+                    list(stages.values())[:6],
+                    "Site Count by Stage",
+                    ylabel="Sites"
+                )
+                temp_files.append(chart_file)
+                pdf.image(chart_file, x=110, y=pdf.get_y(), w=85)
+            
+            pdf.ln(70)
+        except Exception as e:
+            pdf.ln(5)
+            pdf.set_font('Helvetica', 'I', 9)
+            pdf.cell(0, 6, f"(Charts unavailable: {str(e)[:50]})", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(10)
         
         # Generation date
-        pdf.set_font('Helvetica', 'I', 10)
+        pdf.set_font('Helvetica', 'I', 9)
         pdf.set_text_color(128, 128, 128)
         pdf.cell(0, 8, f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", align='C')
         
