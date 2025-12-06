@@ -710,13 +710,10 @@ def show_portfolio_export(sites: Dict):
                         output_path = f"/tmp/Portfolio_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pptx"
                         result = generate_portfolio_export(export_sites, template_path, output_path, config)
                         
+                        # Read into session state
                         with open(result, 'rb') as f:
-                            st.download_button(
-                                "⬇️ Download Portfolio Deck",
-                                f,
-                                file_name=os.path.basename(result),
-                                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                            )
+                            st.session_state['portfolio_export_data'] = f.read()
+                            st.session_state['portfolio_export_name'] = os.path.basename(result)
                         
                         st.success("✅ Portfolio export generated successfully!")
                         
@@ -724,6 +721,16 @@ def show_portfolio_export(sites: Dict):
                     st.error(f"Export failed: {e}")
                     import traceback
                     st.code(traceback.format_exc())
+
+    # Show download button if data exists
+    if 'portfolio_export_data' in st.session_state:
+        st.download_button(
+            "⬇️ Download Portfolio Deck",
+            data=st.session_state['portfolio_export_data'],
+            file_name=st.session_state['portfolio_export_name'],
+            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            key="download_portfolio_pptx"
+        )
 
 
 # =============================================================================

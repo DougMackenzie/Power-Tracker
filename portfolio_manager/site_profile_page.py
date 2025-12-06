@@ -634,13 +634,10 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                 output_path = f"/tmp/{output_name}"
                 result = export_site_to_pptx(export_data, template_path, output_path, config)
                 
+                # Read into session state
                 with open(result, 'rb') as f:
-                    st.download_button(
-                        "⬇️ Download PPTX",
-                        f,
-                        file_name=output_name,
-                        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                    )
+                    st.session_state['single_site_export_data'] = f.read()
+                    st.session_state['single_site_export_name'] = output_name
                 
                 st.success(f"✅ Export complete: {output_name}")
                 
@@ -649,6 +646,18 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                 import traceback
                 with st.expander("Error Details"):
                     st.code(traceback.format_exc())
+
+    # Show download button if data exists
+    if 'single_site_export_data' in st.session_state:
+        st.download_button(
+            "⬇️ Download PPTX",
+            data=st.session_state['single_site_export_data'],
+            file_name=st.session_state['single_site_export_name'],
+            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            key="download_single_site_pptx"
+        )
+                
+
 
 
 # =============================================================================
