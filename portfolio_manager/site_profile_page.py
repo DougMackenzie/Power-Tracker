@@ -580,6 +580,7 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
     
     if st.button("📤 Export PPTX", type="primary", use_container_width=True):
         import os
+        import re
         
         if not template_path or template_path.strip() == '':
             st.warning("⚠️ No template path provided. Please add a template path to export to PowerPoint.")
@@ -623,23 +624,18 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                     include_market_analysis=inc_market,
                 )
                 
-                output_path = f"/tmp/{output_name}"
+                # Sanitize filename
+                safe_name = re.sub(r'[^\w\-\. ]', '', output_name)
+                output_path = f"/tmp/{safe_name}"
+                
                 result = export_site_to_pptx(export_data, template_path, output_path, config)
                 
-                # ✅ FIX: Read file as bytes BEFORE the download button
+                # Read file as bytes and store in session state
                 with open(result, 'rb') as f:
-                    pptx_bytes = f.read()
+                    st.session_state[f'pptx_bytes_{site_id}'] = f.read()
+                    st.session_state[f'pptx_name_{site_id}'] = safe_name
                 
-                st.success(f"Export complete: {output_name}")
-                
-                # ✅ FIX: Pass bytes and unique key
-                st.download_button(
-                    "⬇️ Download PPTX",
-                    data=pptx_bytes,
-                    file_name=output_name,
-                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    key=f"pptx_download_{site_id}"
-                )
+                st.success(f"Export complete: {safe_name}")
                 
                 # Cleanup temp file
                 try:
@@ -651,6 +647,16 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                 import traceback
                 with st.expander("Error Details"):
                     st.code(traceback.format_exc())
+
+    # Show download button if data exists (Outside the button block)
+    if f'pptx_bytes_{site_id}' in st.session_state:
+        st.download_button(
+            "⬇️ Download PPTX",
+            data=st.session_state[f'pptx_bytes_{site_id}'],
+            file_name=st.session_state[f'pptx_name_{site_id}'],
+            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            key=f"pptx_download_btn_{site_id}"
+        )
 
 
 # =============================================================================
