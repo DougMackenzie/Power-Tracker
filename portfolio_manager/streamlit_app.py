@@ -76,6 +76,14 @@ except ImportError as e:
     UTILITY_AGENT_AVAILABLE = False
     print(f"Utility agent not available: {e}")
 
+# Critical Path integration
+try:
+    from .critical_path_page import show_critical_path_page, get_critical_path_summary
+    CRITICAL_PATH_AVAILABLE = True
+except ImportError as e:
+    CRITICAL_PATH_AVAILABLE = False
+    print(f"Critical path not available: {e}")
+
 
 # =============================================================================
 # DATABASE MANAGEMENT - Google Sheets Integration
@@ -130,7 +138,9 @@ def load_database() -> Dict:
                         "zoning_stage", "water_stage", "incentives_stage",
                         "probability", "weighted_fee", "tracker_notes",
                         # Site profile builder columns
-                        "profile_json", "latitude", "longitude"
+                        "profile_json", "latitude", "longitude",
+                        # Critical path column
+                        "critical_path_json"
                     ]
                     
                     # Find missing columns
@@ -164,7 +174,9 @@ def load_database() -> Dict:
                     "zoning_stage", "water_stage", "incentives_stage",
                     "probability", "weighted_fee", "tracker_notes",
                     # Site profile builder columns
-                    "profile_json", "latitude", "longitude"
+                    "profile_json", "latitude", "longitude",
+                    # Critical path column
+                    "critical_path_json"
                 ]
                 sites_ws.append_row(headers)
             
@@ -283,6 +295,13 @@ def load_database() -> Dict:
                 except (ValueError, TypeError):
                     pass
                 
+                # Load critical path data
+                critical_path_json_str = row.get('critical_path_json', '')
+                if critical_path_json_str and critical_path_json_str.strip():
+                    site['critical_path_json'] = critical_path_json_str
+                else:
+                    site['critical_path_json'] = ''
+                
                 sites[site_id] = site
             
             # Try to get metadata
@@ -386,7 +405,9 @@ def save_database(db: Dict):
             "zoning_stage", "water_stage", "incentives_stage",
             "probability", "weighted_fee", "tracker_notes",
             # Site profile builder columns
-            "profile_json", "latitude", "longitude"
+            "profile_json", "latitude", "longitude",
+            # Critical path column
+            "critical_path_json"
         ]
         sites_ws.append_row(headers)
         
@@ -437,7 +458,9 @@ def save_database(db: Dict):
                 # Site profile builder columns
                 json.dumps(site.get('profile_json', {})),
                 site.get('latitude', ''),
-                site.get('longitude', '')
+                site.get('longitude', ''),
+                # Critical path column
+                site.get('critical_path_json', '')
             ]
             sites_ws.append_row(row)
         
@@ -802,7 +825,7 @@ def run():
     page = st.sidebar.radio(
         "Navigation",
         ["📊 Dashboard", "🏭 Site Database", "💬 AI Chat", "📁 VDR Upload", "➕ Add/Edit Site", 
-         "🏆 Rankings", "📊 Program Tracker", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "🧩 Network Operations Center (NOC)", "⚙️ Settings"],
+         "🏆 Rankings", "📊 Program Tracker", "⚡ Critical Path", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "🧩 Network Operations Center (NOC)", "⚙️ Settings"],
         key="page"
     )
     
@@ -837,6 +860,12 @@ def run():
     elif page == "🔍 Utility Research": 
         log_activity('UtilAgent')
         show_utility_research()
+    elif page == "⚡ Critical Path":
+        log_activity('CriticalPath')
+        if CRITICAL_PATH_AVAILABLE:
+            show_critical_path_page()
+        else:
+            st.error("Critical Path module not available")
     elif page == "🧩 Network Operations Center (NOC)":
         # No log needed, we are viewing the logs
         show_system_flow()
