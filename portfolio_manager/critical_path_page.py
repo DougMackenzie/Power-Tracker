@@ -421,6 +421,9 @@ def show_critical_path_page():
             st.rerun()
         return
     
+    # TEMPORARILY DISABLED - Investigating deployment issue
+    # Auto-sync will be re-enabled after verification
+    """
     # Auto-sync: Check if site properties have changed
     needs_recalc = False
     config_updates = {}
@@ -487,6 +490,7 @@ def show_critical_path_page():
         
         st.success(f"✅ Auto-synced! Updated: {', '.join(config_updates.keys())}")
         st.rerun()
+    """
     
     
     # Sidebar info
