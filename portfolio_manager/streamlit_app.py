@@ -1285,25 +1285,38 @@ def sanitize_text(text):
 
 
 def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
-    """Generate minimal portfolio PDF."""
+    """Generate minimal portfolio PDF - v2024.12.06.3"""
     from fpdf import FPDF
     
     pdf = FPDF()
     pdf.add_page()
     
-    # Title only
+    # Title
     pdf.set_font('Helvetica', 'B', 18)
-    pdf.multi_cell(0, 10, 'Portfolio Export')
+    pdf.multi_cell(0, 10, 'Portfolio Export - Minimal Version')
     pdf.ln(10)
     
-    # Sites list only
-    sites = db.get('sites', {})
-    pdf.set_font('Helvetica', '', 10)
+    # Just count
+    pdf.set_font('Helvetica', '', 11)
+    pdf.multi_cell(0, 8, f'Total Sites: {len(site_ids)}')
+    pdf.ln(5)
     
-    for sid in site_ids:
+    # Site names - very safe
+    sites = db.get('sites', {})
+    pdf.set_font('Helvetica', '', 9)
+    
+    for i, sid in enumerate(site_ids, 1):
         if sid in sites:
-            name = str(sites[sid].get('name', 'Site'))[:50].encode('ascii', 'ignore').decode('ascii')
-            pdf.multi_cell(0, 6, name)
+            # Ultra-safe name extraction
+            try:
+                raw_name = sites[sid].get('name', f'Site {i}')
+                safe_name = str(raw_name)[:40]
+                safe_name = safe_name.encode('ascii', 'ignore').decode('ascii')
+                if not safe_name.strip():
+                    safe_name = f'Site {i}'
+                pdf.multi_cell(0, 5, f'{i}. {safe_name}')
+            except:
+                pdf.multi_cell(0, 5, f'{i}. Site')
     
     return bytes(pdf.output())
 
