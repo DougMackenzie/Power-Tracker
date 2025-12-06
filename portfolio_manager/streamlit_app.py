@@ -1265,7 +1265,7 @@ def sanitize_text(text):
         '\u2013': '-',  # En dash
         '\u2014': '--', # Em dash
         '\u2018': "'",  # Left single quote
-        '\u201 9': "'",  # Right single quote
+        '\u2019': "'",  # Right single quote
         '\u201C': '"',  # Left double quote
         '\u201D': '"',  # Right double quote
         '\u2026': '...', # Ellipsis
