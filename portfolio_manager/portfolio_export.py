@@ -133,6 +133,62 @@ def copy_slide_from_external(source_slide, dest_prs):
                 print(f"Failed to copy shape: {e}")
 
 
+
+
+def prepare_site_for_export(site_data: Dict) -> Dict:
+    """
+    Parse JSON string fields in site_data into Python objects.
+    This ensures charts and detailed slides can access structured data.
+    """
+    import json
+    
+    # Fields that might be JSON strings
+    json_fields = [
+        'phases_json', 'schedule_json', 'capacity_trajectory',
+        'infrastructure', 'score_analysis', 'market_analysis'
+    ]
+    
+    for field in json_fields:
+        if field in site_data and isinstance(site_data[field], str):
+            try:
+                site_data[field] = json.loads(site_data[field])
+            except:
+                pass  # Not valid JSON, leave as-is
+    
+    return site_data
+
+
+def get_profile_data(site_data: Dict):
+    """
+    Robustly extract SiteProfileData from various formats.
+    Handles: existing object, dict, JSON string, or maps raw site_data.
+    """
+    from .pptx_export import SiteProfileData, map_app_to_profile
+    import json
+    
+    # 1. Already a SiteProfileData object
+    if 'profile' in site_data:
+        p = site_data['profile']
+        if hasattr(p, 'overview') and hasattr(p, 'to_description_dict'):
+            return p
+        # 2. Dictionary format
+        elif isinstance(p, dict):
+            return SiteProfileData.from_dict(p)
+        # 3. JSON string
+        elif isinstance(p, str):
+            try:
+                p_dict = json.loads(p)
+                return SiteProfileData.from_dict(p_dict)
+            except:
+                pass
+    
+    # 4. Fallback: map from raw site_data
+    try:
+        return map_app_to_profile(site_data)
+    except:
+        return None
+
+
 def generate_portfolio_export(
     sites: Dict[str, Dict],
     template_path: str,
@@ -191,7 +247,30 @@ def generate_portfolio_export(
         'topo': 5
     }
     
-    # 3. Generate Slides for Each Site
+    # 3. Pre-Calculate Scores for All Sites
+    # ---------------------------------------
+    try:
+        from .site_scoring import calculate_site_score
+        SCORING_AVAILABLE = True
+    except ImportError:
+        SCORING_AVAILABLE = False
+        print("[WARNING] Scoring module not available")
+    
+    if SCORING_AVAILABLE:
+        default_weights = {
+            'state': 0.20, 'power': 0.25, 'relationship': 0.20,
+            'execution': 0.15, 'fundamentals': 0.10, 'financial': 0.10
+        }
+        for site_id, site_data in sites.items():
+            if 'scores' not in site_data or not site_data['scores']:
+                try:
+                    scores = calculate_site_score(site_data, default_weights)
+                    site_data['scores'] = scores
+                    print(f"[DEBUG] Pre-calculated scores for {site_data.get('name', site_id)}")
+                except Exception as e:
+                    print(f"[WARNING] Could not calculate scores for {site_id}: {e}")
+    
+    # 4. Generate Slides for Each Site
     # --------------------------------
     from .pptx_export import (
         populate_site_profile_table, update_overview_textbox, replace_in_table,
@@ -206,17 +285,23 @@ def generate_portfolio_export(
     for site_id, site_data in sites.items():
         print(f"[DEBUG] Processing site: {site_data.get('name', site_id)}")
         
-        # Prepare Data
-        replacements = build_replacements(site_data, config)
+        # Prepare site data (parse JSON fields)
+        site_data_copy = site_data.copy()
+        site_data_copy = prepare_site_for_export(site_data_copy)
         
-        # Get Profile Data
-        profile_data = None
-        if 'profile' in site_data:
-            p = site_data['profile']
-            if hasattr(p, 'overview') and hasattr(p, 'to_description_dict'):
-                profile_data = p
-            elif isinstance(p, dict):
-                profile_data = SiteProfileData.from_dict(p)
+        # Safety net: Calculate scores if still missing
+        if SCORING_AVAILABLE and ('scores' not in site_data_copy or not site_data_copy['scores']):
+            try:
+                scores = calculate_site_score(site_data_copy, default_weights)
+                site_data_copy['scores'] = scores
+            except Exception as e:
+                print(f"[WARNING] Could not calculate scores in loop for {site_id}: {e}")
+        
+        # Prepare Data
+        replacements = build_replacements(site_data_copy, config)
+        
+        # Get Profile Data using robust helper
+        profile_data = get_profile_data(site_data_copy)
         
         # --- 1. Site Profile Slide ---
         # Clone the template profile slide
@@ -236,12 +321,12 @@ def generate_portfolio_export(
             elif shape.has_text_frame:
                 shape_text = shape.text_frame.text.lower()
                 if 'overview' in shape_text and 'observation' in shape_text:
-                    update_overview_textbox(shape, site_data, profile_data)
+                    update_overview_textbox(shape, site_data_copy, profile_data)
                 else:
                     find_and_replace_text(shape, replacements)
                     
         # Handle Image Placeholders on Profile Slide
-        replace_images_with_placeholders(profile_slide, site_data)
+        replace_images_with_placeholders(profile_slide, site_data_copy)
 
         # --- 2. Site Boundary Slide ---
         if config.include_site_boundary:
@@ -250,7 +335,7 @@ def generate_portfolio_export(
             # Replace placeholders
             for shape in boundary_slide.shapes:
                 find_and_replace_text(shape, replacements)
-            replace_images_with_placeholders(boundary_slide, site_data, label="Site Boundary Map")
+            replace_images_with_placeholders(boundary_slide, site_data_copy, label="Site Boundary Map")
 
         # --- 3. Topography Slide ---
         if config.include_topography:
@@ -258,23 +343,23 @@ def generate_portfolio_export(
             topo_slide = duplicate_slide_in_place(prs, source_topo_idx)
             for shape in topo_slide.shapes:
                 find_and_replace_text(shape, replacements)
-            replace_images_with_placeholders(topo_slide, site_data, label="Topography Map")
+            replace_images_with_placeholders(topo_slide, site_data_copy, label="Topography Map")
             
         # --- 4. Capacity Trajectory (New Slide) ---
         if config.include_capacity_trajectory:
-            add_capacity_slide(prs, site_data, replacements)
+            add_capacity_slide(prs, site_data_copy, replacements)
 
         # --- 5. Infrastructure (New Slide) ---
         if config.include_infrastructure:
-            add_infrastructure_slide(prs, site_data, replacements)
+            add_infrastructure_slide(prs, site_data_copy, replacements)
             
         # --- 6. Market Analysis (New Slide) ---
         if config.include_market_analysis:
-            add_market_slide(prs, site_data, replacements)
+            add_market_slide(prs, site_data_copy, replacements)
             
         # --- 7. Score Analysis (New Slide) ---
         if config.include_score_analysis:
-            add_score_slide(prs, site_data, replacements)
+            add_score_slide(prs, site_data_copy, replacements)
 
     # 4. Cleanup
     # ----------
