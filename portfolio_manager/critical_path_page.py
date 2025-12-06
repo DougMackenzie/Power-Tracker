@@ -128,14 +128,35 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner") -> go.Fi
                    ticktext=[l['label'] for l in y_labels], autorange='reversed'),
     )
     
-    # Add vertical line for today (use ISO string format for plotly compatibility)
+    # Add vertical line for today using shapes (more reliable than add_vline)
     today_str = date.today().isoformat()
-    fig.add_vline(x=today_str, line_dash="dash", line_color="gray", annotation_text="Today")
+    fig.add_shape(
+        type="line",
+        x0=today_str, x1=today_str,
+        y0=0, y1=1,
+        yref="paper",
+        line=dict(color="gray", width=2, dash="dash")
+    )
+    fig.add_annotation(
+        x=today_str, y=1, yref="paper",
+        text="Today", showarrow=False,
+        yshift=10, font=dict(size=10, color="gray")
+    )
     
     # Add vertical line for energization date
     if data.calculated_energization:
-        fig.add_vline(x=data.calculated_energization, line_dash="solid", line_color="#fbbf24",
-                     line_width=3, annotation_text="⚡ Energization")
+        fig.add_shape(
+            type="line",
+            x0=data.calculated_energization, x1=data.calculated_energization,
+            y0=0, y1=1,
+            yref="paper",
+            line=dict(color="#fbbf24", width=3)
+        )
+        fig.add_annotation(
+            x=data.calculated_energization, y=1, yref="paper",
+            text="⚡ Energization", showarrow=False,
+            yshift=10, font=dict(size=10, color="#fbbf24", weight="bold")
+        )
     
     return fig
 
