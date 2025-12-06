@@ -604,132 +604,231 @@ def get_extended_column_order():
 
 
 def show_portfolio_export(sites: Dict):
-    """UI for generating portfolio export."""
-    from .portfolio_export import generate_portfolio_export
-    from .pptx_export import ExportConfig
-    import tempfile
-    import os
+    """UI for generating portfolio export - both PowerPoint and PDF."""
+    st.subheader("📥 Portfolio Export")
+    st.write("Generate a comprehensive portfolio document including all selected sites with full analysis.")
     
-    st.subheader("📥 Portfolio PowerPoint Export")
-    st.write("Generate a comprehensive master deck including portfolio summary, rankings, and individual site profiles.")
-    
-    # Selection
-    st.write("### 1. Select Sites")
-    
-    # Filter by Client
-    clients = sorted(list(set(s.get('client', '') for s in sites.values() if s.get('client'))))
-    selected_client = st.selectbox("Filter by Client (Optional)", ["All"] + clients)
-    
-    filtered_sites = sites
-    if selected_client != "All":
-        filtered_sites = {k: v for k, v in sites.items() if v.get('client') == selected_client}
-    
-    # Multiselect
-    site_options = {f"{s.get('name', sid)} ({sid})": sid for sid, s in filtered_sites.items()}
-    selected_ids = st.multiselect(
-        "Select Sites to Include",
-        options=list(site_options.keys()),
-        default=list(site_options.keys())
+    # Export Format Selection
+    export_format = st.radio(
+        "Export Format",
+        ["PDF", "PowerPoint"],
+        horizontal=True,
+        help="PDF: Simple, reliable export with all data. PowerPoint: Presentation-ready with visual formatting."
     )
     
-    selected_sites = {site_options[k]: sites[site_options[k]] for k in selected_ids}
-    
-    st.write(f"Selected **{len(selected_sites)}** sites for export.")
-    
-    # Configuration
-    st.write("### 2. Export Settings")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        include_market = st.checkbox("Include Market Analysis", value=True)
-        include_trajectory = st.checkbox("Include Capacity Trajectory", value=True)
-        include_infra = st.checkbox("Include Infrastructure", value=True)
-    with col2:
-        include_boundary = st.checkbox("Include Site Boundary", value=True)
-        include_topo = st.checkbox("Include Topography", value=True)
-        include_score = st.checkbox("Include Score Analysis", value=True)
-        
     st.divider()
     
-    if st.button("🚀 Generate Portfolio Deck", type="primary", use_container_width=True):
-        if not selected_sites:
-            st.warning("Please select at least one site.")
-        else:
-            # Check template
-            import os
-            default_template = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Sample Site Profile Template.pptx')
-            if os.path.exists(default_template):
-                template_path = default_template
-            else:
-                template_path = st.session_state.get('export_template_path', '')
-                
-            if not template_path or not os.path.exists(template_path):
-                st.error("Template not found. Please ensure 'Sample Site Profile Template.pptx' exists.")
-            else:
-                try:
-                    with st.spinner("Generating portfolio export..."):
-                        # Prepare data with full profiles
-                        export_sites = {}
-                        import json
-                        from .pptx_export import SiteProfileData
-                        
-                        for sid, s in selected_sites.items():
-                            site_copy = s.copy()
+    # ========================================================================
+    # PDF EXPORT
+    # ========================================================================
+    if export_format == "PDF":
+        st.write("### PDF Export")
+        st.write("Generates a comprehensive PDF with cover page, table of contents, and detailed site sections.")
+        
+        # Selection
+        st.write("#### Select Sites")
+        
+        # Filter by Client
+        clients = sorted(list(set(s.get('client', '') for s in sites.values() if s.get('client'))))
+        selected_client = st.selectbox("Filter by Client (Optional)", ["All"] + clients, key="pdf_client_filter")
+        
+        filtered_sites = sites
+        if selected_client != "All":
+            filtered_sites = {k: v for k, v in sites.items() if v.get('client') == selected_client}
+        
+        # Multiselect
+        site_options = {f"{s.get('name', sid)} ({sid})": sid for sid, s in filtered_sites.items()}
+        selected_ids = st.multiselect(
+            "Select Sites to Include",
+            options=list(site_options.keys()),
+            default=list(site_options.keys()),
+            key="pdf_site_select"
+        )
+        
+        selected_site_ids = [site_options[k] for k in selected_ids]
+        
+        st.write(f"Selected **{len(selected_site_ids)}** sites for export.")
+        
+        st.divider()
+        
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            if st.button("📄 Generate PDF", type="primary", use_container_width=True):
+                if not selected_site_ids:
+                    st.warning("Please select at least one site.")
+                else:
+                    with st.spinner("Generating portfolio PDF..."):
+                        try:
+                            # Import the PDF generation function
+                            from . import streamlit_app
                             
-                            # Hydrate SiteProfileData from profile_json if available
-                            if 'profile_json' in s and s['profile_json']:
-                                try:
-                                    p_dict = json.loads(s['profile_json'])
-                                    # Create SiteProfileData object
-                                    # We use from_dict if available, or constructor
-                                    if hasattr(SiteProfileData, 'from_dict'):
-                                        profile_obj = SiteProfileData.from_dict(p_dict)
-                                    else:
-                                        # Fallback: try to match fields
-                                        profile_obj = SiteProfileData(**{
-                                            k: v for k, v in p_dict.items() 
-                                            if k in SiteProfileData.__dataclass_fields__
-                                        })
-                                    
-                                    site_copy['profile'] = profile_obj
-                                    print(f"[DEBUG] Hydrated profile for {sid}")
-                                except Exception as e:
-                                    print(f"[WARNING] Failed to hydrate profile for {sid}: {e}")
+                            # Generate portfolio PDF
+                            pdf_bytes = streamlit_app.generate_portfolio_pdf(
+                                selected_site_ids, 
+                                st.session_state.db, 
+                                st.session_state.weights
+                            )
                             
-                            export_sites[sid] = site_copy
-                        
-                        config = ExportConfig(
-                            include_capacity_trajectory=include_trajectory,
-                            include_infrastructure=include_infra,
-                            include_score_analysis=include_score,
-                            include_market_analysis=include_market,
-                            include_site_boundary=include_boundary,
-                            include_topography=include_topo
-                        )
-                        
-                        import re
-                        # Sanitize filename
-                        safe_name = f"Portfolio_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pptx"
-                        output_path = f"/tmp/{safe_name}"
-                        
-                        result = generate_portfolio_export(export_sites, template_path, output_path, config)
-                        
-                        st.success("✅ Portfolio export generated successfully!")
-                        
-                        # Read file
-                        with open(result, 'rb') as f:
-                            file_bytes = f.read()
-                        
-                        # Use base64 encoding for reliable filename
-                        import base64
-                        b64 = base64.b64encode(file_bytes).decode()
-                        href = f'<a href="data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,{b64}" download="{safe_name}">⬇️ Download {safe_name}</a>'
-                        st.markdown(href, unsafe_allow_html=True)
-                        
-                except Exception as e:
-                    st.error(f"Export failed: {e}")
-                    import traceback
-                    st.code(traceback.format_exc())
+                            # Store in session state
+                            st.session_state.portfolio_pdf = pdf_bytes
+                            client_label = selected_client if selected_client != "All" else "Full_Portfolio"
+                            st.session_state.portfolio_pdf_filename = f"Portfolio_Export_{client_label}_{len(selected_site_ids)}_Sites.pdf"
+                            
+                            # Calculate total MW
+                            total_mw = sum(sites[sid].get('target_mw', 0) for sid in selected_site_ids)
+                            
+                            st.success(f"✅ Generated PDF with {len(selected_site_ids)} sites ({total_mw:,.0f} MW total)")
+                            st.rerun()
+                            
+                        except Exception as e:
+                            st.error(f"Failed to generate PDF: {str(e)}")
+                            import traceback
+                            st.code(traceback.format_exc())
+        
+        # Show download button if PDF was generated
+        if 'portfolio_pdf' in st.session_state and st.session_state.portfolio_pdf:
+            with col2:
+                st.download_button(
+                    label="⬇️ Download PDF",
+                    data=st.session_state.portfolio_pdf,
+                    file_name=st.session_state.get('portfolio_pdf_filename', 'Portfolio_Export.pdf'),
+                    mime="application/pdf",
+                    use_container_width=True,
+                    type="secondary"
+                )
+    
+    # ========================================================================
+    # POWERPOINT EXPORT
+    # ========================================================================
+    else:  # PowerPoint
+        from .portfolio_export import generate_portfolio_export
+        from .pptx_export import ExportConfig
+        import tempfile
+        import os
+        
+        st.write("### PowerPoint Export")
+        st.write("Generate a presentation-ready master deck with visual formatting.")
+        
+        # Selection
+        st.write("#### 1. Select Sites")
+        
+        # Filter by Client
+        clients = sorted(list(set(s.get('client', '') for s in sites.values() if s.get('client'))))
+        selected_client = st.selectbox("Filter by Client (Optional)", ["All"] + clients, key="pptx_client_filter")
+        
+        filtered_sites = sites
+        if selected_client != "All":
+            filtered_sites = {k: v for k, v in sites.items() if v.get('client') == selected_client}
+        
+        # Multiselect
+        site_options = {f"{s.get('name', sid)} ({sid})": sid for sid, s in filtered_sites.items()}
+        selected_ids = st.multiselect(
+            "Select Sites to Include",
+            options=list(site_options.keys()),
+            default=list(site_options.keys()),
+            key="pptx_site_select"
+        )
+        
+        selected_sites = {site_options[k]: sites[site_options[k]] for k in selected_ids}
+        
+        st.write(f"Selected **{len(selected_sites)}** sites for export.")
+        
+        # Configuration
+        st.write("#### 2. Export Settings")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            include_market = st.checkbox("Include Market Analysis", value=True)
+            include_trajectory = st.checkbox("Include Capacity Trajectory", value=True)
+            include_infra = st.checkbox("Include Infrastructure", value=True)
+        with col2:
+            include_boundary = st.checkbox("Include Site Boundary", value=True)
+            include_topo = st.checkbox("Include Topography", value=True)
+            include_score = st.checkbox("Include Score Analysis", value=True)
+            
+        st.divider()
+        
+        if st.button("🚀 Generate Portfolio Deck", type="primary", use_container_width=True):
+            if not selected_sites:
+                st.warning("Please select at least one site.")
+            else:
+                # Check template
+                import os
+                default_template = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Sample Site Profile Template.pptx')
+                if os.path.exists(default_template):
+                    template_path = default_template
+                else:
+                    template_path = st.session_state.get('export_template_path', '')
+                    
+                if not template_path or not os.path.exists(template_path):
+                    st.error("Template not found. Please ensure 'Sample Site Profile Template.pptx' exists.")
+                else:
+                    try:
+                        with st.spinner("Generating portfolio export..."):
+                            # Prepare data with full profiles
+                            export_sites = {}
+                            import json
+                            from .pptx_export import SiteProfileData
+                            
+                            for sid, s in selected_sites.items():
+                                site_copy = s.copy()
+                                
+                                # Hydrate SiteProfileData from profile_json if available
+                                if 'profile_json' in s and s['profile_json']:
+                                    try:
+                                        p_dict = json.loads(s['profile_json'])
+                                        # Create SiteProfileData object
+                                        # We use from_dict if available, or constructor
+                                        if hasattr(SiteProfileData, 'from_dict'):
+                                            profile_obj = SiteProfileData.from_dict(p_dict)
+                                        else:
+                                            # Fallback: try to match fields
+                                            profile_obj = SiteProfileData(**{
+                                                k: v for k, v in p_dict.items() 
+                                                if k in SiteProfileData.__dataclass_fields__
+                                            })
+                                        
+                                        site_copy['profile'] = profile_obj
+                                        print(f"[DEBUG] Hydrated profile for {sid}")
+                                    except Exception as e:
+                                        print(f"[WARNING] Failed to hydrate profile for {sid}: {e}")
+                                
+                                export_sites[sid] = site_copy
+                            
+                            config = ExportConfig(
+                                include_capacity_trajectory=include_trajectory,
+                                include_infrastructure=include_infra,
+                                include_score_analysis=include_score,
+                                include_market_analysis=include_market,
+                                include_site_boundary=include_boundary,
+                                include_topography=include_topo
+                            )
+                            
+                            import re
+                            # Sanitize filename
+                            safe_name = f"Portfolio_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pptx"
+                            output_path = f"/tmp/{safe_name}"
+                            
+                            result = generate_portfolio_export(export_sites, template_path, output_path, config)
+                            
+                            st.success("✅ Portfolio export generated successfully!")
+                            
+                            # Read file
+                            with open(result, 'rb') as f:
+                                file_bytes = f.read()
+                            
+                            # Use base64 encoding for reliable filename
+                            import base64
+                            b64 = base64.b64encode(file_bytes).decode()
+                            href = f'<a href="data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,{b64}" download="{safe_name}">⬇️ Download {safe_name}</a>'
+                            st.markdown(href, unsafe_allow_html=True)
+                            
+                    except Exception as e:
+                        st.error(f"Export failed: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
+
 
 
 # =============================================================================
