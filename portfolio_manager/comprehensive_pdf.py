@@ -320,8 +320,10 @@ def generate_comprehensive_portfolio_pdf(site_ids: List[str], db: Dict, weights:
             site_state = sanitize_text(site.get('state', 'N/A'))
             mw = site.get('target_mw', 0)
             
-            pdf.cell(150, 7, f"{idx}. {site_name} ({site_state}, {mw} MW)", new_x="RIGHT")
-            pdf.cell(0, 7, f"Page {pdf.page_no() + idx + 2}", new_x="LMARGIN", new_y="NEXT", align='R')
+            # Truncate site name if too long
+            site_name_short = site_name[:40] if len(site_name) > 40 else site_name
+            
+            pdf.cell(0, 7, f"{idx}. {site_name_short} ({site_state}, {mw} MW)", new_x="LMARGIN", new_y="NEXT")
         
         # ================================================================
         # SECTION 4: INDIVIDUAL SITE SECTIONS
@@ -410,9 +412,26 @@ def generate_comprehensive_portfolio_pdf(site_ids: List[str], db: Dict, weights:
         # GENERATE AND RETURN PDF
         # ================================================================
         
-        pdf_bytes = bytes(pdf.output())
-        
-        return pdf_bytes
+        try:
+            pdf_bytes = bytes(pdf.output())
+            return pdf_bytes
+        except Exception as e:
+            # If PDF generation fails, create a simple error PDF
+            error_pdf = FPDF()
+            error_pdf.add_page()
+            error_pdf.set_font('Helvetica', 'B', 16)
+            error_pdf.cell(0, 10, 'PDF Generation Error', new_x="LMARGIN", new_y="NEXT")
+            error_pdf.set_font('Helvetica', '', 10)
+            error_pdf.multi_cell(0, 5, f'Error: {str(e)}')
+            error_pdf.ln(5)
+            error_pdf.multi_cell(0, 5, 'This error has been logged. Please try with fewer sites or contact support.')
+            
+            # Log the error details
+            import traceback
+            print(f"PDF Generation Error: {str(e)}")
+            print(traceback.format_exc())
+            
+            return bytes(error_pdf.output())
         
     finally:
         # Cleanup temporary chart files
