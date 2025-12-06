@@ -1254,6 +1254,35 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     return bytes(pdf.output())
 
 
+def sanitize_text(text):
+    """Remove or replace Unicode characters that can't be encoded in latin-1."""
+    if text is None:
+        return ''
+    text = str(text)
+    # Replace common Unicode characters with ASCII equivalents
+    replacements = {
+        '\u2022': '-',  # Bullet point
+        '\u2013': '-',  # En dash
+        '\u2014': '--', # Em dash
+        '\u2018': "'",  # Left single quote
+        '\u201 9': "'",  # Right single quote
+        '\u201C': '"',  # Left double quote
+        '\u201D': '"',  # Right double quote
+        '\u2026': '...', # Ellipsis
+        '\u00B0': ' degrees',  # Degree symbol
+    }
+    for unicode_char, ascii_char in replacements.items():
+        text = text.replace(unicode_char, ascii_char)
+    
+    # Remove any remaining non-latin-1 characters
+    try:
+        text.encode('latin-1')
+        return text
+    except UnicodeEncodeError:
+        # If still has unicode, replace with ASCII approximation
+        return text.encode('ascii', 'replace').decode('ascii')
+
+
 def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
     """Generate comprehensive portfolio PDF with all sites and analysis.
     
@@ -1479,7 +1508,7 @@ def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
     pdf.set_font("Helvetica", size=10)
     for stage, count in sorted(stages.items(), key=lambda x: -x[1])[:5]:
         pdf.set_xy(60, pdf.get_y())
-        pdf.cell(0, 6, f"• {stage}: {count}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 6, sanitize_text(f"- {stage}: {count}"), new_x="LMARGIN", new_y="NEXT")
     
     pdf.ln(20)
     pdf.set_font("Helvetica", 'I', 10)
@@ -1499,13 +1528,15 @@ def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
         site = sd['site']
         # We'll update page numbers after we know them
         pdf.toc_entries.append({
-            'name': site.get('name', 'Unnamed Site'),
-            'state': site.get('state', ''),
+            'name': sanitize_text(site.get('name', 'Unnamed Site')),
+            'state': sanitize_text(site.get('state', '')),
             'mw': site.get('target_mw', 0),
             'page_start': pdf.page_no() + idx  # Approximate, will be updated
         })
         
-        pdf.cell(130, 7, f"{idx}. {site.get('name', 'Unnamed Site')} ({site.get('state', 'N/A')}, {site.get('target_mw', 0)} MW)", new_x="LMARGIN", new_y="NEXT")
+        site_name = sanitize_text(site.get('name', 'Unnamed Site'))
+        site_state = sanitize_text(site.get('state', 'N/A'))
+        pdf.cell(130, 7, f"{idx}. {site_name} ({site_state}, {site.get('target_mw', 0)} MW)", new_x="LMARGIN", new_y="NEXT")
     
     # --- INDIVIDUAL SITE SECTIONS ---
     for idx, site_data in enumerate(sites_data, 1):
@@ -1520,11 +1551,13 @@ def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
         # --- Title Block ---
         pdf.set_font("Helvetica", 'B', 24)
         pdf.set_text_color(0, 0, 0)
-        pdf.cell(0, 15, f"{site.get('name', 'Unnamed Site')}", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 15, sanitize_text(site.get('name', 'Unnamed Site')), new_x="LMARGIN", new_y="NEXT")
         
         pdf.set_font("Helvetica", size=10)
         pdf.set_text_color(100, 100, 100)
-        pdf.cell(0, 6, f"State: {site.get('state', 'N/A')} | Utility: {site.get('utility', 'N/A')}", new_x="LMARGIN", new_y="NEXT")
+        site_state = sanitize_text(site.get('state', 'N/A'))
+        site_utility = sanitize_text(site.get('utility', 'N/A'))
+        pdf.cell(0, 6, f"State: {site_state} | Utility: {site_utility}", new_x="LMARGIN", new_y="NEXT")
         pdf.cell(0, 6, f"Target Capacity: {site.get('target_mw', 0)} MW | Acreage: {site.get('acreage', 0)} acres", new_x="LMARGIN", new_y="NEXT")
         pdf.cell(0, 6, f"Stage: {stage}", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(5)
@@ -1583,7 +1616,7 @@ def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
         risks = site.get('risks', [])
         for risk in risks[:3]:
             pdf.set_xy(110, pdf.get_y())
-            pdf.multi_cell(85, 5, f"- {risk}")
+            pdf.multi_cell(85, 5, sanitize_text(f"- {risk}"))
         
         pdf.ln(80)  # Move past the spider graph
         
@@ -1712,7 +1745,7 @@ def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
         pdf.cell(0, 7, "Key Risks", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", size=9)
         for r in site.get('risks', [])[:5]:
-            clean_text = str(r).strip()[:120]
+            clean_text = sanitize_text(str(r).strip()[:120])
             pdf.cell(0, 5, f"- {clean_text}", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(3)
         
@@ -1720,7 +1753,7 @@ def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
         pdf.cell(0, 7, "Acceleration Opportunities", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", size=9)
         for o in site.get('opps', [])[:5]:
-            clean_text = str(o).strip()[:120]
+            clean_text = sanitize_text(str(o).strip()[:120])
             pdf.cell(0, 5, f"- {clean_text}", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(3)
         
@@ -1728,7 +1761,7 @@ def generate_portfolio_pdf(site_ids: list, db: Dict, weights: Dict) -> bytes:
         pdf.cell(0, 7, "Open Questions", new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Helvetica", size=9)
         for q in site.get('questions', [])[:5]:
-            clean_text = str(q).strip()[:120]
+            clean_text = sanitize_text(str(q).strip()[:120])
             pdf.cell(0, 5, f"- {clean_text}", new_x="LMARGIN", new_y="NEXT")
     
     return bytes(pdf.output())
