@@ -152,20 +152,26 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
             })
             y_pos += 0.8
         
-        # Task bar
+        # Task bar as rectangle shape (more reliable than Bar for date axis)
         border_width = 2.5 if row['critical'] else 0.5
-        opacity = 1.0 if row['is_milestone'] else 0.85
+        border_color = '#1f2937' if row['critical'] else row['color']
         
-        fig.add_trace(go.Bar(
-            x=[row['duration_days']],
+        # Add rectangle for task duration
+        fig.add_shape(
+            type="rect",
+            x0=row['start'], x1=row['end'],
+            y0=y_pos - 0.3, y1=y_pos + 0.3,
+            fillcolor=row['color'],
+            opacity=0.9,
+            line=dict(color=border_color, width=border_width)
+        )
+        
+        # Add invisible scatter point for hover info
+        fig.add_trace(go.Scatter(
+            x=[(row['start'] + timedelta(days=row['duration_days']//2))],  # Middle of bar
             y=[y_pos],
-            base=[row['start']],
-            orientation='h',
-            marker=dict(
-                color=row['color'],
-                line=dict(color='#1f2937' if row['critical'] else row['color'], width=border_width),
-                opacity=opacity
-            ),
+            mode='markers',
+            marker=dict(size=0.1, opacity=0),  # Invisible
             hovertemplate=(
                 f"<b>{row['name']}</b><br>"
                 f"Start: {row['start'].strftime('%Y-%m-%d')}<br>"
