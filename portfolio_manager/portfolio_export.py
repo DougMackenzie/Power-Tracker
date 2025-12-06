@@ -133,6 +133,25 @@ def copy_slide_from_external(source_slide, dest_prs):
                 print(f"Failed to copy shape: {e}")
 
 
+def prepare_site_for_export(site_data):
+    """Parse JSON fields and prepare site for export."""
+    import json
+    
+    json_fields = ['phases_json', 'schedule_json', 'non_power_json', 
+                   'risks_json', 'opps_json', 'capacity_trajectory_json']
+    
+    for field in json_fields:
+        if field in site_data and isinstance(site_data[field], str):
+            try:
+                # Convert to target field name (remove _json suffix)
+                target = field.replace('_json', '')
+                site_data[target] = json.loads(site_data[field])
+            except json.JSONDecodeError:
+                pass
+    
+    return site_data
+
+
 def get_profile_data(site_data):
     """Extract profile data from site, handling JSON storage."""
     profile_data = None
@@ -262,6 +281,9 @@ def generate_portfolio_export(
 
     for site_id, site_data in sites.items():
         print(f"[DEBUG] Processing site: {site_data.get('name', site_id)}")
+        
+        # Prepare Site Data (Parse JSONs)
+        site_data = prepare_site_for_export(site_data)
         
         # Prepare Data
         replacements = build_replacements(site_data, config)
