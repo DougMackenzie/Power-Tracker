@@ -632,17 +632,15 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
                 
                 st.success(f"✅ Export complete: {safe_name}")
                 
-                # Read file and provide download immediately
+                # Read file
                 with open(result, 'rb') as f:
                     file_bytes = f.read()
                 
-                st.download_button(
-                    label="⬇️ Download PPTX",
-                    data=file_bytes,
-                    file_name=safe_name,
-                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    key=f"download_{site_id}_{safe_name}"
-                )
+                # Use base64 encoding for reliable filename
+                import base64
+                b64 = base64.b64encode(file_bytes).decode()
+                href = f'<a href="data:application/vnd.openxmlformats-officedocument.presentationml.presentation;base64,{b64}" download="{safe_name}">⬇️ Download {safe_name}</a>'
+                st.markdown(href, unsafe_allow_html=True)
                 
             except Exception as e:
                 st.error(f"Export failed: {e}")
