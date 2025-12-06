@@ -293,7 +293,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
             'yanchor': 'top'
         },
         barmode='overlay',
-        height=min(1500, max(700, len(y_labels) * 45)),  # Larger spacing, higher cap
+        height=max(800, len(y_labels) * 60),  # No cap - proper spacing always
         margin=dict(l=220, r=100, t=100, b=50),
         paper_bgcolor='white',
         plot_bgcolor='#f9fafb',
