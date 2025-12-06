@@ -649,10 +649,11 @@ def show_preview_section(builder: SiteProfileBuilder, site_data: Dict):
 
     # Show download button if data exists
     if 'single_site_export_data' in st.session_state:
+        fname = st.session_state.get('single_site_export_name', 'Site_Profile.pptx')
         st.download_button(
             "⬇️ Download PPTX",
             data=st.session_state['single_site_export_data'],
-            file_name=st.session_state['single_site_export_name'],
+            file_name=fname,
             mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
             key="download_single_site_pptx"
         )

@@ -724,10 +724,11 @@ def show_portfolio_export(sites: Dict):
 
     # Show download button if data exists
     if 'portfolio_export_data' in st.session_state:
+        fname = st.session_state.get('portfolio_export_name', 'Portfolio_Export.pptx')
         st.download_button(
             "⬇️ Download Portfolio Deck",
             data=st.session_state['portfolio_export_data'],
-            file_name=st.session_state['portfolio_export_name'],
+            file_name=fname,
             mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
             key="download_portfolio_pptx"
         )
