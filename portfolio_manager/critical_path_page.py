@@ -247,12 +247,6 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
     templates = get_milestone_templates()
     tasks = []
     
-    # Debug audience selection
-    # st.toast(f"Generating chart for audience: {audience}")
-    
-    # DEBUG: Print first few decisions
-    debug_count = 0
-    
     # Filter based on detail level
     for ms_id, instance in data.milestones.items():
         if not instance.is_active:
@@ -635,7 +629,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
 def show_critical_path_page():
     """Main Critical Path page with MS Project-style Gantt chart."""
     
-    st.header("⚡ Critical Path to Energization (v1.8 - Audience Filter Logic Refined)")
+    st.header("⚡ Critical Path to Energization (v1.9 - Audience Filter Connected)")
     
     if 'db' not in st.session_state:
         st.warning("No database loaded")
@@ -939,7 +933,7 @@ def show_critical_path_page():
         **Timeline Markers:** ┃ Today | ⚡ Target Energization
         """, unsafe_allow_html=True)
         
-        fig = create_gantt_chart(cp_data, group_by, show_detail)
+        fig = create_gantt_chart(cp_data, group_by, show_detail, audience=audience)
         st.plotly_chart(fig, use_container_width=True)
     
     with tab2:
