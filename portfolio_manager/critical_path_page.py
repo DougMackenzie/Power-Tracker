@@ -632,7 +632,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
 def show_critical_path_page():
     """Main Critical Path page with MS Project-style Gantt chart."""
     
-    st.header("⚡ Critical Path to Energization (v2.0 - Community View Fixed)")
+    st.header("⚡ Critical Path to Energization (v2.1 - Debug Mode Enabled)")
     
     if 'db' not in st.session_state:
         st.warning("No database loaded")
