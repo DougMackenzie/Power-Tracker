@@ -33,6 +33,190 @@ from .critical_path import (
 )
 
 
+def sync_site_data_to_critical_path(site: Dict, cp_data: CriticalPathData) -> bool:
+    """
+    Synchronize site database values to Critical Path configuration and milestones.
+    Returns True if any changes were made.
+    """
+    changes_made = False
+    
+    # 1. Sync Configuration
+    # ---------------------
+    # Target MW
+    new_mw = site.get('target_mw', 0)
+    if cp_data.config.target_mw != new_mw:
+        cp_data.config.target_mw = new_mw
+        changes_made = True
+        
+    # ISO
+    new_iso = site.get('iso', 'SPP')
+    if cp_data.config.iso != new_iso:
+        cp_data.config.iso = new_iso
+        changes_made = True
+        
+    # Voltage - find max from phases
+    phases = site.get('phases', [])
+    max_volts = 138
+    if phases:
+        for p in phases:
+            try:
+                v = int(p.get('voltage', 0))
+                if v > max_volts:
+                    max_volts = v
+            except (ValueError, TypeError):
+                pass
+    
+    if cp_data.config.voltage_kv != max_volts:
+        cp_data.config.voltage_kv = max_volts
+        changes_made = True
+
+    # 2. Sync Milestones Status
+    # -------------------------
+    status_map = {
+        "Not Started": MilestoneStatus.NOT_STARTED,
+        "Initiated": MilestoneStatus.IN_PROGRESS,
+        "Drafted": MilestoneStatus.IN_PROGRESS,
+        "Submitted": MilestoneStatus.IN_PROGRESS,
+        "Study": MilestoneStatus.IN_PROGRESS,
+        "Complete": MilestoneStatus.COMPLETE,
+        "Executed": MilestoneStatus.COMPLETE,
+        "Approved": MilestoneStatus.COMPLETE,
+        "Secured": MilestoneStatus.COMPLETE,
+        "Option": MilestoneStatus.IN_PROGRESS,
+        "Owned": MilestoneStatus.COMPLETE
+    }
+    
+    def update_ms(ms_id, site_status_val):
+        nonlocal changes_made
+        if ms_id in cp_data.milestones and site_status_val:
+            new_status = status_map.get(site_status_val, MilestoneStatus.NOT_STARTED)
+            if cp_data.milestones[ms_id].status != new_status:
+                cp_data.milestones[ms_id].status = new_status
+                changes_made = True
+                # If complete, set actual end date to today if missing
+                if new_status == MilestoneStatus.COMPLETE and not cp_data.milestones[ms_id].actual_end:
+                    cp_data.milestones[ms_id].actual_end = date.today().isoformat()
+
+    # --- Power / Interconnection ---
+    best_study_status = "Not Started"
+    best_loa_status = "Not Started"
+    
+    for phase in phases:
+        p_study = phase.get('contract_study_status', 'Not Started')
+        if p_study == "Complete":
+            best_study_status = "Complete"
+        elif p_study == "Initiated" and best_study_status != "Complete":
+            best_study_status = "Initiated"
+            
+        p_loa = phase.get('loa_status', 'Not Started')
+        if p_loa == "Executed":
+            best_loa_status = "Executed"
+        elif p_loa == "Drafted" and best_loa_status != "Executed":
+            best_loa_status = "Drafted"
+
+    if best_study_status in ["Initiated", "Complete"]:
+        update_ms("PS-PWR-02", "Complete") # Application
+        update_ms("PS-PWR-03", "Complete") # Queue Position
+    
+    # Map Contract Study to Facilities Study (PS-PWR-06)
+    # The user specifically asked for "Contract Study" alignment.
+    # In our template, PS-PWR-06 is now "Contract Study (Facilities Study) Complete"
+    update_ms("PS-PWR-06", best_study_status) 
+    
+    # Also update SIS (PS-PWR-05) if Contract Study is initiated/complete, assume SIS is done
+    if best_study_status in ["Initiated", "Complete"]:
+        update_ms("PS-PWR-05", "Complete")
+
+    update_ms("PS-PWR-09", best_loa_status)   # IA/FA
+
+    # --- Land / Site Control ---
+    land_status = site.get('land_status', 'Not Started')
+    if land_status == "Option":
+        update_ms("PS-SC-02", "Executed")
+    elif land_status == "Owned":
+        update_ms("PS-SC-02", "Executed")
+        update_ms("PS-SC-03", "Executed")
+        update_ms("PS-TXN-03", "Executed")
+        
+    # --- Marketing / Transaction ---
+    # If developer is assigned, assume Buyer Identified
+    if site.get('developer'):
+        update_ms("PS-MKT-02", "Complete") # Buyer Identified
+        update_ms("PS-MKT-03", "Complete") # Buyer LOI
+        
+    # If capital status is Secured, assume Transaction Closed or near closing
+    cap_status = site.get('capital_status', '')
+    if cap_status == "Secured":
+         update_ms("PS-TXN-03", "Complete") # Transaction Closed
+
+    # --- Zoning ---
+    zoning = site.get('non_power', {}).get('zoning_status', 'Not Started')
+    update_ms("PS-ZN-03", zoning)
+    if zoning == "Approved":
+        update_ms("PS-ZN-06", "Approved")
+
+    return changes_made
+
+
+def analyze_procurement_risk(site: Dict, cp_data: CriticalPathData) -> Dict:
+    """
+    Analyze schedule risk by comparing Utility Schedule vs. Procurement Schedule.
+    """
+    # 1. Get Utility Power Schedule
+    schedule = site.get('schedule', {})
+    utility_target_date = None
+    
+    for year in sorted(schedule.keys()):
+        try:
+            if schedule[year].get('ic_mw', 0) > 0:
+                utility_target_date = date(int(year), 1, 1)
+                break
+        except (ValueError, TypeError):
+            continue
+            
+    if not utility_target_date:
+        return {"has_risk": False, "msg": "No utility schedule defined"}
+
+    # 2. Get Calculated Energization
+    if not cp_data.calculated_energization:
+        return {"has_risk": False, "msg": "No calculated energization"}
+        
+    calc_date = date.fromisoformat(cp_data.calculated_energization)
+
+    # 3. Compare
+    # If calculated date is significantly later than utility date, we have a risk
+    risk_delta_days = (calc_date - utility_target_date).days
+    
+    # Check if procurement (Transformer Manufacturing) is the driver
+    # POST-EQ-02 is Transformer Manufacturing
+    is_procurement_driver = False
+    if cp_data.primary_driver == "POST-EQ-02":
+        is_procurement_driver = True
+    
+    if risk_delta_days > 90:
+        return {
+            "has_risk": True,
+            "level": "HIGH",
+            "msg": f"Procurement lags Utility by {risk_delta_days} days",
+            "delta_days": risk_delta_days,
+            "utility_date": utility_target_date,
+            "calc_date": calc_date,
+            "is_procurement_issue": is_procurement_driver
+        }
+    elif risk_delta_days > 0:
+         return {
+            "has_risk": True,
+            "level": "MEDIUM",
+            "msg": f"Procurement lags Utility by {risk_delta_days} days",
+            "delta_days": risk_delta_days,
+            "utility_date": utility_target_date,
+            "calc_date": calc_date,
+            "is_procurement_issue": is_procurement_driver
+        }
+        
+    return {"has_risk": False, "msg": "Schedule aligned"}
+
+
 def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_detail: str = "all") -> go.Figure:
     """Create MS Project-style Gantt chart with dependencies and hierarchy."""
     
@@ -443,64 +627,11 @@ def show_critical_path_page():
             st.rerun()
         return
     
-    # TEMPORARILY DISABLED - Investigating deployment issue
-    # Auto-sync will be re-enabled after verification
-    """
-    # Auto-sync: Check if site properties have changed
-    needs_recalc = False
-    config_updates = {}
-    
-    # Check target MW
-    current_mw = site.get('target_mw', 200)
-    if cp_data.config.target_mw != current_mw:
-        config_updates['target_mw'] = current_mw
-        needs_recalc = True
-    
-    # Check voltage (affects transformer lead times)
-    current_voltage = site.get('voltage_kv', 138)
-    if current_voltage is None:
-        # Infer from target_mw if not set
-        if current_mw >= 500:
-            current_voltage = 345
-        elif current_mw >= 200:
-            current_voltage = 230
-        elif current_mw >= 100:
-            current_voltage = 138
-        else:
-            current_voltage = 69
-    
-    if cp_data.config.voltage_kv != current_voltage:
-        config_updates['voltage_kv'] = current_voltage
-        needs_recalc = True
-    
-    # Check ISO
-    current_iso = site.get('iso', 'SPP')
-    if cp_data.config.iso != current_iso:
-        config_updates['iso'] = current_iso
-        needs_recalc = True
-    
-    # Auto-recalculate if properties changed
-    if needs_recalc:
-        st.info(f"🔄 Site properties changed. Auto-updating critical path...")
-        
-        # Update config
-        for key, value in config_updates.items():
-            setattr(cp_data.config, key, value)
-        
-        # Recalculate with new lead times based on updated voltage/ISO
-        for ms_id, instance in cp_data.milestones.items():
-            instance.target_start = None
-            instance.target_end = None
-        
-        # Re-apply voltage-adjusted lead times
-        for ms_id, instance in cp_data.milestones.items():
-            tmpl = templates.get(ms_id)
-            if tmpl and tmpl.lead_time_key:
-                new_duration = engine._get_adjusted_duration(tmpl, cp_data.config)
-                if new_duration != tmpl.duration_typical:
-                    instance.duration_override = new_duration
-        
-        # Recalculate schedule
+    # Auto-sync with Site Database
+    if sync_site_data_to_critical_path(site, cp_data):
+        # Recalculate if changes were made
+        for ms in cp_data.milestones.values():
+            ms.target_start = ms.target_end = None
         cp_data = engine.calculate_schedule(cp_data)
         cp_data.critical_path = engine.identify_critical_path(cp_data)
         
@@ -509,10 +640,9 @@ def show_critical_path_page():
         sites[selected_site_id] = site
         from .streamlit_app import save_database
         save_database(db)
-        
-        st.success(f"✅ Auto-synced! Updated: {', '.join(config_updates.keys())}")
-        st.rerun()
-    """
+        st.toast("✅ Synced with Site Database", icon="🔄")
+        # No rerun needed, we just use the updated cp_data
+
     
     
     # Sidebar info
@@ -617,20 +747,31 @@ def show_critical_path_page():
         
         with col2:
             # Schedule risk assessment
-            risk_level = "LOW"
-            risk_color = "🟢"
-            if cp_data.total_duration_weeks > 200:
-                risk_level = "HIGH"
-                risk_color = "🔴"
-            elif cp_data.total_duration_weeks > 150:
-                risk_level = "MEDIUM"
-                risk_color = "🟡"
+            # Schedule risk assessment
+            procurement_risk = analyze_procurement_risk(site, cp_data)
+            
+            if procurement_risk['has_risk']:
+                risk_level = procurement_risk.get('level', 'HIGH')
+                risk_color = "🔴" if risk_level == "HIGH" else "🟡"
+                delta_msg = procurement_risk['msg']
+            else:
+                # Fallback to duration-based risk
+                if cp_data.total_duration_weeks > 200:
+                    risk_level = "HIGH"
+                    risk_color = "🔴"
+                elif cp_data.total_duration_weeks > 150:
+                    risk_level = "MEDIUM"
+                    risk_color = "🟡"
+                else:
+                    risk_level = "LOW"
+                    risk_color = "🟢"
+                delta_msg = "Equipment lead times"
             
             st.metric(
                 "SCHEDULE RISK",
                 f"{risk_color} {risk_level}",
-                delta="Equipment lead times",
-                delta_color="off"
+                delta=delta_msg,
+                delta_color="off" if not procurement_risk['has_risk'] else "inverse"
             )
         
         with col3:
@@ -665,17 +806,32 @@ def show_critical_path_page():
             )
         
         # Timeline Driver Callout
-        st.markdown(f"""
-        <div style="background: #fff3cd; border-left: 4px solid #ff8c00; padding: 16px; border-radius: 4px; margin: 20px 0;">
-            <div style="color: #856404; font-weight: 700; font-size: 14px; margin-bottom: 8px;">
-                🎯 Timeline Driver: Equipment Lead Times
+        procurement_risk = analyze_procurement_risk(site, cp_data)
+        if procurement_risk['has_risk']:
+            st.markdown(f"""
+            <div style="background: #fff3cd; border-left: 4px solid #ff8c00; padding: 16px; border-radius: 4px; margin: 20px 0;">
+                <div style="color: #856404; font-weight: 700; font-size: 14px; margin-bottom: 8px;">
+                    ⚠️ Schedule Risk: {procurement_risk['msg']}
+                </div>
+                <div style="color: #333; font-size: 13px; line-height: 1.6;">
+                    <strong>Utility Ready:</strong> {procurement_risk['utility_date']}<br>
+                    <strong>Project Ready:</strong> {procurement_risk['calc_date']}<br>
+                    <strong>Driver:</strong> {cp_data.primary_driver}<br>
+                    <strong>Recommendation:</strong> Explore early procurement or customer-conveyed equipment to bridge the {procurement_risk['delta_days']}-day gap.
+                </div>
             </div>
-            <div style="color: #333; font-size: 13px; line-height: 1.6;">
-                <strong>Transformer procurement</strong> is driving your timeline. The 345kV transformer has a {max_duration}-week ({max_duration//52}-year) lead time.<br>
-                <strong>Recommended:</strong> Explore customer-funded early procurement to accelerate by 6-12 months.
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 16px; border-radius: 4px; margin: 20px 0;">
+                <div style="color: #065f46; font-weight: 700; font-size: 14px; margin-bottom: 8px;">
+                    ✅ Schedule Aligned
+                </div>
+                <div style="color: #333; font-size: 13px; line-height: 1.6;">
+                    Project schedule aligns with utility interconnection capacity availability.
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
         
         st.markdown("---")
         
