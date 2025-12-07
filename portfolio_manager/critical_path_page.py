@@ -73,18 +73,18 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
             group = tmpl.workstream.value
             subgroup = tmpl.owner.value
         
-        # Color by status with critical path override
-        if instance.status == MilestoneStatus.COMPLETE:
-            color = "#10b981"
-        elif instance.status == MilestoneStatus.IN_PROGRESS:
-            color = "#3b82f6"
-        elif instance.status == MilestoneStatus.BLOCKED:
-            color = "#ef4444"
-        elif instance.on_critical_path:
-            color = "#f97316"  # Orange for critical path
+        # Color by control level (who can influence this)
+        owner = Owner(instance.owner_override) if instance.owner_override else tmpl.owner
+        
+        # Control level mapping
+        if owner in [Owner.CUSTOMER, Owner.END_USER]:
+            color = "#10b981"  # Green - You control
+        elif owner in [Owner.SELLER, Owner.CONSULTANT, Owner.CONTRACTOR]:
+            color = "#fbbf24"  # Yellow - Partial control (you manage these parties)
+        elif owner in [Owner.UTILITY, Owner.ISO, Owner.MUNICIPALITY, Owner.REGULATOR]:
+            color = "#ef4444"  # Red - No control (external parties)
         else:
-            owner = Owner(instance.owner_override) if instance.owner_override else tmpl.owner
-            color = OWNER_COLORS.get(owner, "#64748b")
+            color = "#64748b"  # Gray - Unknown
         
         tasks.append({
             'id': ms_id,
@@ -155,8 +155,25 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
             y_pos += 0.8
         
         # Task bar as rectangle shape (more reliable than Bar for date axis)
-        border_width = 2.5 if row['critical'] else 0.5
-        border_color = '#1f2937' if row['critical'] else row['color']
+        # Critical path items get orange border
+        border_width = 3 if row['critical'] else 1
+        border_color = '#ff8c00' if row['critical'] else row['color']
+        
+        # Add orange dot for critical path items
+        if row['critical']:
+            fig.add_trace(go.Scatter(
+                x=[row['start'] - timedelta(days=10)],  # Position dot to left of bar
+                y=[y_pos],
+                mode='markers',
+                marker=dict(
+                    size=12,
+                    color='#ff8c00',  # Orange
+                    symbol='circle',
+                    line=dict(color='white', width=1)
+                ),
+                showlegend=False,
+                hoverinfo='skip'
+            ))
         
         # Add rectangle for task duration
         fig.add_shape(
@@ -164,9 +181,10 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
             x0=row['start'], x1=row['end'],
             y0=y_pos - 0.3, y1=y_pos + 0.3,
             fillcolor=row['color'],
-            opacity=0.9,
+            opacity=0.85,
             line=dict(color=border_color, width=border_width)
         )
+
         
         # Add invisible scatter point for hover info
         fig.add_trace(go.Scatter(
@@ -543,13 +561,130 @@ def show_critical_path_page():
                 help="Toggle between detailed and simplified views"
             )
         
+        # ====================================================================
+        # PROFESSIONAL HEADER & METRICS
+        # ====================================================================
+        
+        # Extract target energization from capacity trajectory
+        target_energization = None
+        if site.get('capacity_trajectory'):
+            for year in sorted(site['capacity_trajectory'].keys()):
+                mw = site['capacity_trajectory'][year]
+                if mw and mw > 0:
+                    target_energization = f"Q4 {year}"  # Simplified - assume Q4
+                    break
+        
+        #Header section with dark background
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8a 100%); padding: 24px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="color: white; margin: 0 0 12px 0;">⚡ Critical Path to Energization</h2>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                <div>
+                    <div style="color: #b0c4de; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">SITE</div>
+                    <div style="color: #ffa500; font-size: 18px; font-weight: 700; margin-top: 4px;">{site.get('name', 'Unknown')}</div>
+                </div>
+                <div>
+                    <div style="color: #b0c4de; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">ISO</div>
+                    <div style="color: #ffa500; font-size: 18px; font-weight: 700; margin-top: 4px;">{site.get('ISO', 'N/A')}</div>
+                </div>
+                <div>
+                    <div style="color: #b0c4de; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">TARGET CAPACITY</div>
+                    <div style="color: #ffa500; font-size: 18px; font-weight: 700; margin-top: 4px;">{site.get('target_mw', 0)} MW @ {site.get('voltage_kv', 'N/A')}kV</div>
+                </div>
+                <div>
+                    <div style="color: #b0c4de; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">TARGET ENERGIZATION</div>
+                    <div style="color: #ffa500; font-size: 18px; font-weight: 700; margin-top: 4px;">{target_energization or 'TBD'}</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Metrics Panel
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            if cp_data.calculated_energization:
+                energization_date = date.fromisoformat(cp_data.calculated_energization)
+                days_to_energization = (energization_date - date.today()).days
+                st.metric(
+                    "DAYS TO ENERGIZATION", 
+                    f"{days_to_energization:,}",
+                    delta=f"~{days_to_energization//365} years from today",
+                    delta_color="off"
+                )
+            else:
+                st.metric("DAYS TO ENERGIZATION", "N/A")
+        
+        with col2:
+            # Schedule risk assessment
+            risk_level = "LOW"
+            risk_color = "🟢"
+            if cp_data.total_duration_weeks > 200:
+                risk_level = "HIGH"
+                risk_color = "🔴"
+            elif cp_data.total_duration_weeks > 150:
+                risk_level = "MEDIUM"
+                risk_color = "🟡"
+            
+            st.metric(
+                "SCHEDULE RISK",
+                f"{risk_color} {risk_level}",
+                delta="Equipment lead times",
+                delta_color="off"
+            )
+        
+        with col3:
+            critical_count = sum(1 for ms in cp_data.milestones.values() if ms.on_critical_path and ms.is_active)
+            total_count = sum(1 for ms in cp_data.milestones.values() if ms.is_active)
+            st.metric(
+                "CRITICAL PATH ITEMS",
+                f"{critical_count}",
+                delta=f"of {total_count} total milestones",
+                delta_color="off"
+            )
+        
+        with col4:
+            # Find primary driver (longest critical path milestone)
+            primary_driver = "Unknown"
+            max_duration = 0
+            templates = get_milestone_templates()
+            for ms_id, instance in cp_data.milestones.items():
+                if instance.on_critical_path and instance.is_active:
+                    tmpl = templates.get(ms_id)
+                    if tmpl:
+                        duration = instance.duration_override or tmpl.default_duration_weeks
+                        if duration > max_duration:
+                            max_duration = duration
+                            primary_driver = tmpl.name
+            
+            st.metric(
+                "PRIMARY DRIVER",
+                primary_driver.split(' - ')[0] if ' - ' in primary_driver else primary_driver,
+                delta=f"{max_duration} weeks lead time",
+                delta_color="off"
+            )
+        
+        # Timeline Driver Callout
+        st.markdown(f"""
+        <div style="background: #fff3cd; border-left: 4px solid #ff8c00; padding: 16px; border-radius: 4px; margin: 20px 0;">
+            <div style="color: #856404; font-weight: 700; font-size: 14px; margin-bottom: 8px;">
+                🎯 Timeline Driver: Equipment Lead Times
+            </div>
+            <div style="color: #333; font-size: 13px; line-height: 1.6;">
+                <strong>Transformer procurement</strong> is driving your timeline. The 345kV transformer has a {max_duration}-week ({max_duration//52}-year) lead time.<br>
+                <strong>Recommended:</strong> Explore customer-funded early procurement to accelerate by 6-12 months.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
         st.markdown("---")
         
-        # Legend
+        # Updated Legend
         st.markdown("""
-        **Legend:** 
-        🟢 Complete | 🔵 In Progress | 🔴 Blocked | 🟠 Critical Path | ◆ Major Milestone | ⤷ Dependencies
-        """)
+        **Control Level (Bar Color):** 🟢 You Control | 🟡 Partial Control | 🔴 No Control  
+        **Critical Path:** <span style="color: #ff8c00;">⬤</span> Orange dot + border = On Critical Path  
+        **Timeline Markers:** ┃ Today | ⚡ Target Energization
+        """, unsafe_allow_html=True)
         
         fig = create_gantt_chart(cp_data, group_by, show_detail)
         st.plotly_chart(fig, use_container_width=True)
