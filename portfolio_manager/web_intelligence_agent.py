@@ -7,8 +7,9 @@ from typing import Dict
 from datetime import datetime
 import json
 
-from .llm_integration import get_llm_response
+from .agent_llm_helper import get_llm_response
 from .critical_path import CriticalPathData, get_milestone_templates
+
 
 
 def research_equipment_lead_times(cp_data: CriticalPathData) -> Dict:

@@ -9,8 +9,9 @@ from datetime import datetime
 import json
 
 from .document_utils import extract_text_from_file
-from .llm_integration import get_llm_response
+from .agent_llm_helper import get_llm_response
 from .critical_path import CriticalPathData, MilestoneStatus, get_milestone_templates
+
 
 
 def scan_documents_for_updates(
