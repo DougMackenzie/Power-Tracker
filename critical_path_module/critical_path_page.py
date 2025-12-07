@@ -77,11 +77,11 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
         owner = Owner(instance.owner_override) if instance.owner_override else tmpl.owner
         
         # Control level mapping
-        if owner in [Owner.CUSTOMER, Owner.END_USER]:
+        if owner in [Owner.CUSTOMER, Owner.END_USER, Owner.BUYER]:
             color = "#10b981"  # Green - You control
-        elif owner in [Owner.SELLER, Owner.CONSULTANT, Owner.CONTRACTOR]:
+        elif owner in [Owner.SELLER, Owner.CONSULTANT, Owner.CONTRACTOR, Owner.VENDOR]:
             color = "#fbbf24"  # Yellow - Partial control (you manage these parties)
-        elif owner in [Owner.UTILITY, Owner.ISO, Owner.MUNICIPALITY, Owner.REGULATOR]:
+        elif owner in [Owner.UTILITY, Owner.ISO, Owner.COUNTY, Owner.MUNICIPAL, Owner.STATE, Owner.FEDERAL, Owner.GAS_UTILITY]:
             color = "#ef4444"  # Red - No control (external parties)
         else:
             color = "#64748b"  # Gray - Unknown
