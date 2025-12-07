@@ -32,6 +32,20 @@ from .critical_path import (
     parse_document_for_updates,
 )
 
+# Import AI agents
+from .document_scanner_agent import (
+    scan_documents_for_updates,
+    apply_document_update
+)
+from .web_intelligence_agent import (
+    research_equipment_lead_times,
+    research_iso_timelines,
+    research_all_intelligence,
+    apply_intelligence_to_schedule,
+    apply_iso_intelligence_to_schedule
+)
+
+
 
 def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_detail: str = "all") -> go.Figure:
     """Create MS Project-style Gantt chart with dependencies and hierarchy."""
