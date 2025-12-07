@@ -652,7 +652,7 @@ def show_critical_path_page():
                 if instance.on_critical_path and instance.is_active:
                     tmpl = templates.get(ms_id)
                     if tmpl:
-                        duration = instance.duration_override or tmpl.default_duration_weeks
+                        duration = instance.duration_override or tmpl.duration_typical
                         if duration > max_duration:
                             max_duration = duration
                             primary_driver = tmpl.name
