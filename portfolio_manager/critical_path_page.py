@@ -32,6 +32,22 @@ from .critical_path import (
     parse_document_for_updates,
 )
 
+# Try to import AI agents (optional - page works without them)
+AGENTS_AVAILABLE = False
+try:
+    from .document_scanner_agent import scan_documents_for_updates, apply_document_update
+    from .web_intelligence_agent import (
+        research_equipment_lead_times,
+        research_iso_timelines,
+        research_all_intelligence,
+        apply_intelligence_to_schedule,
+        apply_iso_intelligence_to_schedule
+    )
+    AGENTS_AVAILABLE = True
+except Exception as e:
+    # Agents not available - page will work without them
+    pass
+
 
 def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_detail: str = "all") -> go.Figure:
     """Create MS Project-style Gantt chart with dependencies and hierarchy."""
@@ -515,10 +531,15 @@ def show_critical_path_page():
         save_database(db)
         st.rerun()
     
-    # Tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📊 Gantt", "🔍 Analysis", "✏️ Milestones", "⚙️ Lead Times", "🎯 What-If"
-    ])
+    # Tabs - add AI agent tabs if available
+    base_tabs = ["📊 Gantt", "🔍 Analysis", "✏️ Milestones", "⚙️ Lead Times", "🎯 What-If"]
+    if AGENTS_AVAILABLE:
+        base_tabs.extend(["📄 Doc Scanner", "🌐 Intelligence"])
+    
+    all_tabs = st.tabs(base_tabs)
+    tab1, tab2, tab3, tab4, tab5 = all_tabs[0], all_tabs[1], all_tabs[2], all_tabs[3], all_tabs[4]
+    tab6 = all_tabs[5] if len(all_tabs) > 5 else None
+    tab7 = all_tabs[6] if len(all_tabs) > 6 else None
     
     with tab1:
         # Controls for Gantt chart
@@ -651,6 +672,98 @@ def show_critical_path_page():
                         st.metric("Current", f"{cp_data.total_duration_weeks} wks")
                     with col2:
                         st.metric("With Scenario", f"{scenario_data.total_duration_weeks} wks", delta=f"-{delta} wks")
+    
+    # AI AGENT TABS (only if available)
+    if tab6 and AGENTS_AVAILABLE:
+        with tab6:
+            st.subheader("📄 Document Scanner Agent")
+            st.info("Scan documents for milestone updates using AI")
+            
+            folder_path = st.text_input("📁 Folder Path", placeholder="/path/to/documents")
+            file_types = st.multiselect("File Types", ["PDF", "DOCX", "TXT"], default=["PDF"])
+            
+            if st.button("🚀 Scan", type="primary"):
+                if folder_path:
+                    with st.spinner("Scanning..."):
+                        try:
+                            results = scan_documents_for_updates(folder_path, file_types, selected_site_id, cp_data)
+                            st.success(f"Scanned {results['files_scanned']} files, found {len(results['updates'])} updates")
+                            
+                            for idx, update in enumerate(results['updates']):
+                                with st.expander(f"{update['milestone_name']} - {update['confidence']*100:.0f}%"):
+                                    st.write(f"**Update**: {update['old_value']} → {update['new_value']}")
+                                    st.code(update['excerpt'])
+                                    if st.button("Apply", key=f"apply_{idx}"):
+                                        apply_document_update(cp_data, update)
+                                        site = save_critical_path_to_site(site, cp_data)
+                                        sites[selected_site_id] = site
+                                        from .streamlit_app import save_database
+                                        save_database(db)
+                                        st.success("Applied!")
+                                        st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
+                else:
+                    st.warning("Please enter a folder path")
+    
+    if tab7 and AGENTS_AVAILABLE:
+        with tab7:
+            st.subheader("🌐 Web Intelligence Agent")
+            st.info("AI-powered equipment & timeline research")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🔌 Research Equipment"):
+                    with st.spinner("Researching..."):
+                        try:
+                            research_equipment_lead_times(cp_data)
+                            site = save_critical_path_to_site(site, cp_data)
+                            sites[selected_site_id] = site
+                            from .streamlit_app import save_database
+                            save_database(db)
+                            st.success("Research complete!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
+            
+            with col2:
+                if st.button("⚡ Research ISOs"):
+                    with st.spinner("Researching..."):
+                        try:
+                            research_iso_timelines(cp_data)
+                            site = save_critical_path_to_site(site, cp_data)
+                            sites[selected_site_id] = site
+                            from .streamlit_app import save_database
+                            save_database(db)
+                            st.success("Research complete!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
+            
+            # Display results
+            intel_db = cp_data.intelligence_database if cp_data.intelligence_database else {}
+            if intel_db.get('equipment_lead_times'):
+                st.write("### Equipment Lead Times")
+                for equip_id, data in intel_db['equipment_lead_times'].items():
+                    with st.expander(equip_id.replace('_', ' ').title()):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("Current", f"{data.get('current_weeks', 0)} wks")
+                        with col2:
+                            st.metric("Trend", data.get('trend', '').title())
+                        if st.button(f"Apply", key=f"apply_{equip_id}"):
+                            try:
+                                apply_intelligence_to_schedule(cp_data, equip_id, data)
+                                site = save_critical_path_to_site(site, cp_data)
+                                sites[selected_site_id] = site
+                                from .streamlit_app import save_database
+                                save_database(db)
+                                st.success("Applied!")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error: {str(e)}")
+
+
 
 
 def get_critical_path_summary(site: Dict) -> Optional[Dict]:
