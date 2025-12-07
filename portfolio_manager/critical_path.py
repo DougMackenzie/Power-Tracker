@@ -955,6 +955,24 @@ class CriticalPathEngine:
                         break
                 
                 if predecessors_ready:
+                    # If already complete, use actual dates as anchor
+                    if instance.actual_end:
+                        ms_end = date.fromisoformat(instance.actual_end)
+                        if instance.actual_start:
+                            ms_start = date.fromisoformat(instance.actual_start)
+                        else:
+                            # Estimate start based on duration
+                            duration_weeks = get_duration(ms_id)
+                            ms_start = ms_end - timedelta(weeks=duration_weeks)
+                        
+                        scheduled[ms_id] = {'start': ms_start, 'end': ms_end, 'duration': (ms_end - ms_start).days // 7}
+                        
+                        # Ensure target matches actual for consistency
+                        instance.target_start = ms_start.isoformat()
+                        instance.target_end = ms_end.isoformat()
+                        continue
+
+                    # Normal calculation for incomplete items
                     ms_start = get_earliest_start(ms_id)
                     duration_weeks = get_duration(ms_id)
                     ms_end = ms_start + timedelta(weeks=duration_weeks)
