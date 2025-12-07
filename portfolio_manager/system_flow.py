@@ -118,6 +118,7 @@ def show_system_flow():
         c.node('Builder', html_node('Builder', '🏗️ SiteProfileBuilder', '.map_app_to_profile()', '#01579b'))
         c.node('Tracker', html_node('Tracker', '📈 ProgramTracker', 'Weighted Probabilities', '#01579b'))
         c.node('Scorer', html_node('Scorer', '⭐ ScoringEngine', '.calculate_site_score()', '#01579b'))
+        c.node('CPEngine', html_node('CPEngine', '⚡ CriticalPathEngine', 'CPM & Schedule Logic', '#01579b'))
         
         # New Framework Node
         c.node('ProbFramework', html_node('ProbFramework', '⚖️ Probability Framework', '(Drivers &amp; Multipliers)', '#006064'))
@@ -137,6 +138,7 @@ def show_system_flow():
         c.node('PPTX', html_node('PPTX', '📽️ PPT Generator', '.export_site_to_pptx()', '#4a148c'))
         c.node('PDF', html_node('PDF', '📄 PDF Report', '[fpdf2]', '#4a148c'))
         c.node('Dash', html_node('Dash', '📊 Dashboard UI', '[streamlit_app.py]', '#880e4f'))
+        c.node('GanttUI', html_node('GanttUI', '📅 Gantt Chart', '[critical_path_page.py]', '#880e4f'))
 
     # -- EDGES --
     graph.edge('DeepResearch', 'SupplyDemand', label=' drives_assumptions', color='#ffffff')
@@ -159,6 +161,11 @@ def show_system_flow():
     # Tracker reads state from the Profile/DB and updates probability/fees
     graph.edge('ProfileObj', 'Tracker', label=' provides_state', color='#ffea00')
     graph.edge('Tracker', 'ProfileObj', label=' updates_metrics', color='#00e5ff')
+    
+    # Critical Path Sync
+    graph.edge('ProfileObj', 'CPEngine', label=' syncs_site_data', color='#ffea00')
+    graph.edge('CPEngine', 'GanttUI', label=' renders_schedule', color='#00e5ff')
+    graph.edge('CPEngine', 'ProfileObj', label=' updates_dates', color='#00e5ff', style='dashed')
     
     # Clarify Data Flow: ProfileObj carries all data to Session/Sheet
     # Two-way arrows for full persistence cycle
@@ -288,6 +295,10 @@ def show_system_flow():
             - **`program_tracker.py`**: 
                 - Calculates `Probability` based on Stage Gates (Site Control, Power, Zoning).
                 - Computes `Weighted Fee` = `Total Fee` * `Probability`.
+            - **`critical_path.py`**:
+                - **Critical Path Engine**: Implements CPM (Critical Path Method) logic.
+                - **Schedule Calculation**: Computes float, early/late dates, and identifies the primary driver.
+                - **Risk Analysis**: Compares calculated energization vs. utility target dates.
             - **`state_analysis.py`**:
                 - Runs the Scoring Engine: `(StateScore * 0.2) + (PowerScore * 0.25) + ...`
                 - Normalizes scores across different markets (e.g., ERCOT vs PJM).
@@ -305,6 +316,10 @@ def show_system_flow():
         elif selected_layer == "Output Layer":
             st.info("**Output Layer**: Renders data for decision makers.")
             st.markdown("""
+            - **`critical_path_page.py`**:
+                - **Interactive Gantt**: Renders MS Project-style timeline with dependencies.
+                - **Audience Filters**: Toggles views for Developer, Buyer, and Community stakeholders.
+                - **Live Sync**: Automatically pulls latest milestones from Site Database.
             - **`pptx_export.py`**: 
                 - Loads `Sample Site Profile Template.pptx`.
                 - Replaces text placeholders (e.g., `{{target_mw}}`).
