@@ -645,7 +645,17 @@ def get_milestone_templates() -> Dict[str, MilestoneTemplate]:
     # =========================================================================
     # POST-SALE: UTILITY CONSTRUCTION
     # =========================================================================
+    # =========================================================================
+    # POST-SALE: UTILITY CONSTRUCTION
+    # =========================================================================
     postsale_utility = [
+        MilestoneTemplate(
+            id="POST-UTL-EQ-01", name="Utility Breaker Procurement", workstream=Workstream.POWER,
+            phase=Phase.POST_SALE, owner=Owner.UTILITY, duration_min=104, duration_typical=130, duration_max=156,
+            control=ControlLevel.NONE, predecessors=["PS-PWR-09"],
+            lead_time_key="breakers_hv", is_critical_default=True,
+            description="Utility orders breakers upon IA execution (30 month lead time)"
+        ),
         MilestoneTemplate(
             id="POST-UTL-01", name="Utility Engineering Start", workstream=Workstream.POWER,
             phase=Phase.POST_SALE, owner=Owner.UTILITY, duration_min=0, duration_typical=0, duration_max=0,
@@ -672,9 +682,9 @@ def get_milestone_templates() -> Dict[str, MilestoneTemplate]:
         ),
         MilestoneTemplate(
             id="POST-UTL-05", name="Equipment Installation", workstream=Workstream.POWER,
-            phase=Phase.POST_SALE, owner=Owner.UTILITY, duration_min=8, duration_typical=16, duration_max=26,
-            control=ControlLevel.NONE, predecessors=["POST-UTL-04", "POST-EQ-03", "POST-EQ-06"],
-            is_critical_default=True, description="Transformer and breaker installation"
+            phase=Phase.POST_SALE, owner=Owner.UTILITY, duration_min=24, duration_typical=26, duration_max=30,
+            control=ControlLevel.NONE, predecessors=["POST-UTL-04", "POST-UTL-EQ-01"],
+            is_critical_default=True, description="Breaker installation and switching station construction (6 months)"
         ),
         MilestoneTemplate(
             id="POST-UTL-06", name="Transmission Line Complete", workstream=Workstream.POWER,
@@ -697,7 +707,7 @@ def get_milestone_templates() -> Dict[str, MilestoneTemplate]:
         MilestoneTemplate(
             id="POST-UTL-09", name="ENERGIZATION", workstream=Workstream.POWER,
             phase=Phase.POST_SALE, owner=Owner.UTILITY, duration_min=0, duration_typical=1, duration_max=2,
-            control=ControlLevel.NONE, predecessors=["POST-UTL-08", "POST-CON-06"],
+            control=ControlLevel.NONE, predecessors=["POST-UTL-08", "POST-CON-06", "POST-EQ-03"],
             is_critical_default=True, description="⚡ SITE ENERGIZED - Project Complete"
         ),
     ]
