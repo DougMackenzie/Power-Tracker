@@ -720,25 +720,15 @@ def show_critical_path_page():
                 if st.button("🔌 Research Equipment"):
                     with st.spinner("Researching..."):
                         try:
-                            result = research_equipment_lead_times(cp_data)
-                            st.write(f"**Research returned**: {bool(result)}")
-                            st.write(f"**Has equipment_lead_times**: {bool(result.get('equipment_lead_times'))}")
-                            if result.get('error'):
-                                st.error(f"Research error: {result['error']}")
-                            else:
-                                st.write(f"**Database before save**: {bool(cp_data.intelligence_database)}")
-                                site = save_critical_path_to_site(site, cp_data)
-                                sites[selected_site_id] = site
-                                from .streamlit_app import save_database
-                                save_database(db)
-                                st.success("Research complete!")
-                                st.write("**Data saved! Reloading page...**")
-                                st.rerun()
+                            research_equipment_lead_times(cp_data)
+                            site = save_critical_path_to_site(site, cp_data)
+                            sites[selected_site_id] = site
+                            from .streamlit_app import save_database
+                            save_database(db)
+                            st.success("Research complete!")
+                            st.rerun()
                         except Exception as e:
                             st.error(f"Error: {str(e)}")
-                            import traceback
-                            st.code(traceback.format_exc())
-
             
             with col2:
                 if st.button("⚡ Research ISOs"):
