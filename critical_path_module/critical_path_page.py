@@ -260,16 +260,23 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
         should_include = True
         force_show = False  # Flag to bypass detail filter for specific audience views
         
+        # Helper to get string value safely
+        def get_val(enum_or_str):
+            return enum_or_str.value if hasattr(enum_or_str, 'value') else str(enum_or_str)
+
+        phase_val = get_val(tmpl.phase)
+        ws_val = get_val(tmpl.workstream)
+        
         if audience == "developer":
             # Developer only cares about Pre-Sale
-            if str(tmpl.phase) != "Pre-Sale" and tmpl.phase != Phase.PRE_SALE:
+            if phase_val != "Pre-Sale":
                 should_include = False
         elif audience == "community":
             # Community cares about Zoning, Environmental, Water, and Pre-Sale Power
             relevant_workstreams = ["Zoning & Permitting", "Environmental", "Water"]
-            is_relevant_power = (str(tmpl.workstream) == "Power/Interconnection" and str(tmpl.phase) == "Pre-Sale")
+            is_relevant_power = (ws_val == "Power/Interconnection" and phase_val == "Pre-Sale")
             
-            if str(tmpl.workstream) not in relevant_workstreams and not is_relevant_power:
+            if ws_val not in relevant_workstreams and not is_relevant_power:
                 should_include = False
             else:
                 # If it is a community milestone, show it regardless of "Major Only" setting
@@ -632,7 +639,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
 def show_critical_path_page():
     """Main Critical Path page with MS Project-style Gantt chart."""
     
-    st.header("⚡ Critical Path to Energization (v2.0 - Community View Fixed)")
+    st.header("⚡ Critical Path to Energization (v2.1 - Debug Mode Enabled)")
     
     if 'db' not in st.session_state:
         st.warning("No database loaded")
