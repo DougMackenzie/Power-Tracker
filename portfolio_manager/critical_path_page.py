@@ -105,8 +105,16 @@ def sync_site_data_to_critical_path(site: Dict, cp_data: CriticalPathData) -> bo
     best_study_status = "Not Started"
     best_sis_status = "Not Started"
     best_loa_status = "Not Started"
+    best_screening_status = "Not Started"
     
     for phase in phases:
+        # Screening
+        p_screen = phase.get('screening_status', 'Not Started')
+        if p_screen == "Complete":
+            best_screening_status = "Complete"
+        elif p_screen == "Initiated" and best_screening_status != "Complete":
+            best_screening_status = "Initiated"
+
         # Contract Study
         p_study = phase.get('contract_study_status', 'Not Started')
         if p_study == "Complete":
@@ -130,6 +138,8 @@ def sync_site_data_to_critical_path(site: Dict, cp_data: CriticalPathData) -> bo
     if best_study_status in ["Initiated", "Complete"] or best_sis_status in ["Initiated", "Complete"]:
         update_ms("PS-PWR-02", "Complete") # Application
         update_ms("PS-PWR-03", "Complete") # Queue Position
+    
+    update_ms("PS-PWR-04", best_screening_status) # Screening Study
     
     # Map Contract Study to Facilities Study (PS-PWR-06)
     update_ms("PS-PWR-06", best_study_status) 
@@ -599,7 +609,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
 def show_critical_path_page():
     """Main Critical Path page with MS Project-style Gantt chart."""
     
-    st.header("⚡ Critical Path to Energization (v1.4 - Sync Logic Fixed)")
+    st.header("⚡ Critical Path to Energization (v1.5 - Milestone Reconciliation Added)")
     
     if 'db' not in st.session_state:
         st.warning("No database loaded")
@@ -627,6 +637,24 @@ def show_critical_path_page():
     
     site = sites[selected_site_id]
     cp_data = get_critical_path_for_site(site)
+    
+    if cp_data:
+        # Reconcile missing milestones (e.g. new Utility Breakers)
+        for tmpl_id, tmpl in templates.items():
+            if tmpl_id not in cp_data.milestones:
+                # Add missing milestone
+                duration = tmpl.duration_typical
+                # Adjust duration if needed (simplified)
+                if tmpl.lead_time_key:
+                    duration = engine._get_adjusted_duration(tmpl, cp_data.config)
+                
+                cp_data.milestones[tmpl_id] = MilestoneInstance(
+                    template_id=tmpl_id,
+                    duration_override=duration if duration != tmpl.duration_typical else None,
+                    is_active=True,
+                    on_critical_path=tmpl.is_critical_default,
+                )
+                st.toast(f"Added new milestone: {tmpl.name}")
     
     if cp_data is None:
         st.sidebar.info("Critical path not initialized")
