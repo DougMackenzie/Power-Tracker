@@ -118,7 +118,7 @@ def show_system_flow():
         c.node('Builder', html_node('Builder', '🏗️ SiteProfileBuilder', '.map_app_to_profile()', '#01579b'))
         c.node('Tracker', html_node('Tracker', '📈 ProgramTracker', 'Weighted Probabilities', '#01579b'))
         c.node('Scorer', html_node('Scorer', '⭐ ScoringEngine', '.calculate_site_score()', '#01579b'))
-        c.node('CPEngine', html_node('CPEngine', '⚡ CriticalPathEngine', 'CPM & Schedule Logic', '#01579b'))
+        c.node('CPEngine', html_node('CPEngine', '⚡ CriticalPathEngine', 'CPM &amp; Schedule Logic', '#01579b'))
         
         # New Framework Node
         c.node('ProbFramework', html_node('ProbFramework', '⚖️ Probability Framework', '(Drivers &amp; Multipliers)', '#006064'))
