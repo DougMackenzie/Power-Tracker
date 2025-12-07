@@ -355,11 +355,11 @@ def get_milestone_templates() -> Dict[str, MilestoneTemplate]:
             is_critical_default=True, description="Grid impact analysis - duration varies by ISO"
         ),
         MilestoneTemplate(
-            id="PS-PWR-06", name="Facilities Study (FS) Complete", workstream=Workstream.POWER,
+            id="PS-PWR-06", name="Contract Study (Facilities Study) Complete", workstream=Workstream.POWER,
             phase=Phase.PRE_SALE, owner=Owner.UTILITY, duration_min=12, duration_typical=24, duration_max=40,
             control=ControlLevel.NONE, predecessors=["PS-PWR-05"],
             lead_time_key="fs_typical", is_critical_default=True,
-            description="Detailed engineering and cost estimate"
+            description="Detailed engineering and cost estimate (Contract Study)"
         ),
         MilestoneTemplate(
             id="PS-PWR-07", name="IA/FA Draft Received", workstream=Workstream.POWER,
@@ -910,7 +910,13 @@ class CriticalPathEngine:
             earliest = start_date
             for pred_id in tmpl.predecessors:
                 if pred_id in scheduled:
-                    pred_end = scheduled[pred_id]['end']
+                    # Use actual end if available (for completed tasks), otherwise target end
+                    pred_instance = data.milestones.get(pred_id)
+                    if pred_instance and pred_instance.actual_end:
+                         pred_end = date.fromisoformat(pred_instance.actual_end)
+                    else:
+                        pred_end = scheduled[pred_id]['end']
+                    
                     if pred_end > earliest:
                         earliest = pred_end
             return earliest
