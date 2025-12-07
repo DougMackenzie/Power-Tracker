@@ -46,7 +46,11 @@ try:
     AGENTS_AVAILABLE = True
 except Exception as e:
     # Agents not available - page will work without them
-    pass
+    import streamlit as st
+    st.warning(f"⚠️ AI Agents not available: {str(e)}")
+    import traceback
+    print(f"Agent import error: {e}")
+    print(traceback.format_exc())
 
 
 def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_detail: str = "all") -> go.Figure:
