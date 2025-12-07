@@ -250,6 +250,9 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
     # Debug audience selection
     # st.toast(f"Generating chart for audience: {audience}")
     
+    # DEBUG: Print first few decisions
+    debug_count = 0
+    
     # Filter based on detail level
     for ms_id, instance in data.milestones.items():
         if not instance.is_active:
@@ -260,18 +263,24 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
             continue
         
         # Filter by Audience
+        should_include = True
         if audience == "developer":
             # Developer only cares about Pre-Sale
-            # Use string comparison for safety
             if str(tmpl.phase) != "Pre-Sale" and tmpl.phase != Phase.PRE_SALE:
-                continue
+                should_include = False
         elif audience == "community":
             # Community cares about Zoning, Environmental, Water, and Pre-Sale Power
             relevant_workstreams = ["Zoning & Permitting", "Environmental", "Water"]
             is_relevant_power = (str(tmpl.workstream) == "Power/Interconnection" and str(tmpl.phase) == "Pre-Sale")
             
             if str(tmpl.workstream) not in relevant_workstreams and not is_relevant_power:
-                continue
+                should_include = False
+        
+        if not should_include:
+            # if debug_count < 5:
+            #    st.write(f"Skipping {tmpl.name} (Phase: {tmpl.phase}, WS: {tmpl.workstream}) for {audience}")
+            #    debug_count += 1
+            continue
         
         # Filter by detail level
         if show_detail == "critical_only" and not instance.on_critical_path:
@@ -626,7 +635,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
 def show_critical_path_page():
     """Main Critical Path page with MS Project-style Gantt chart."""
     
-    st.header("⚡ Critical Path to Energization (v1.6 - Audience Filters Added)")
+    st.header("⚡ Critical Path to Energization (v1.7 - Audience Filter Fix)")
     
     if 'db' not in st.session_state:
         st.warning("No database loaded")
