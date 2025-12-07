@@ -639,7 +639,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
 def show_critical_path_page():
     """Main Critical Path page with MS Project-style Gantt chart."""
     
-    st.header("⚡ Critical Path to Energization (v2.2 - Community View Logic Fixed)")
+    st.header("⚡ Critical Path to Energization")
     
     if 'db' not in st.session_state:
         st.warning("No database loaded")
@@ -797,6 +797,7 @@ def show_critical_path_page():
         # ====================================================================
         
         # Extract target energization from capacity trajectory
+        # Extract target energization from capacity trajectory
         target_energization = None
         if site.get('capacity_trajectory'):
             for year in sorted(site['capacity_trajectory'].keys()):
@@ -805,7 +806,18 @@ def show_critical_path_page():
                     target_energization = f"Q4 {year}"  # Simplified - assume Q4
                     break
         
-        #Header section with dark background
+        # Extract Voltage from phases (max voltage)
+        voltage_display = site.get('voltage_kv', 'N/A')
+        if voltage_display == 'N/A' and site.get('phases'):
+            try:
+                # Get max voltage from phases
+                voltages = [float(p.get('voltage', 0)) for p in site['phases'] if p.get('voltage')]
+                if voltages:
+                    voltage_display = f"{int(max(voltages))}"
+            except:
+                pass
+
+        # Header section with dark background
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8a 100%); padding: 24px; border-radius: 8px; margin-bottom: 20px;">
             <h2 style="color: white; margin: 0 0 12px 0;">⚡ Critical Path to Energization</h2>
@@ -816,11 +828,11 @@ def show_critical_path_page():
                 </div>
                 <div>
                     <div style="color: #b0c4de; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">ISO</div>
-                    <div style="color: #ffa500; font-size: 18px; font-weight: 700; margin-top: 4px;">{site.get('ISO', 'N/A')}</div>
+                    <div style="color: #ffa500; font-size: 18px; font-weight: 700; margin-top: 4px;">{site.get('iso', site.get('ISO', 'N/A'))}</div>
                 </div>
                 <div>
                     <div style="color: #b0c4de; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">TARGET CAPACITY</div>
-                    <div style="color: #ffa500; font-size: 18px; font-weight: 700; margin-top: 4px;">{site.get('target_mw', 0)} MW @ {site.get('voltage_kv', 'N/A')}kV</div>
+                    <div style="color: #ffa500; font-size: 18px; font-weight: 700; margin-top: 4px;">{site.get('target_mw', 0)} MW @ {voltage_display}kV</div>
                 </div>
                 <div>
                     <div style="color: #b0c4de; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">TARGET ENERGIZATION</div>
