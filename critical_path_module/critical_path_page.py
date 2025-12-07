@@ -585,7 +585,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
 def show_critical_path_page():
     """Main Critical Path page with MS Project-style Gantt chart."""
     
-    st.header("⚡ Critical Path to Energization")
+    st.header("⚡ Critical Path to Energization (v1.1)")
     
     if 'db' not in st.session_state:
         st.warning("No database loaded")
@@ -659,6 +659,23 @@ def show_critical_path_page():
         site = save_critical_path_to_site(site, cp_data)
         sites[selected_site_id] = site
         # Save to Google Sheets
+        from .streamlit_app import save_database
+        save_database(db)
+        st.rerun()
+
+    if st.sidebar.button("⚠️ Force Sync from Site DB"):
+        if sync_site_data_to_critical_path(site, cp_data):
+            st.toast("Sync found changes!", icon="✅")
+        else:
+            st.toast("No changes found during sync.", icon="ℹ️")
+            
+        # Always recalculate on force sync
+        for ms in cp_data.milestones.values():
+            ms.target_start = ms.target_end = None
+        cp_data = engine.calculate_schedule(cp_data)
+        cp_data.critical_path = engine.identify_critical_path(cp_data)
+        site = save_critical_path_to_site(site, cp_data)
+        sites[selected_site_id] = site
         from .streamlit_app import save_database
         save_database(db)
         st.rerun()
