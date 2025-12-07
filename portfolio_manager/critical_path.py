@@ -267,6 +267,10 @@ class CriticalPathData:
     # Metadata
     last_calculated: Optional[str] = None
     version: str = "1.0"
+    
+    # AI Agent Data
+    document_scan_history: Dict = field(default_factory=dict)
+    intelligence_database: Dict = field(default_factory=dict)
 
 
 # =============================================================================

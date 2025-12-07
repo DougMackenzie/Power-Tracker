@@ -1,0 +1,1776 @@
+SEMICONDUCTOR CAPACITY ANALYSIS
+FAB Production to Data Center
+Power Demand: 2024-2035
+Converting wafer capacity to gigawatts of AI infrastructure demand
+80-180 GW
+Global by 2030
+70-85%
+U.S. Tech Stack Share
+10-15x
+Growth 2024-2035
+Executive Summary: The Supply-Demand Gap
+AI power demand will structurally outpace supply through 2037 — creating persistent scarcity premium
+DEMAND TRAJECTORY
+GLOBAL AI DATA CENTER POWER
+2024
+10-14 GW
+2030
+80-180 GW
+2035
+180-400 
+GW
+U.S. TECHNOLOGY STACK (75-80% OF GLOBAL)
+2025
+18-23 GW
+2030
+95-120 GW
+2035
+180-230 GW
+THE DEFICIT
+Peak deficit 2029-2032: 15-50 GW shortfall
+Deficit persists through 2037 even with aggressive supply build -out
+SUPPLY VS DEMAND TRAJECTORY
+Demand Supply
+SUPPLY CONSTRAINTS
+Generation Interconnection
+2,600 GW generation backlog
+4-7 year avg wait time
+Equipment Lead Times
+Gas turbines: 5-7 years
+Transformers: 2-4 years
+Switchgear: 18-30 months
+Labor Constraint
+2,000+ workers per 1GW
+HV electricians in shortage
+STRATEGIC IMPLICATION
+Capacity delivered 2027-2032 captures peak scarcity premium. Speed-to-power is the dominant competitive variable.
+0
+50
+100
+150
+200
+250
+2024 2026 2028 2030 2032 2034
+Executive Summary: State Prioritization
+Geographic arbitrage toward low-queue, utility-friendly states with speed-to-power advantage
+TIER 1: PRIMARY TARGETS
+Oklahoma #1 RANKED
+SPP market, proactive utilities (OG&E, PSO, GRDA)
+Capacity potential: 8-12 GW by 2035
+Wyoming #2 RANKED
+Lowest cost power, TerraPower SMR pipeline
+Capacity potential: 3.5-5.5 GW by 2035
+Arkansas #3 RANKED
+MISO South access, nuclear uprate potential
+Capacity potential: 2.5-4.5 GW by 2035
+TIER 2: SECONDARY OPPORTUNITIES
+Rust Belt Cluster
+Ohio, Indiana, W. Virginia — retiring coal, grid capacity, labor pool
+Gulf South
+Louisiana, Mississippi — industrial gas infrastructure, water access
+ERCOT Secondary
+West Texas — if grid stability concerns addressed
+AVOID
+California, New York — regulatory, cost, queue
+Northern Virginia — saturated, 7+ year queues
+SCORING CRITERIA
+Power (40%)
+Grid capacity, queue depth, utility posture
+Speed (25%)
+Permitting timeline, regulatory complexity
+Cost (20%)
+Power rates, land, labor, incentives
+Risk (15%)
+Political stability, natural disaster exposure
+CENTRAL BELT TOTAL CAPACITY: 14-22 GW BY 2035
+Oklahoma alone can absorb 8-12 GW. First movers in the #1 ranked state have 12-18 month advantage before arbitrage window closes.
+Executive Summary
+Key findings from FAB-to-GW conversion analysis
+2030 GLOBAL DEMAND
+80-180 GW
+Up from 10-14 GW in 2024
+2030 U.S. STACK DEMAND
+95-120 GW
+75% of global, design leadership maintained
+BINDING CONSTRAINT
+CoWoS Packaging
+Not wafers - limits supply through 2027
+Supply-Constrained Through 2027
+Packaging and HBM capacity - not demand or capital - limit deployment speed. 
+Hyperscalers have committed $200B+ in capex.
+Grid Interconnection Becomes Binding Post-2028
+As CoWoS scales to 200K+ WPM and HBM4 enters production, constraint shifts to 3-
+7 year utility interconnection timelines.
+No Power Surplus in Any Scenario
+Even if AI business case weakens, existing commitments and base case inference 
+demand ensure deficit through 2035.
+Methodology: Wafer → Package → TDP → GW
+Explicit modeling through CoWoS constraints, chip TDP mix, server overhead 
+(1.45x), utilization (60-80%), and PUE (1.12-1.4).
+Global AI Data Center Power Demand
+Base case projections from FAB capacity analysis
+2024 BASELINE
+10-14 GW
+2027 PROJECTION
+48-78 GW
+CoWoS constraint relaxes
+2030 PROJECTION
+80-180 GW
+Grid becomes binding
+2035 PROJECTION
+180-400 GW
+Scenario dependent
+0
+100
+200
+300
+400
+2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035
+GW
+Demand by Chip Category (2030 Base Case)
+Training vs inference vs infrastructure power allocation
+Leading-Edge Training
+NVIDIA Blackwell/Rubin, AMD MI400+
+55-65 GW
+58% of demand
+Inference-Optimized
+Groq, Cerebras, custom ASICs, TPUs
+21-28 GW
+22% of demand
+Supporting Infrastructure
+Networking ASICs, memory controllers
+19-25 GW
+20% of demand
+Total 2030 Base Case 120-140 GW
+58%22%
+20%
+U.S. Technology Stack Deep Dive
+Chips designed by U.S. companies regardless of manufacturing location
+Scope: NVIDIA, AMD, Google, Amazon, Microsoft, Meta, Broadcom, Marvell, Intel, Qualcomm chip designs — includes TSMC Taiwan capacity serving 
+U.S. hyperscalers
+2024 SHARE
+85%
+NVIDIA 80%, AMD 8%
+2027 SHARE
+80%
+Chinese domestic growing
+2030 SHARE
+75%
+Design leadership maintained
+2035 SHARE
+70-75%
+Supply chain diversified
+2030 U.S. STACK FAB LOCATION
+TSMC Taiwan 55%
+TSMC Arizona 15%
+Samsung 12%
+Intel Foundry 8%
+Other 10%
+KEY IMPLICATION
+Taiwan concentration risk: 55% of U.S. AI chip capacity fabbed in Taiwan. 
+TSMC Arizona + Intel provide only 23% domestic by 2030.
+U.S. Technology Stack Power Demand
+Year-by-year projections with scenario ranges
+KEY MILESTONES
+18-23 GW
+2025: CoWoS ramp begins
+48-58 GW
+2027: Packaging constraint eases
+95-120 GW
+2030: Grid becomes limiting factor
+180-230 GW
+2035: Scenario dependent
+~30% CAGR to 2030, 15-25% to 2035
+0
+50
+100
+150
+200
+250
+2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035
+GW
+Two Futures: Post-2030 Trajectories
+Business case determines demand acceleration vs plateau
+SCENARIO A: DEMAND ACCELERATES
+AI BUSINESS CASE CONTINUES TO SCALE
+Reasoning inference drives exponential compute demand
+Model sizes continue scaling 10x every 2 years
+Enterprise adoption reaches majority of workflows
+Autonomous systems (robotics, vehicles) scale
+2035 U.S. STACK DEMAND
+230-290 GW
+25-30% CAGR sustained
+SCENARIO B: DEMAND PLATEAUS
+AI BUSINESS CASE FAILS TO MATERIALIZE
+Efficiency gains outpace demand growth
+ROI skepticism reduces enterprise investment
+Model scaling hits diminishing returns
+Regulatory constraints limit deployment
+2035 U.S. STACK DEMAND
+85-110 GW
+Growth slows to 5-10% CAGR
+Scenario Trajectory Comparison
+U.S. technology stack GW demand under both scenarios
+LEGEND
+Scenario A: Acceleration
+Scenario B: Plateau
+Current committed capacity
+CRITICAL INSIGHT
+Both scenarios converge through 2028-2029 due to 
+supply constraints. Divergence begins only after 
+CoWoS and grid capacity expand.
+DECISION WINDOW
+Infrastructure committed 2024-2027 will be needed 
+regardless of scenario. Post-2028 commitments carry 
+higher scenario risk.
+2035 DIVERGENCE (2.4x)
+230 GW
+Scenario A
+95 GW
+Scenario B
+0
+50
+100
+150
+200
+250
+2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035
+GW
+No Power Surplus in Any Scenario
+The critical infrastructure planning implication
+Even under Scenario B (AI business case fails to materialize), U.S. data center power demand reaches 85-110 GW by 2035 — still 
+requiring 4-6x growth from current infrastructure.
+1. COMMITTED CAPITAL
+$200B+ already committed by hyperscalers for 
+2024-2026 deployment. These data centers will be 
+built regardless of demand trajectory changes.
+2. INFERENCE BASELINE
+Current AI applications (ChatGPT, Copilot, etc.) 
+have 100M+ users. Maintaining service at current 
+quality requires sustained infrastructure.
+3. CLOUD MIGRATION
+Traditional enterprise workloads continue migrating 
+to hyperscale DCs at 15%+ CAGR — independent 
+of AI demand trajectory.
+SUPPLY VS DEMAND COMPARISON (2030)
+SCENARIO A SCENARIO B
+U.S. Demand 115 GW 75 GW
+Planned Supply 65 GW 65 GW
+Deficit -50 GW -10 GW
+IMPLICATION FOR INFRASTRUCTURE
+Power infrastructure investment is a low-regret strategy through 2030. 
+The question is not if demand will materialize, but how much beyond 
+baseline projections.
+Evolving Constraint Landscape
+The binding constraint shifts over time
+2024
+ 2035
+CoWoS Packaging (2024-2027) HBM Memory (2025-2028) Grid Interconnection (2028+)
+CoWoS PACKAGING
+2024-2027 BINDING
+35K → 200K WPM capacity
+NVIDIA takes 63% allocation
+CoWoS-L for B200+
+Resolution: TSMC expansion + OSAT partners
+HBM MEMORY
+2025-2028 CO-BINDING
+SK Hynix 54%, Samsung 39%
+Sold out through late 2025
+8-12 stacks per GPU (192-288GB)
+Resolution: HBM4 on logic nodes, capacity expansion
+GRID INTERCONNECTION
+2028+ PRIMARY BINDING
+3-7 year interconnection timelines
+120 kW/rack for GB200 NVL72
+Only 17% DCs support liquid cooling
+Resolution: BTM power, nuclear, transmission upgrades
+Strategic implication: Infrastructure planning must address the constraint expected to be binding at time of deployment, not today's constraint. Projects starting in 
+2025 face grid constraints at completion.
+Strategic Implications
+1. NEAR-TERM: LOW-REGRET
+2024-2028 infrastructure commitments needed under both scenarios.
+2. TIMING IS CRITICAL
+Grid interconnection takes 3-7 years. Projects today deliver into 2028-2032 crunch.
+3. BTM BRIDGING OPPORTUNITY
+$120-140/MWh BTM power bridges 2027-2030 grid gap.
+4. GEOGRAPHIC ARBITRAGE
+TX, OK, Midwest offer 2-3 year advantages over VA, GA.
+Bottom Line: 10-15x increase in AI power demand through 2035. No scenario produces a power surplus. Infrastructure 
+development is the rate-limiting factor.
+85-290 GW
+2035 U.S. Stack Range
+10-15x
+Growth from 2024
+0 GW
+Surplus in Any Scenario
+Supply Analysis
+Constraints, Capacity Additions, and Regional Breakdown
+
+Supply Constraint Executive Summary
+Structural 40-90 GW deficit through 2035 under most scenarios
+The bottleneck is infrastructure delivery, not technology: 2,600 GW generation in queues (5-year avg wait), 5-7 year gas turbine lead times, 
+2-4 year transformer delays. Policy reforms cannot materially improve conditions before 2028-2029.
+GENERATION INTERCONNECTION
+2,600 GW
+generation in queues (2x installed fleet)
+Only 19% of projects reach COD
+5-year avg wait, 9+ yrs in CAISO
+MANUFACTURING
+5-7 Years
+gas turbine lead times
+80 GW orders vs 30 GW capacity
+GE backlog: $119B
+TRANSFORMERS
+2-4 Years
+large power transformer lead time
+80% imported, 1 domestic GOES producer
+Avg fleet age: 38-40 years
+FASTEST PATH: GETs
+Grid-enhancing technologies could unlock 50-175 GW
+from existing infrastructure but adoption remains 
+minimal
+MATERIALS: COPPER CRUNCH
+IEA projects 30-35% supply shortfall by 2035. 
+Renewables need 4-6x more copper per MW than 
+conventional
+REFORM TIMELINE
+FERC Order 2023 full implementation 2026-2027. 
+Meaningful backlog reduction begins 2028-2030
+Generation Interconnection Queue Crisis by ISO
+The primary binding constraint on new generation capacity additions
+2,600 GW
+Total generation in U.S. queues
+19%
+Project completion rate
+ISO QUEUE WAIT W/D RATE
+CAISO 523 GW 9.2 yrs 20%
+MISO 312 GW 5+ yrs 70%
+PJM 287 GW 6-7 yrs 46-79%
+ERCOT 269 GW 4.5 yrs 20%
+SPP 145 GW 5-6 yrs 46-79%
+NYISO 132 GW 6.5 yrs High
+ISO-NE 51 GW 3.8 yrs Lowest
+FERC Order 2023: Full implementation 2026-27. Meaningful backlog clearing 2028-30.523
+312
+287
+269
+145
+132
+51
+CAISO
+MISO
+PJM
+ERCOT
+SPP
+NYISO
+ISO-NE
+Manufacturing & Equipment Bottlenecks
+Multi-year delivery delays that policy cannot accelerate
+GAS TURBINE MANUFACTURING
+5-7 yrs
+Lead Time
+80 GW
+2024 Orders
+30 GW
+Annual Capacity
+GE Vernova $119B backlog, 29 GW orders + 21 GW slots
+Siemens Energy 5+ yr quotes, 65% from DC customers
+Mitsubishi Doubling capacity in 2 yrs
+LARGE POWER TRANSFORMERS
+2-4 yrs
+Lead Time
+80%
+Imported
+38-40
+Avg Fleet Age (yrs)
+– Pre-pandemic: 12-24 week lead times
+– Current: 80-210 weeks (specialized: 6 yrs)
+– Only Cleveland-Cliffs makes GOES steel domestically
+– 60-80% price increases since 2020
+COPPER SUPPLY
+30-35%
+Shortfall by 2035
+Renewables need 4-6x more Cu/MW
+Mine production peaks 2025-26
+BATTERY & SOLAR
+$115/kWh
+Record low BESS cost
+China: 2,600 GWh/yr capacity 
+(adequate)
+Risk: 828-921% graphite tariffs
+WHEN DO BOTTLENECKS EASE?
+2026-27: Mitsubishi expansion online
+2027-28: Gas turbines > 3-4 yr leads
+2028-30: Potential 2-3 yr leads (high scenario)
+U.S. Firm Capacity Additions by Scenario (2024-2035)
+ELCC-adjusted for intermittent resources | Cumulative GW
+TECHNOLOGY LOW ★ MEDIUM HIGH KEY DRIVER
+Natural Gas (CCGTs + 
+peakers) 33-47 GW 60-75 GW 95-110 GW Turbine manufacturing
+Nuclear (restarts + SMRs) 2.1 GW 4-6 GW 8-12 GW SMR execution risk
+Solar (ELCC-adjusted) 14-26 GW 17-35 GW 20-40 GW ELCC: 50% → 15-30%
+Wind (ELCC-adjusted) 12-17 GW 21-29 GW 32-44 GW ELCC: 25% → 10-20%
+Battery Storage (ELCC-adj) 32-50 GW 42-72 GW 54-96 GW ELCC: 85% → 50-70%
+Geothermal (EGS + 
+conventional) 2-4 GW 6-10 GW 15-25 GW Fervo scaling
+GETs (transmission unlocked) 10-20 GW 40-80 GW 100-150 GW Utility adoption risk
+Other (hydro, LDES) 3-6 GW 8-17 GW 18-30 GW LDES commercialization
+TOTAL FIRM CAPACITY ~140 GW ~257 GW ~418 GW Cumulative 2024-2035
+★ LOW scenario most viable: Reflects proven technologies with minimal reliance on GETs adoption or SMR commercialization. Medium/High scenarios require aggressive utility innovation and first-of-kind nuclear 
+deployment that carry significant execution risk based on market feedback.
+U.S. Regional Supply Analysis by ISO/RTO
+Capacity constraints concentrate in highest data center growth regions
+PJM
+20+ GW
+Dominion zone DC growth by 2037
+– 30 GW DC load growth by 2030
+– Capacity prices 10x to $8-14/kW-mo
+– Queue: 265 GW, only 100 GW by '25
+ERCOT
+205+ GW
+Large load requests (370% increase)
+– 73% of requests from data centers
+– 35 GW DC demand by 2035
+– SB6 "kill-switch" framework
+SOUTHEAST
+50+ GW
+Southern Co pipeline (10 yrs)
+– GA Power: 9.4+ GW over 10 yrs
+– 80%+ from data centers
+– Extending coal life (8.2 GW)
+MISO HIGH
+312 GW queue, 70% withdrawal rate. Tranche 
+process helping clear backlog.
+NYISO HIGH
+132 GW queue, 6.5 yr wait. Pipeline constraints, 
+transmission to NYC limited.
+CAISO MODERATE
+523 GW queue but 9.2 yr wait. Strong 
+solar/storage. CEQA permitting drag.
+SPP / ISO-NE MODERATE
+SPP: 145 GW queue, wind-rich. ISO-NE: 51 GW, 
+lowest withdrawal, gas constrained.
+REGION 2025 PEAK 2030 DEFICIT RANGE 2035 DEFICIT RANGE SEVERITY
+PJM ~152 GW 15-45 GW 25-60+ GW CRITICAL
+ERCOT ~92 GW 10-35 GW 20-70 GW SEVERE
+Southeast Variable 15-25 GW 30-40 GW SEVERE
+Others ~285 GW 14-30 GW 22-48 GW MODERATE-HIGH
+Nuclear Capacity: Restarts and SMR Pipeline
+Probability-weighted additions: 2-12 GW by 2035 depending on scenario
+PLANT RESTARTS (~2.2 GW POTENTIAL)
+Palisades (800 MW) 80-90% Operating status Aug 2025, restart by EOY
+TMI Unit 1 (835 MW) 75-85% Microsoft 20-yr PPA, target 2028
+Duane Arnold (615 
+MW) 65-75% Google/NextEra 25-yr PPA, Q1 2029
+DATA CENTER NUCLEAR PPAs
+Microsoft: TMI restart (835 MW), Constellation
+Amazon: Susquehanna (Talen), X-energy SMRs
+Google: Kairos SMRs, Duane Arnold restart
+Meta: Clinton plant (Constellation)
+→ Multi-GW committed, de-risks development
+SMR VENDOR PIPELINE
+VENDOR KEY PROJECT TIMELINE GW BY 2035 PROBABILITY
+TerraPower Natrium Kemmerer, Wyoming Fall 2031 0.3-0.5 50-60%
+Kairos Power Hermes 2, TN (Google) 2030 0.3-0.5 45-55%
+X-energy Xe-100 Dow Seadrift, TX (Amazon) Early 2030s 0.3-0.5 40-50%
+Oklo Aurora INL demonstration 2027 target 0.05-0.2 25-35%
+NuScale No active U.S. project N/A 0-0.5 20-30%
+LOW SCENARIO: 2.1 GW
+Palisades only + 1-2 demo units
+MEDIUM SCENARIO: 4-6 GW
+All restarts + early commercial SMRs
+HIGH SCENARIO: 8-12 GW
+Multiple vendors at commercial scale
+Supply-Demand Gap
+Crossing Supply and Demand Scenarios
+
+Supply-Demand Gap Analysis (U.S.)
+Absolute GW deficit by scenario combination | Negative = shortfall
+DEMAND SCENARIO A: ACCELERATION
+Business case continues → 115 GW by 2030, 230 GW by 2035
+DEMAND SCENARIO B: PLATEAU
+Business case doesn't materialize → 85 GW by 2030, 95 GW by 2035
+SCENARIO COMBINATION 2027 2030 2035 ASSESSMENT
+Low Supply × Demand A -25 GW -65 GW -90 GW MOST LIKELY ★
+Low Supply × Demand B -10 GW -35 GW +45 GW Tight then surplus
+Med Supply × Demand A -15 GW -40 GW +27 GW Requires GETs/SMR
+Med Supply × Demand B 0 GW -10 GW +162 GW Balanced then surplus
+High Supply × Demand A -5 GW -15 GW +188 GW Achievable if aggressive
+High Supply × Demand B +10 GW +15 GW +323 GW Major surplus
+CRITICAL FINDING
+Under the most likely combination (Low Supply × Demand A), the U.S. faces a 65 GW deficit by 2030 that widens to 90 GW by 2035. This reflects utility delivery 
+slippage and minimal reliance on unproven GETs/SMR deployment.
+Regional Deficit Concentration (2030)
+Medium Supply × Demand A scenario | National gap obscures severe regional crises
+REGION DEMAND SUPPLY DEFICIT
+PJM 35-40 GW 15-20 GW -15 to -25 GW
+ERCOT 25-30 GW 12-18 GW -7 to -18 GW
+Southeast 20-25 GW 10-15 GW -5 to -15 GW
+MISO 8-12 GW 6-10 GW -2 to -6 GW
+Other 20-28 GW 15-22 GW -3 to -8 GW
+MOST CONSTRAINED SUB-REGIONS
+1. Dominion Zone (VA) — 20+ GW DC growth, 10x capacity price spike
+2. West Texas (ERCOT) — 205+ GW requests, transmission-limited
+3. Georgia (Southern Co) — 9.4+ GW new load, extending coal plants
+IMPLICATION: National capacity may appear adequate while specific data center corridors face 
+severe deficits. Geographic arbitrage toward TX, OK will accelerate.
+-20
+-12
+-10
+-4
+-5
+PJM
+ERCOT
+Southeast
+MISO
+Other
+Strategic Implications: Supply-Demand Analysis
+Infrastructure delivery is the binding constraint through 2030
+The fundamental physics of power system development — 5-year queue timelines, 5-7 year equipment lead times, 10-year major 
+transmission projects — cannot be compressed by policy or capital alone. AI data center buildout will proceed at the speed of infrastructure 
+delivery.
+GEOGRAPHIC ARBITRAGE 
+ACCELERATES
+Texas permits 3x faster than California. ERCOT queues 
+are more efficient despite growth. Deregulated markets 
+offer faster delivery despite reliability concerns. 
+Southeast's vertically integrated model offers a middle 
+path — slower but more reliable.
+→ TX, OK have 2-3 year advantage
+BTM GENERATION ESSENTIAL
+With widening deficit through 2035+, on-site generation 
+is not optional but essential: nuclear PPAs, gas island 
+microgrids, co-located renewables + storage. Higher 
+capital intensity but bypasses decade-long 
+interconnection constraints.
+→ $120-140/MWh BTM viable indefinitely
+DEFICIT WIDENS THROUGH 2035
+Under LOW supply scenario (proven tech only), gap 
+grows from -25 GW (2027) to -90 GW (2035). No 
+crossover within forecast window. Seller's market for 
+power capacity. Sustained high capacity prices. 
+Ongoing reliability concerns.
+→ Persistent structural shortage
+BOTTOM LINE FOR INFRASTRUCTURE INVESTORS
+Power infrastructure investment is a low-regret strategy through 2035+. The question is not if demand will 
+materialize, but how much beyond baseline. Even Scenario B (plateau) requires 85-110 GW by 2035 — 4-6x 
+growth from current levels.
+LOW SCENARIO ASSUMPTIONS
+No GETs adoption acceleration
+SMRs: restarts only, no new builds
+Utility delivery slips 2028→2031
+Most Likely Scenario: Supply vs Demand (U.S.)
+Low Supply × Demand A | Based on utility feedback and proven technologies only
+Orange = Demand | Cyan = Supply | Gap widens through 2035
+LOW SUPPLY SCENARIO
+Proven technologies only. No reliance on GETs 
+adoption or SMR commercialization. Reflects 
+2028→2031 utility slippage.
+SUPPLY-DEMAND GAP
+2027: -25 GW
+2030: -65 GW
+2035: -90 GW
+2040+
+Crossover
+WIDENING
+Gap trajectory
+INVESTMENT THESIS
+Power infrastructure is low-regret through 2035+. BTM 
+bridging essential for any near-term deployment.
+0
+50
+100
+150
+200
+250
+2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035
+GW
+Geographic Demand Distribution
+U.S. Technology Stack demand ≠ U.S.-located power demand
+THE DISTINCTION
+U.S. TECHNOLOGY STACK (75-80% OF GLOBAL)
+Chips designed by NVIDIA, AMD, Google, Amazon, Microsoft, Meta, 
+Broadcom, Intel, Qualcomm — regardless of where deployed
+↓
+U.S. DOMESTIC DEPLOYMENT (~70%)
+Power demand that materializes within U.S. borders — training concentration, 
+North American inference, security preferences
+INTERNATIONAL OVERSPILL (~30%)
+Demand forced overseas by U.S. power constraints — GDPR requirements, 
+sovereign AI initiatives, latency optimization
+THE "PRESSURE COOKER" EFFECT
+Full stack demand represents pressure on the U.S. system. Capacity that 
+wants to be here but is forced overseas. Any deliverable U.S. capacity is 
+immediately absorbed at scarcity premium.
+WHY ~70% STAYS DOMESTIC
+Training Concentration
+Frontier models require proximity to research teams, IP security. 80%+ of 
+training stays U.S.
+North American Market
+Largest demand market. Central U.S. serves continent with acceptable latency 
+(30-50ms).
+Ecosystem Depth
+HV electricians, commissioning engineers, EPC capacity concentrated in U.S.
+WHY ~30% GOES INTERNATIONAL
+U.S. Power Constraints
+5-9 year queues force hyperscalers to seek deliverable power abroad.
+Sovereign AI / Data Residency
+GDPR mandates local deployment. UAE, Saudi, France, UK funding sovereign 
+clouds.
+Global Inference Latency
+Europe (70ms+) and Asia (150ms+) from U.S. require regional hubs.
+OVERSPILL DESTINATIONS
+Middle East 10-15%
+UAE, Saudi — cheap power, fast permitting, serves 
+Europe/Africa/South Asia
+Europe 8-12%
+Nordics, UK, Ireland — GDPR compliance, renewable power
+Asia-Pacific 5-8%
+Japan, Singapore, Australia — regional inference hubs
+CRITICAL: SAME SUPPLY CONSTRAINTS
+International sites face identical equipment bottlenecks: 5-7 year gas 
+turbine lead times, 2-4 year transformer delays. Building in UAE 
+competes for the same GE/Siemens capacity as Oklahoma.
+IMPLICATION
+Overspill destinations don't relieve pressure — they queue behind it. 
+U.S. capacity remains scarce and premium-priced.
+Domestic share range: Estimates vary from 55-80% depending on sovereign AI acceleration and U.S. supply responsiveness. 70% is base case. Higher U.S. share = larger domestic deficit. Lower share still leaves 30-50 GW shortfall.
+Recalibrated U.S. Supply vs Demand
+Even with 30% international overspill, structural U.S. deficit persists through 2035
+Total U.S. Stack Demand U.S. Domestic Demand (70%) U.S. Supply (Low Trend)
+DEFICIT ANALYSIS
+2030
+Stack Demand: 115 GW
+Domestic (70%): 81 GW
+U.S. Supply: 50 GW
+U.S. Deficit: -31 GW
+2035
+Stack Demand: 230 GW
+Domestic (70%): 161 GW
+U.S. Supply: 140 GW
+U.S. Deficit: -21 GW
+THE GAP BETWEEN LINES
+Orange → Green = demand forced overseas by U.S. constraints. Green → 
+Cyan = persistent domestic deficit requiring fast-to-power solutions.
+INTERNATIONAL DEMAND = SAME SUPPLY CHAIN PRESSURE
+The ~35 GW of 2030 overspill competes for the same gas turbines, transformers, and HV equipment. International buildout does not relieve global manufacturing constraints — it adds to them. GE, Siemens, Hitachi backlogs serve global demand.
+0
+50
+100
+150
+200
+250
+2024 2025 2026 2027 2028 2029 2030 2031 2032 2033 2034 2035
+GW
+APPENDIX
+State Prioritization Analysis
+Powered Land Development Opportunity Ranking
+State Prioritization: Scoring Methodology
+Weighted criteria for powered land development opportunity
+SCORING DIMENSIONS
+Queue Efficiency 25%
+Interconnection timeline, backlog volume, completion rate
+Permitting Speed 20%
+State/local approvals, environmental review, political climate
+BTM Flexibility 15%
+Regulatory pathway for on-site generation at scale
+Transmission Headroom 15%
+Available capacity without major grid upgrades
+Resource Access 10%
+Gas pipeline, renewable potential, water availability
+Saturation/Competition 10%
+Market crowding, competitive pressure for sites
+Cost Structure 5%
+Land, labor, taxes, incentives
+TIER 1: HIGHEST PRIORITY
+Score 75-100
+Aggressive development. Best deliverability.
+TIER 2: STRONG POTENTIAL
+Score 60-74
+Selective with manageable constraints.
+TIER 3: SELECTIVE
+Score 50-64
+Opportunistic. Specific circumstances.
+AVOID
+Score <50
+Structural barriers. Not viable.
+Key Thesis: States that will win data center investment 2030-2035 are those that can actually deliver power, not those with the best demand fundamentals. This inverts traditional site selection.
+TIER 1 Highest Priority States (Score 75-100)
+88
+OKLAHOMA
+SPP
+ADVANTAGES
+SPP transmission buildout. OG&E proactive on large loads. 
+Excellent gas + wind. Low competition. BTM straightforward.
+RISKS
+Smaller utility balance sheets. Workforce depth for mega-scale.
+Target: Tulsa corridor, Mayes, Rogers, Washington, Creek 
+Counties
+82
+WYOMING
+WECC / SPP
+ADVANTAGES
+Fastest permitting in nation. Best wind (45-50% CF). TerraPower 
+SMR 2031. Coal retirement sites. Lowest costs.
+RISKS
+Transmission export constraints (improving). Distance from 
+markets. Limited ecosystem.
+Target: Cheyenne, Casper, Gillette, Kemmerer (SMR)
+80
+TEXAS (Secondary)
+ERCOT
+ADVANTAGES
+Most permissive BTM. 3x faster permitting. ERCOT market 
+rewards flex. SB6 large load framework. Deep ecosystem.
+RISKS
+Grid reliability (Uri). Primary markets saturated. "Kill switch" for 
+large loads. Water stress west.
+Target: Permian, Panhandle, East TX, Gulf Coast. Avoid 
+DFW/Austin.
+TIER 2 Strong Potential — PJM & Southeast (Score 60-74)
+76
+WEST VIRGINIA
+PJM (AEP/FirstEnergy)
+ADVANTAGES
+Coal retirement sites w/ transmission. 
+Marcellus gas. Very low costs. Governor 
+courting DCs. WV Data Center Act 
+incentives.
+RISKS
+PJM queue still applies. Limited 
+workforce/ecosystem.
+Target: Pleasants, Harrison (coal sites), 
+Eastern Panhandle
+72
+INDIANA
+PJM (AEP) / MISO
+ADVANTAGES
+Less congested than VA. Coal retirement 
+sites. Central location. AEP proactive. 
+Business-friendly state.
+RISKS
+PJM/MISO queue. Less BTM flexibility. 
+Utility cooperation required.
+Target: Central IN, Indianapolis suburbs, 
+retired coal sites
+70
+OHIO
+PJM (AEP/FE)
+ADVANTAGES
+Marcellus gas access. Google/Meta/AWS 
+presence. Central location. Some coal 
+sites available.
+RISKS
+More complex regulatory. Variable county 
+permitting. PJM queue applies.
+Target: Columbus suburbs, AEP territory, 
+SE Ohio
+70
+GEORGIA
+SERC (Southern Co)
+ADVANTAGES
+Utility obligated to serve. Vogtle 3&4 
+nuclear online. Strong ecosystem. 
+Regulatory certainty once approved.
+RISKS
+Limited BTM. Must partner with Georgia 
+Power. Near-term capacity tight.
+Target: Newton, Douglas Co, metro 
+Atlanta ring
+68
+PENNSYLVANIA 
+WPJM (Non-Dominion)
+ADVANTAGES
+Marcellus gas abundant. TMI restart 
+(Microsoft). Nuclear restart potential. Less 
+saturated than VA.
+RISKS
+PJM queue. Environmental opposition in 
+some areas. Complex utility landscape.
+Target: York/Lancaster, Pittsburgh 
+suburbs, Scranton
+TIER 2 Strong Potential — Gulf South & MISO (Score 60-74)
+71 ARKANSAS
+SPP / MISO
+ADVANTAGES
+Entergy proactive on DCs. Low land costs. Good gas access 
+(Fayetteville Shale). Low competition. Central location. Nuclear 
+(ANO) provides baseload.
+RISKS
+Smaller utility balance sheet. Limited workforce depth. Less 
+developed ecosystem.
+Target: Little Rock metro, NW Arkansas (Bentonville corridor), 
+Jonesboro
+68 LOUISIANA
+MISO
+ADVANTAGES
+Excellent gas infrastructure (Henry Hub). Industrial load 
+experience. Strong incentives (LED, ITEP). Nuclear (Waterford, 
+River Bend). LNG export infrastructure.
+RISKS
+Hurricane exposure (coastal). MISO queue challenges. Entergy 
+capacity tight. Transmission constraints in some areas.
+Target: Baton Rouge corridor, Shreveport (north, lower hurricane 
+risk), Lake Charles (gas/LNG)
+64 MISSISSIPPI
+MISO / SERC
+ADVANTAGES
+Lowest land costs in region. Very low competition. Grand Gulf 
+nuclear station. Business-friendly. Strong state incentives (MDA).
+RISKS
+Weaker transmission infrastructure. Smaller utility balance sheets. 
+Limited workforce. Hurricane exposure (coastal).
+Target: Jackson metro, DeSoto County (Memphis adjacent), 
+Hattiesburg
+Gulf South Thesis: Entergy territory spans AR/LA/MS with consistent regulatory approach. Gas infrastructure excellent. Low saturation = early mover advantage. Northern locations (Shreveport, NW Arkansas, DeSoto) 
+avoid hurricane exposure while maintaining cost advantages.
+TIER 3 Selective Opportunity (Score 50-64)
+67
+NEW MEXICO
+WECC
+ADVANTAGES
+Best solar in nation. Low competition. 
+SunZia transmission (under construction). 
+Permian-adjacent gas. Low costs.
+RISKS
+Severe water stress (critical). Distance 
+from markets. Limited workforce.
+Target: Los Lunas, ABQ metro, Las 
+Cruces
+58
+VIRGINIA (Secondary)
+PJM - Dominion Edge
+ADVANTAGES
+Highest powered land premium in nation 
+(scarcity). Secondary markets (Southside, 
+Valley) less congested than NoVA.
+RISKS
+NoVA = AVOID. 20+ GW demand vs 
+capacity. Queue closed. 6-7 year 
+timelines.
+Target: Southside VA, Roanoke, Valley 
+ONLY w/ existing queue
+55
+NEVAD
+AWECC
+ADVANTAGES
+Good solar. Switch, Apple, Google 
+present. Reno/Sparks better than Vegas 
+for water.
+RISKS
+Severe water stress (Las Vegas critical). 
+Transmission constraints. NV Energy 
+capacity limited.
+Target: Reno/Sparks only. Avoid Las 
+Vegas.
+52
+ARIZONA
+WECC
+ADVANTAGES
+Excellent solar. Palo Verde nuclear. 
+Microsoft, Google present. SRP/APS 
+large utilities.
+RISKS
+Critical water stress (Phoenix acute). 
+Capacity hitting limits. Cooling 
+challenges.
+Target: N. Arizona (Flagstaff) only. Avoid 
+Phoenix metro.
+62
+MONTANA
+WECC / NorthernGrid
+ADVANTAGES
+Very low saturation. Colstrip coal 
+retirement (transmission). Good wind. 
+Permitting fast. Cold climate cooling.
+RISKS
+Transmission export constraints. Limited 
+gas. Distance from markets. Workforce 
+thin.
+Target: Colstrip area, Billings, Butte
+AVOI
+D
+Structural Barriers — Not Viable for New Development
+25 CALIFORNIA
+CAISO
+FATAL CONSTRAINTS
+•9.2-year average 
+queue wait
+•CEQA permitting 2-4 
+years
+•No new gas permitted
+•Highest costs in 
+nation
+•Severe water stress
+Not viable for new development
+30 N. VIRGINIA (Primary)
+PJM - Dominion
+FATAL CONSTRAINTS
+•Queue closed by 
+PJM
+•20+ GW demand vs 
+capacity
+•6-7 year timelines
+•70%+ of U.S. DC 
+market
+•No capacity until 
+2030+
+Only acquire existing queue positions
+40 NEW YORK
+NYISO
+KEY CONSTRAINTS
+•High costs (land, 
+labor)
+•Environmental 
+opposition
+•Upstate transmission 
+limited
+•NYC-centric grid 
+design
+•Moratorium 
+discussions
+Very limited opportunity
+35 NEW ENGLAND
+ISO-NE
+KEY CONSTRAINTS
+•Gas pipeline 
+constraints
+•Highest power costs
+•Limited land 
+availability
+•Environmental 
+opposition
+•Small geographic 
+area
+Not viable for new development
+Common Thread: Long queue times, high costs, regulatory complexity. Capital faces 5 -10 year timelines vs 2-4 years in Tier 1. Geographic arbitrage strongly favored.
+State Prioritization Summary
+Powered Land Development Opportunity Rankings (2030-2035 Delivery)
+Rank State/Region ISO Score 2027-30 2030-35 Strategy
+1 Oklahoma SPP 88 ★★★★★ ★★★★★ Aggressive. Tulsa corridor well-positioned.
+2 Wyoming WECC/SPP 82 ★★★★ ★★★★★ Emerging. Position now for 2030+.
+3 Texas (Secondary) ERCOT 80 ★★★★ ★★★★ Selective. Permian, Panhandle, East TX.
+4 West Virginia PJM 76 ★★★ ★★★★ Coal sites + gas. Growing opportunity.
+5 Indiana PJM/MISO 72 ★★★ ★★★★ Coal retirement sites. AEP proactive.
+6 Arkansas SPP/MISO 71 ★★★ ★★★★ Entergy territory. Low saturation.
+7 Ohio / Georgia PJM / SERC 70 ★★★ ★★★★ OH: gas. GA: utility obligation.
+8 Louisiana / PA West MISO / PJM 68 ★★★ ★★★ LA: gas hub. PA: nuclear restarts.
+9 Mississippi MISO/SERC 64 ★★ ★★★ Lowest costs. Very low saturation.
+IMMEDIATE ACTION
+Oklahoma Tulsa corridor is #1 ranked with existing 
+portfolio. Expand position. SPP queue 1-2 years faster 
+than ERCOT, 3-4 years faster than PJM.
+NEAR-TERM EXPANSION
+Wyoming + West Virginia coal retirement sites offer 2030+ 
+capacity with existing transmission. Gulf South 
+(AR/LA/MS) under-saturated with Entergy cooperation.
+CRITICAL FILTERS
+Avoid water-stressed markets (AZ/NV/NM coastal). Avoid 
+saturated markets (NoVA, TX primary). Prioritize gas 
+pipeline access for BTM optionality.
+AVOID
+California (9+ yr queue), NoVA primary (closed), New 
+England (gas constraints), New York (costs + opposition).
+Strategic Implications: Geographic Arbitrage
+Capacity delivery timeline drives site selection, not demand proximity
+SPP / CENTRAL CORRIDOR 2-3 YR 
+ADVANTAGE
+Oklahoma, Arkansas, Wyoming form "Central Power Belt" with 2-3 year delivery advantage. Transmission built for wind now 
+available for DC load. Gas infrastructure excellent.
+GULF SOUTH / ENTERGY UNDER-SATURATED
+LA, MS, AR (Entergy) offer consistent regulatory framework. Henry Hub gas unmatched. Northern locations avoid hurricane 
+exposure.
+RUST BELT / COAL CONVERSION INFRASTRUCTURE REUSE
+WV, IN, OH, PA offer coal retirement sites with existing HV transmission. Marcellus gas abundant. PJM queue less congested 
+than Virginia.
+DELIVERY TIMELINE BY REGION
+SPP (OK, AR) 2-3 yrs
+ERCOT (TX Secondary) 3-4 yrs
+MISO (LA, MS, IN) 4-5 yrs
+PJM (WV, OH, PA) 4-6 yrs
+PJM-Dominion (NoVA) 6-7+ yrs
+CAISO (California) 9+ yrs
+PORTFOLIO STRATEGY
+Core: OK Tulsa corridor | Expand: WY, WV, AR | Opportunistic: TX secondary | 
+Avoid: CA, NoVA, NE
+PART VI
+Strategic Analysis
+Execution Framework for 2026-2027
+FOCUS
+Giga-Scale Development
+WINDOW
+18-36 Month Arbitrage
+IMPERATIVE
+Speed of Execution
+Strategic Imperatives
+Core framework for powered land development 2026-2027
+PILLAR 1
+Giga-Scale Mandate
+Focus exclusively on 1GW+ Energy Hubs — smaller sites 
+cannot achieve BTM economies of scale or meet 
+hyperscaler cluster requirements.
+KEY DRIVERS
+AI training requires contiguous capacity
+1GW commands higher $/MW premium
+BTM gas economics require scale
+Effort-to-yield ratio maximized
+PILLAR 2
+Geographic Arbitrage
+Prioritize speed-to-power over proximity to traditional 
+markets. Generation queue efficiency now drives site 
+selection.
+PRIORITY REGIONS
+P1: Central Belt (OK, AR, WY) — 2-3 yr
+P2: Rust Belt (WV, IN, OH, PA) — 4-5 yr
+P3: ERCOT Secondary (TX) — 3-4 yr
+Avoid: CA, NoVA, NE, NY — 6-9+ yr
+PILLAR 3
+BTM / Power Island
+Assume the grid will be late. Design all campuses with 
+BTM capability from inception. Reliance on grid alone is a 
+failing strategy.
+EXECUTION ELEMENTS
+Gas pipeline access mandatory
+Brownfield sites (coal retirement)
+Dual-fuel capability standard
+Battery storage complement
+CORE THESIS
+Your value proposition: delivering complex, integrated energy solutions faster than hyperscalers can themselves.
+Strategic Partnership Model
+Partnering for BTM capability rather than building IPP infrastructure in-house
+THE STRATEGIC CHOICE
+BUILD (HIGH RISK)
+In-house energy trading, fuel procurement, 
+generation O&M
+PARTNER (RECOMMENDED)
+With established IPPs who bring capital, 
+expertise, risk capacity
+IDEAL PARTNER PROFILES
+Major IPPs: Talen, Vistra, NRG, Calpine — generation fleet, trading desks, fuel contracts
+Infrastructure Funds: Stonepeak, EIG, KKR Infra — patient capital, energy expertise
+Utility Affiliates: AEP Energy Partners, NextEra — regulatory relationships, balance sheet
+O&M Specialists: Mitsubishi Power, GE Vernova — turbine supply + long-term service
+PARTNERSHIP STRUCTURES
+Development Partner
+You contribute: site control, entitlements, utility relationships, end-user pipeline
+Partner contributes: generation development, fuel, O&M, capital
+PPA + Tolling Structure
+IPP builds/owns BTM generation, sells power under long-term PPA to DC. You take spread on powered 
+land.
+Build-Transfer-Operate
+Partner develops generation, transfers to DC owner/operator, retains long-term O&M contract.
+YOUR VALUE PROPOSITION TO PARTNERS
+Shovel-ready sites in low-queue states + utility relationships + end-user demand pipeline = de-risked development for IPP partners seeking DC exposure.
+State Capacity Projections
+Realistic new DC capacity (GW) for Central Belt states through 2035
+STATE 2030 GW 2035 GW CONSTRAINT
+Oklahoma 3.5 - 6.0 8 - 12 Labor / Supply Chain
+Wyoming 1.5 - 2.5 3.5 - 5.5 Acute Labor / Logistics
+Arkansas 1.0 - 2.0 2.5 - 4.5 MISO Queue / Infra
+TOTAL 6 - 10.5 14 - 22
+OKLAHOMA SUB-MARKETS (8-12 GW)
+Tulsa / MAIP
+4 - 5.5 GW
+OKC Metro
+2.5 - 4 GW
+Rural / Panhandle
+1.5 - 2.5 GW
+BINDING CONSTRAINT
+Labor is underweighted. A 1GW campus requires 2,000+ specialized workers. 3-5 concurrent projects creates acute labor competition.
+5
+2
+2
+10
+5
+4
+0 5 10
+Oklahoma
+Wyoming
+Arkansas
+2035 GW 2030 GW
+Binding Constraints Analysis
+The brakes on development — assuming unlimited demand and capital
+SUPPLY CHAIN
+Physical Bottleneck
+BTM strategy relies on gas turbines with 5-7 
+year lead times. Projects initiated now receive 
+equipment 2030-2032.
+Gas Turbines: 5-7 yrs
+Transformers: 2-4 yrs
+Switchgear: 18-30 mo
+LABOR FORCE
+Human Bottleneck
+Most significant localized constraint. These 
+states lack deep specialized labor pools. A 
+single 1GW campus requires 2,000+ workers.
+Per 1GW Campus: 2,000+ workers
+HV Electricians: Critical shortage
+Commissioning: Critical shortage
+GAS INFRASTRUCTURE
+Pipeline Capacity
+Resource-rich states but pipeline capacity for 
+Giga-scale BTM not guaranteed. Local 
+distribution insufficient.
+Pipeline Upgrades: 2-4 yrs
+Firm Transport: Contract required
+OK/AR Access: Strong
+UTILITY ABSORPTION
+Pace of Scaling
+Smaller utility balance sheets and less 
+engineering bandwidth than coastal giants.
+OG&E / PSO: Proactive
+Entergy: Proactive
+Concurrent GW Projects: Limited
+Key Insight: You can buy turbines on secondary markets and fund transmission upgrades — but you cannot manufacture experienced HV electricians. Labor is the constraint most likely to bite.
+Water vs Power: The Binary Divide
+Why power is the fatal flaw and water is a design variable
+POWER IS BINARY
+0 or 1
+Either you have firm capacity or you do not
+No design workaround. A data center without power is a warehouse. Cannot be optimized, 
+substituted, or engineered around.
+CHARACTERISTICS
+Generation queue position is irreversible
+Timeline slippage = project death
+No substitute for firm MW
+BTM only option when grid fails
+FATAL FLAW CRITERION
+No power pathway = Kill the deal
+WATER IS DESIGNABLE
+70x Range
+Technology choice drives consumption
+Observed variation: End-user requirements range from 120K gal/day to 8M gal/day for 
+equivalent 600-900MW campuses.
+DESIGN LEVERS
+Air cooling vs evaporative (10x delta)
+Closed-loop liquid cooling (lowest)
+Reclaimed / industrial water sources
+BTM generation cooling technology
+PLUS FACTOR
+Water rights are valuable, but absence is manageable
+LOW WATER DESIGN
+120K - 500K gal/day
+Air-cooled + closed-loop liquid | 600-900MW
+HIGH WATER DESIGN
+5M - 8M gal/day
+Evaporative cooling + BTM thermal | 600MW
+IMPLICATION
+Water adds value but is not disqualifying. Design to context. 
+Power has no substitute.
+Strategic Risk Matrix
+Second-order effects and hidden risks in BTM/Giga-scale strategy
+GAS ISLAND RISK — HIGH
+Firm transport does not equal firm delivery during extreme weather 
+(Uri). Pipeline interruption = catastrophic downtime.
+Mitigation: Dual-fuel capability, on-site LNG/diesel storage
+STRANDED ASSET — MEDIUM
+BTM gas conflicts with Net Zero commitments. By mid-2030s, risk 
+of regulatory/customer-driven stranding.
+Mitigation: H2-ready design (hedge only), CCUS optionality
+POLITICAL BACKLASH — MEDIUM
+Socialized infrastructure costs lead to residential rate shock, power 
+hogs narrative, moratoriums.
+Mitigation: Direct cost allocation, proactive PUC engagement
+GAS PRICE VOLATILITY — MEDIUM
+Henry Hub: $2-9/MMBtu range. At $4/MMBtu BTM compelling. At 
+$8/MMBtu value proposition weakens.
+Mitigation: Long-term hedging, fixed-price contracts
+CLOSING WINDOW — HIGH
+Geographic arbitrage is not proprietary. Rush to the Middle will 
+erode speed advantages within 18-36 months.
+Response: Lock down best sites, utility commitments NOW
+TAIWAN BLACK SWAN — TAIL
+55% of US AI capacity still fabbed in Taiwan 2030. Disruption halts 
+new demand but existing infra value spikes.
+Implication: Capacity online 2025-2028 = geopolitical hedge
+Net Assessment: Risks are manageable with proper mitigation. The dominant risk is moving too slowly. Speed of execution remains the strategic imperative.
+The Closing Window
+18-36 month arbitrage opportunity — execution priorities for 2026-2027
+ARBITRAGE WINDOW EROSION
+2025-2026 — MAXIMUM ADVANTAGE
+First movers secure best sites, utility relationships, labor
+2027 — ERODING
+QTS, Vantage, EdgeCore entering OK/TX secondary
+2028+ — NORMALIZED
+Arbitrage states saturated. Competing on cost.
+OKLAHOMA POSITIONING
+Sites in #1 ranked state offer 12-18 month advantage over competitors entering now. First movers 
+capture utility relationships and queue positions.
+EXECUTION PRIORITIES 2026-2027
+1 Secure 3-5 Giga-Scale Sites
+Deploy capital for queue positions, land control, utility LOIs
+2 Lock Labor and Equipment
+Secure HV electrical contractors, turbine positions
+3 Deepen Utility Relationships
+Embed in OG&E/PSO IRP planning, fund staff expansion
+4 Build IPP Capability
+Establish energy trading partnership or hire desk
+The dominant risk is moving too slowly.
+Every month of delay narrows the window. Capacity online 2027-2030 captures peak scarcity premium.
+Site Selection Team: Execution Framework
+Prioritized actions within your control — organized by impact and urgency
+PRIORITY 1: IMMEDIATE (Q1 2026)
+Queue Positions
+File generation interconnection applications NOW
+Fund feasibility studies to advance queue position
+Every month delay = 1 month later delivery
+Capital Readiness
+Stage capital for rapid deployment on sites
+Pre-approve land acquisition parameters
+Opportunity cost of slow capital is site loss
+Utility Relationships
+Deepen OG&E/PSO/GRDA engagement
+Participate in IRP planning processes
+Relationship depth = timeline advantage
+PRIORITY 2: NEAR-TERM (H1 2026)
+IPP Partnerships
+Initiate conversations with 3-5 target IPPs
+Define JV term sheet templates
+Critical for BTM execution capability
+Economic Development
+Build relationships with state/local EDCs
+Identify incentive programs, expedited permitting
+Political support accelerates timelines
+Developer Partnerships
+Formalize partnership models
+Expand developer partner network
+Execution capacity for parallel projects
+PRIORITY 3: ENABLERS (2026)
+DD Standardization
+Create repeatable site evaluation checklist
+Standardize power pathway assessment
+Speed + consistency in evaluation
+EPC / Technical MSA
+Pre-negotiate MSA for DD
+Rapid-deploy technical assessment capability
+Eliminates procurement delay on new sites
+End-User Pipeline
+Expand hyperscaler relationship network
+Track demand signals, RFP calendars
+Demand visibility de-risks development
+All items above are within your direct control. Priority 1 items are time-critical and compound — delay costs more than capital. Execute in parallel, not sequence.
+Geographic Flexibility: Why Central Sites Work
+70-85% of AI power demand is location-independent — power availability trumps proximity
+THE PHYSICS OF LATENCY
+Fiber Optic Speed: ~124 miles per millisecond
+OKC → NYC
+~22ms
+1,330 miles
+OKC → LA
+~20ms
+1,180 miles
+Effective RTT with network overhead: 30-50ms to either coast
+THE KEY INSIGHT
+For Generative AI, processing latency (100-300ms) dominates network latency. Whether 
+network adds 10ms (local) or 40ms (central) is imperceptible to users.
+Total Latency = Network RTT + Processing Latency
+WORKLOAD GEOGRAPHIC REQUIREMENTS
+AI TRAINING
+100% geographically flexible
+Needs power, not proximity
+GENAI INFERENCE
+Chatbots, Copilots, Search
+Flexible (40-100ms+ tolerance)
+Dominant GW demand driver
+LOW LATENCY
+Gaming, AR/VR, AdTech
+Needs regional proximity
+Medium GW impact
+ULTRA-LOW
+AVs, Robotics, HFT
+On-device or metro edge
+Not centralized DC demand
+STRATEGIC CONCLUSION
+70-85% of forecasted AI power demand can be served from Central U.S. sites. Prioritize power availability over proximity. The caveat: sites must have diverse, high-capacity fiber routes to coastal 
+exchange points.
+Latency Spectrum: Workload Detail
+The Hub-and-Spoke architecture validates Central Belt positioning for Giga-scale demand
+CATEGORY THRESHOLD USE CASES LOCATION REQ GW IMPACT
+Ultra-Low < 10ms Autonomous vehicles, industrial robotics, high-frequency trading On-device or metro edge Low
+Low Latency 10-40ms Cloud gaming, complex AR/VR rendering, real-time AdTech Metro / Regional Medium
+Medium Latency 40-100ms+ Generative AI (chatbots, copilots), search engines, recommendation engines Centralized / Continental VERY HIGH
+Tolerant > 100ms Batch processing, scientific analysis, non-real-time content moderation Anywhere High
+THE HUBS: AI Factories (Giga-Scale)
+Location: Central U.S. (OK, AR, WY), Rust Belt
+Function: All training + majority of inference
+Optimized for: Power, cost, deliverability
+THE SPOKES: Regional/Edge
+Location: NoVA, Dallas, LA, Atlanta metros
+Function: Low-latency inference, peering, caching
+Optimized for: Proximity (10-200MW sites)
+SITE SELECTION CRITERION
+Add to DD checklist: Fiber connectivity
+Require: Diverse routes to both coasts
+Tulsa: Strong (legacy telecom hub)
+CAVEAT: This analysis is most robust through 2030. Post-2030, if model inference speeds drop dramatically (to 20-50ms), network latency becomes relatively more important. For the 2026-2030 arbitrage window, power 
+availability clearly dominates proximity.
+The Queue Reality: Bimodal Value Distribution
+Queue position ≠ value. The market is bifurcating into worthless speculation and premium deliverables.
+THE FLOOD OF SPECULATION
+90+ GW
+PJM DC load requests
+100+ 
+GW
+ERCOT large load
+19%
+Historical completion
+Most queue entries are speculative — no land control, no end-user, no 
+utility relationship, no execution capability. "Ghost projects" hoping to flip 
+positions.
+THE GREAT FILTER
+FERC Order 2023
+"First-Ready, First-Served" — higher deposits, readiness milestones, 
+withdrawal penalties. Full implementation 2026 -27.
+Escalating Costs
+Study deposits, security postings, upgrade cost assignments — filters out 
+undercapitalized speculators.
+Utility Triage
+Overwhelmed utilities prioritizing real projects with end-user commitment, 
+land control, financial capability.
+BIMODAL VALUE DISTRIBUTION
+Worthless (~$0) Middle (uncertain) Premium ($1M+)
+Not a continuum. Most positions worth ~$0. Few with right ingredients command 
+premium.
+THE BIFURCATION
+THE "HAVE NOTS"
+Weak queue, no infrastructure, 
+undercapitalized. Will fail the filter. Value → $0.
+THE "HAVES"
+Full ingredients, utility commitment, end-user 
+alignment. Unprecedented premiums.
+VALUE BY STAGE $/MW (2025)
+Queue only, no ingredients ~$0
+Queue + land, no pathway $20-75K
+Early real (utility engaged) $150-300K
+Advancing (study + end-user) $300-500K
+Committed (LOI + entitlements) $500K-1M
+De-risked (36-mo certainty) $800K-1.5M+
+Key insight: The $200K/MW in emerging markets isn't pricing a 
+queue. It's pricing real ingredients and credible sponsors.
+Strategic implication: Don't buy queue positions. Deploy ingredients. The margin is in transforming $0 optionality into $500K+ committed value through execution capability and relationships.
+The Right Ingredients: What Creates Value
+Queue position is table stakes. Value comes from the bundle that enables execution.
+THE VALUE HIERARCHY
+END-USER DEMAND
+Hyperscaler commitment validates all
+↓ validates
+POWER PATHWAY
+Utility commitment + transmission + queue
+↓ enables
+SITE FUNDAMENTALS
+Land, water, fiber, zoning, BTM pathway
+↓ supports
+QUEUE POSITION ALONE
+Worth very little without the above
+THE INGREDIENTS CHECKLIST
+Tier 1: Relationship Capital (Cannot Rush)
+Utility trust, end-user pipeline, community relationships, political access
+Build time: 2-5+ years. Must pre-exist.
+Tier 2: Execution Capability
+Transmission expertise, BTM knowledge, EPC relationships, track record
+Differentiates serious players from speculators.
+Tier 3: Financial Capability
+Patient capital, $100M+ security posting, study funding, fast decisions
+The "Great Filter" for undercapitalized speculators.
+Tier 4: Site-Specific (Table Stakes)
+Land control, queue position, water access, fiber connectivity
+Acquirable with money. Necessary but not differentiating.
+THE 12-18 MONTH SPRINT
+Option Window Reality
+12-18 months from land option to close or walk. Everything must happen 
+in parallel.
+Parallel Workstreams
+Utility study, end-user LOI, zoning/permits, technical DD, financing — all 
+simultaneous.
+The Chicken-and-Egg
+Utility wants end-user. End-user wants power. Zoning wants both. 
+Someone must break cycle with credibility.
+THE MOAT
+Ability to execute parallel sprint — relationships + capability + capital in 
+12-18 months.
+Who can do this? Perhaps 10-20 organizations nationally have pre-existing relationships, execution capability, and capital to run the parallel sprint successfully.
+Geographic Convergence: NoVA as the Ceiling
+Location doesn't matter for AI workloads. Power does. Pricing will converge nationally.
+WHY LOCATION DOESN'T MATTER
+The Latency Reality
+Processing latency (100-300ms) dominates network latency (30-50ms) 
+for GenAI workloads.
+OKC → NYC
+~22ms
+OKC → LA
+~20ms
+Workload Distribution
+AI Training 100% location flexible
+GenAI Inference 80%+ location flexible
+Low-latency (gaming, AR) Regional required
+70-85% of AI power demand can be served from Central U.S.
+THE CONVERGENCE LOGIC
+If location doesn't matter for the workload, and power is the binding 
+constraint everywhere, then the price of deliverable power should 
+converge nationally.
+THE ARBITRAGE WINDOW
+$2M+
+$1.5M
+$1M
+$500K
+$0
+ 2025 2026 2027 2028 2030
+NoVA 
+(ceiling)
+Central Belt (converging)
+2025
+25-35%
+of NoVA
+2027
+45-55%
+of NoVA
+2030
+70-85%
+of NoVA
+The arbitrage: Acquire in Central Belt at 25-35% of NoVA pricing. Hold as convergence 
+closes the gap. Capture both development margin and convergence premium.
+CURRENT MARKET DATA
+Tier 1 (Saturated)
+NoV
+A
+$1M+/MW
+7+ year queues, extreme scarcity
+Tier 2 (Competitive)
+DFW $500K-1M/MW
+Growing competition, tightening
+Tier 3 (Emerging)
+Tulsa / OK ~$200K/MW
+Rural emerging $150K+/MW
+Early recognition, max arbitrage
+NOVA'S DYSFUNCTION = YOUR OPPORTUNITY
+Every year NoVA gets more constrained and expensive, the case for 
+Central Belt strengthens and convergence accelerates.
+Note: Prices shown are for real sites with credible sponsors and utility engagement (not queue-only positions). Full parity unlikely due to ecosystem maturity discount (10-15%), but convergence to 70-85% of NoVA represents 2-4x appreciation 
+from current Central Belt levels.
+Powered Land Valuation Forecast (2025-2030)
+De-risked sites with utility commitment, full entitlements, 36-month delivery, 150-200MW/year scaling
+500MW CAPABLE SITES ($/MW)
+Year Low Mid High
+2025 $400K $600K $900K
+2026 $500K $800K $1.2M
+2027 $700K $1.1M $1.6M
+2028 $800K $1.3M $2.0M
+2029 $900K $1.4M $2.2M
+2030 $800K $1.3M $2.0M
+5-Year Mid Appreciation: ~2.2x
+1GW+ CAPABLE SITES ($/MW)
+Year Low Mid High
+2025 $550K $800K $1.2M
+2026 $700K $1.1M $1.6M
+2027 $1.0M $1.5M $2.2M
+2028 $1.2M $1.8M $2.8M
+2029 $1.3M $2.0M $3.0M
+2030 $1.2M $1.8M $2.8M
+5-Year Mid Appreciation: ~2.3x
+SCALE PREMIUM
+1GW vs 500MW Premium
+2025 ~35%
+2027 ~40%
+2030 ~45%
+VALUE DRIVERS
+↑ NoVA further constrained
+↑ Hyperscaler announcements
+↑ Equipment bottlenecks persist
+↑ AI revenue validates faster
+VALUE RISKS
+↓ Hyperscaler capex pullback
+↓ Supply response faster
+↓ Efficiency gains reduce demand
+↓ Interest rates compress multiples
+Assumptions: Central Belt/emerging markets. De-risked = utility commitment, full entitlements, 36-mo to day 1 power. Queue-only positions valued at $0-75K/MW (not shown). Peak scarcity expected 2028-2029.
+Strategic Implications: The Powered Land Opportunity
+Execution capability + scarcity dynamics = asymmetric value creation window
+THE THESIS SUMMARIZED
+1. STRUCTURAL DEFICIT PERSISTS
+30-50 GW U.S. shortfall through 2030+. Even with 30% international overspill and 
+demand moderation, supply cannot catch up.
+2. LOCATION DOESN'T MATTER
+70-85% of AI workloads geographically flexible. Central U.S. serves continental 
+demand. Pricing will converge nationally toward NoVA ceiling.
+3. QUEUE ≠ VALUE
+Bimodal distribution. Most positions worth ~$0. Only sites with full ingredients (utility 
+commitment, end-user, entitlements) command premium.
+4. CAPABILITY IS THE MOAT
+Perhaps 10-20 organizations can execute the parallel sprint. Scarcity of execution 
+capability, not land, drives value.
+THE VALUE CREATION MODEL
+Entry
+$0-200K
+/MW
+→
+Apply Ingredients
+12-18 mo sprint →
+Exit
+$800K-2M+
+/MW
+Margin is in ingredient application, not land appreciation
+TIMING WINDOWS
+2025-2026: Maximum Arbitrage
+Entry at 25-35% of NoVA. Early movers secure best sites, relationships, utility priority.
+2027-2029: Peak Scarcity
+Maximum supply-demand gap. Premium valuations. Delivery in this window captures 
+scarcity premium.
+2030+: Convergence/Equilibrium
+Geographic pricing converges. New supply begins clearing. First movers already 
+positioned.
+EXECUTION IMPERATIVES
+1. End-user conversations before you need them
+2. Utility relationships at institutional level
+3. Community/political trust pre-built
+4. Parallel execution capability (team + systems)
+5. Portfolio approach for timing optionality
+ILLUSTRATIVE ECONOMICS
+500MW Site (2027 Exit)
+Entry (early real) $100-150M
+Development costs $25-50M
+Exit (de-risked, mid) $550M
+Development margin $350-425M
+1GW Site (2028 Exit)
+Entry (early real) $200-300M
+Development costs $50-100M
+Exit (de-risked, mid) $1.8B
+Development margin $1.4-1.55B
+Note: Illustrative only. Actual returns depend on execution, timing, and 
+market conditions.
+Bottom line: The opportunity isn't buying land — it's deploying execution capability into a structurally supply-constrained market. The 18-36 month window for maximum arbitrage is open now. Speed and relationships compound. Delay costs more 
+than capital.
+DETAILED ANALYSIS
+Appendix
+Methodology, Data Sources, and Supporting Analysis
+Appendix A: Conversion Methodology
+Wafer → Die → Package → TDP → Server → Data Center GW
+STAGE 1
+Wafer Starts
+WSPM by node
+→
+STAGE 2
+Functional Dies
+Yield adjusted
+→
+STAGE 3
+CoWoS Packages
+Binding constraint
+→
+STAGE 4
+Chip TDP
+Weighted mix
+→
+STAGE 5
+Server Power
+1.45x overhead
+→
+STAGE 6
+DC GW Demand
+PUE adjusted
+MASTER FORMULA
+DC Power (GW) = [Annual Chips × Weighted TDP × Utilization × Server Overhead × PUE] / 10⁹
+YIELD MODEL
+Mature N4/N5: 70-85%
+Early N3/N2: 50-65%
+H100 die: 814mm² → ~60-73 dies/wafer
+UTILIZATION
+Training clusters: 75-85%
+Inference farms: 50-65%
+Blended range: 60-80%
+SERVER OVERHEAD
+GPU TDP: 55-70% of server
+CPU/memory/network: 20%
+Factor applied: 1.45x
+PUE RANGE
+Traditional air: 1.4-1.6
+Modern hyperscale: 1.2-1.3
+AI-optimized liquid: 1.1-1.2
+Critical: CoWoS packaging capacity—not wafer fabrication—is the binding constraint through 2027. Model uses CoWoS-constrained output as annual chip production input.
+BASELINE CALIBRATION
+2024 baseline (10-14 GW) anchored to external estimates (IEA, Goldman, McKinsey) reflecting operational capacity. Formula captures growth dynamics; shipped chips have 6-12 month install lag. Forward projections 
+validated against industry forecasts.
+Appendix B: CoWoS Packaging Capacity
+The binding constraint through 2027
+YEAR WPM YoY CHIPS/YR (M)
+2024 35-40K — 22-25
+2025 65-75K +80% 40-47
+2026 90-130K +50% 56-82
+2027 135-180K +35% 84-113
+2028+ 200K+ +20% 130+
+2025 CUSTOMER ALLOCATION
+NVIDIA 63%
+Broadcom 13%
+AMD 8%
+Marvell 8%
+Others 8%
+CoWoS-L: Next-gen packaging for B200+ enables 8-12 HBM stacks (192-
+288GB). More complex, requires additional capacity.
+38
+70
+110
+158
+200
+2024
+2025
+2026
+2027
+2028+
+Appendix C: Chip TDP Specifications
+NVIDIA and AMD roadmap driving power projections
+NVIDIA ARCHITECTURE ROADMAP
+ARCH
+H100
+2022-24
+ARCH
+B200
+2024-25
+ARCH
+B300 Ultra
+2025
+ARCH
+Rubin
+2026
+ARCH
+Rubin Ultra
+2027
+TDP
+700W
+TDP
+1,000W
+TDP
+1,400W
+TDP
+~1,500W
+TDP
+~2,000W
+HBM
+80GB HBM3
+HBM
+192GB HBM3E
+HBM
+288GB HBM3E
+HBM
+288GB HBM4
+HBM
+1TB HBM4E
+AMD CDNA ROADMAP
+MI300X 750W 192GB, 2024
+MI350X 1,000W 288GB, 2025
+MI400 ~1,400W 432GB HBM4, 2026
+HYPERSCALER CUSTOM
+Google TPU v6 ~200W
+AWS Trainium2 ~500W
+MSFT Maia 100 500-700W
+Meta MTIA v2 90W
+WEIGHTED AVERAGE TDP PROJECTION
+680W
+2024
+780W
+2026
+920W
+2028
+1,050W
+2030
+1,300W
+2035
+Appendix D: Year-by-Year Demand Projections
+Global and U.S. Technology Stack (Base Case)
+YEAR CHIPS (M) TDP (W) UTIL % PUE GLOBAL GW US SHARE US STACK GW
+2024 22-25 680 65% 1.30 10-14 85% 10-12
+2025 40-47 720 68% 1.28 20-28 84% 18-23
+2026 56-82 780 70% 1.25 32-52 82% 32-40
+2027 84-113 850 72% 1.22 48-78 80% 48-58
+2028 105-150 920 73% 1.20 62-112 78% 62-78
+2030 160-250 1,050 75% 1.16 95-180 75% 95-120
+2032 220-350 1,150 76% 1.14 130-270 73% 135-165
+2035 350-550 1,300 78% 1.12 180-400 72% 180-230
+Note: Global GW = [Chips × TDP × Util × 1.45 overhead × PUE] / 10⁹. Ranges reflect conservative to aggressive assumptions.
+Appendix E: Scenario Sensitivity Analysis
+Variable ranges and 2030/2035 scenario outcomes
+VARIABLE RANGES MODELED
+Parameter Conservative Base Aggressive
+Advanced node yield 65% 75% 85%
+Packaging yield 85% 92% 96%
+Utilization rate 60% 72% 80%
+PUE 1.40 1.25 1.12
+CoWoS ramp Low Medium High
+2030 SCENARIO OUTCOMES
+Conservative 80-95 / 60-72 GW
+Base 120-140 / 90-105 GW
+Aggressive 165-185 / 124-139 GW
+2035 SCENARIO OUTCOMES
+Conservative 120-150 / 85-110 GW
+Base 200-250 / 145-180 GW
+Aggressive 320-400 / 230-290 GW
+ANNUAL ENERGY (TWh) 2030: Conservative 700-830 | Base 1,050-1,230 | Aggressive 1,450-1,620
+Appendix F: Foundry Capacity by Node
+TSMC advanced node wafer starts per month (WSPM) with AI allocation
+TSMC CAPACITY (WSPM)
+Node 2024 2027 AI %
+N4/N4P 150K 180K 40%
+N3/N3E 100K 150K 35%
+N2 10K 150K 50%
+A16 (1.6nm) 0 30K 60%
+OTHER FOUNDRIES
+Samsung 3nm Yield issues, <10% share
+Intel 18A HVM late 2025
+SMIC 7nm DUV only, 40-50% yield
+TSMC ARIZONA EXPANSION
+$165B investment, 60-100K WSPM advanced capacity by 2030. Three fabs + Amkor 
+packaging. ~30% of 2nm+ production on U.S. soil.
+CHINESE DOMESTIC AI CHIPS
+2024: 0.5-1M (4%)
+2026: 2-3.5M (7%)
+2028: 4.5-7M (9%)
+2030: 8-15M (12%)
+0 50 100 150 200
+N4/N4P
+N3/N3E
+N2
+A16
+2027 (WSPM) 2024 (WSPM)
+Appendix G: U.S. Stack by Chip Designer (2030)
+Projected power demand allocation by company
+DESIGNER 2030 GW % OF US STACK
+NVIDIA 55-70 58-65%
+AMD 12-18 12-15%
+Google TPU 8-12 8-10%
+AWS Trainium 6-10 6-8%
+Intel 4-8 4-6%
+Broadcom/Marvell 4-6 4-5%
+Microsoft Maia 4-6 4-5%
+Meta/Others 2-5 2-4%
+TOTAL U.S. STACK (2030) 95-120 GW63
+15
+10
+8
+6
+5
+5
+4
+NVIDIA
+AMD
+Google TPU
+AWS Trainium
+Intel
+Broadcom/Marvell
+Microsoft Maia
+Meta/Others
+Appendix H: Validation Against Industry Forecasts
+Cross-referencing projections with major analyst estimates
+SOURCE THEIR FORECAST THIS ANALYSIS ALIGNMENT
+IEA (2030) 945 TWh global DC energy 1,050-1,230 TWh (AI portion) Aligned (AI adds to base)
+McKinsey (2030) 80+ GW US DC capacity 95-120 GW US stack demand Aligned (demand > capacity)
+Goldman Sachs (2030) 122 GW global DC capacity 120-140 GW global (base) Close alignment
+SemiAnalysis (2028) 56+ GW AI IT power 62-78 GW US stack Aligned (IT vs DC power)
+Bernstein (2027) 30-35 GW AI demand 48-78 GW global Higher (CoWoS scaling)
+WHY THIS ANALYSIS MAY BE HIGHER
+Explicit wafer-to-power conversion through packaging constraints rather than 
+extrapolating historical DC growth trends. Accounts for chip TDP increases 
+(700W→1,400W+) and AI-specific infrastructure scaling.
+CONSERVATIVE FACTORS
+Supply constraints moderate near-term growth (CoWoS, HBM). Analysis assumes 
+constraints bind through 2027. Actual deployment may lag production by 6-12 months.
+KEY VALIDATION POINTS
+✓ CoWoS as binding constraint (TrendForce, SemiAnalysis) ✓ HBM supply shortage through 2025 (SK Hynix) ✓ 3-7 year grid interconnection (utility data)
+
