@@ -741,11 +741,21 @@ def show_critical_path_page():
                             save_database(db)
                             st.success("Research complete!")
                             st.rerun()
-                        except Exception as e:
+        except Exception as e:
                             st.error(f"Error: {str(e)}")
             
             # Display results
             intel_db = cp_data.intelligence_database if cp_data.intelligence_database else {}
+            
+            # Debug info
+            st.write("---")
+            with st.expander("📊 Database Status"):
+                st.write(f"**Database exists**: {bool(intel_db)}")
+                st.write(f"**Has equipment data**: {bool(intel_db.get('equipment_lead_times'))}")
+                st.write(f"**Has ISO data**: {bool(intel_db.get('iso_timelines'))}")
+                if intel_db:
+                    st.json(intel_db)
+            
             if intel_db.get('equipment_lead_times'):
                 st.write("### Equipment Lead Times")
                 for equip_id, data in intel_db['equipment_lead_times'].items():
@@ -766,6 +776,8 @@ def show_critical_path_page():
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"Error: {str(e)}")
+            else:
+                st.info("👆 Click a research button above to populate the database")
 
 
 
