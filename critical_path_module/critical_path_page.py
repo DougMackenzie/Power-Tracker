@@ -99,14 +99,23 @@ def sync_site_data_to_critical_path(site: Dict, cp_data: CriticalPathData) -> bo
 
     # --- Power / Interconnection ---
     best_study_status = "Not Started"
+    best_sis_status = "Not Started"
     best_loa_status = "Not Started"
     
     for phase in phases:
+        # Contract Study
         p_study = phase.get('contract_study_status', 'Not Started')
         if p_study == "Complete":
             best_study_status = "Complete"
         elif p_study == "Initiated" and best_study_status != "Complete":
             best_study_status = "Initiated"
+            
+        # SIS Status (if available)
+        p_sis = phase.get('sis_status', 'Not Started')
+        if p_sis == "Complete":
+            best_sis_status = "Complete"
+        elif p_sis == "Initiated" and best_sis_status != "Complete":
+            best_sis_status = "Initiated"
             
         p_loa = phase.get('loa_status', 'Not Started')
         if p_loa == "Executed":
@@ -114,18 +123,19 @@ def sync_site_data_to_critical_path(site: Dict, cp_data: CriticalPathData) -> bo
         elif p_loa == "Drafted" and best_loa_status != "Executed":
             best_loa_status = "Drafted"
 
-    if best_study_status in ["Initiated", "Complete"]:
+    if best_study_status in ["Initiated", "Complete"] or best_sis_status in ["Initiated", "Complete"]:
         update_ms("PS-PWR-02", "Complete") # Application
         update_ms("PS-PWR-03", "Complete") # Queue Position
     
     # Map Contract Study to Facilities Study (PS-PWR-06)
-    # The user specifically asked for "Contract Study" alignment.
-    # In our template, PS-PWR-06 is now "Contract Study (Facilities Study) Complete"
     update_ms("PS-PWR-06", best_study_status) 
     
-    # Also update SIS (PS-PWR-05) if Contract Study is initiated/complete, assume SIS is done
+    # Map SIS (PS-PWR-05)
+    # If Contract Study is initiated/complete, assume SIS is done
     if best_study_status in ["Initiated", "Complete"]:
         update_ms("PS-PWR-05", "Complete")
+    else:
+        update_ms("PS-PWR-05", best_sis_status)
 
     update_ms("PS-PWR-09", best_loa_status)   # IA/FA
 
