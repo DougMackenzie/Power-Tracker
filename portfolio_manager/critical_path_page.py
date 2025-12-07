@@ -241,7 +241,7 @@ def analyze_procurement_risk(site: Dict, cp_data: CriticalPathData) -> Dict:
     return {"has_risk": False, "msg": "Schedule aligned"}
 
 
-def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_detail: str = "all") -> go.Figure:
+def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_detail: str = "all", audience: str = "buyer") -> go.Figure:
     """Create MS Project-style Gantt chart with dependencies and hierarchy."""
     
     templates = get_milestone_templates()
@@ -255,6 +255,19 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
         tmpl = templates.get(ms_id)
         if not tmpl:
             continue
+        
+        # Filter by Audience
+        if audience == "developer":
+            # Developer only cares about Pre-Sale (getting to the transaction)
+            if tmpl.phase != Phase.PRE_SALE:
+                continue
+        elif audience == "community":
+            # Community cares about Zoning, Environmental, Water, and Pre-Sale Power (Feasibility)
+            relevant_workstreams = [Workstream.ZONING, Workstream.ENVIRONMENTAL, Workstream.WATER]
+            is_relevant_power = (tmpl.workstream == Workstream.POWER and tmpl.phase == Phase.PRE_SALE)
+            
+            if tmpl.workstream not in relevant_workstreams and not is_relevant_power:
+                continue
         
         # Filter by detail level
         if show_detail == "critical_only" and not instance.on_critical_path:
@@ -609,7 +622,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
 def show_critical_path_page():
     """Main Critical Path page with MS Project-style Gantt chart."""
     
-    st.header("⚡ Critical Path to Energization (v1.5 - Milestone Reconciliation Added)")
+    st.header("⚡ Critical Path to Energization (v1.6 - Audience Filters Added)")
     
     if 'db' not in st.session_state:
         st.warning("No database loaded")
@@ -729,7 +742,7 @@ def show_critical_path_page():
     
     with tab1:
         # Controls for Gantt chart
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
             group_by = st.radio(
                 "Group By", 
@@ -749,7 +762,19 @@ def show_critical_path_page():
                 horizontal=True,
                 help="Toggle between detailed and simplified views"
             )
-        
+        with col3:
+            audience = st.radio(
+                "Audience View",
+                ["buyer", "developer", "community"],
+                format_func=lambda x: {
+                    "buyer": "🏗️ Buyer (Full)",
+                    "developer": "💰 Developer (Pre-Sale)",
+                    "community": "🏘️ Community (Approvals)"
+                }[x],
+                horizontal=True,
+                help="Filter milestones relevant to specific stakeholders"
+            )
+            
         # ====================================================================
         # PROFESSIONAL HEADER & METRICS
         # ====================================================================
