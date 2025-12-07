@@ -90,12 +90,16 @@ def sync_site_data_to_critical_path(site: Dict, cp_data: CriticalPathData) -> bo
         nonlocal changes_made
         if ms_id in cp_data.milestones and site_status_val:
             new_status = status_map.get(site_status_val, MilestoneStatus.NOT_STARTED)
+            
+            # Update status if changed
             if cp_data.milestones[ms_id].status != new_status:
                 cp_data.milestones[ms_id].status = new_status
                 changes_made = True
-                # If complete, set actual end date to today if missing
-                if new_status == MilestoneStatus.COMPLETE and not cp_data.milestones[ms_id].actual_end:
-                    cp_data.milestones[ms_id].actual_end = date.today().isoformat()
+            
+            # Ensure actual_end is set if COMPLETE (even if status didn't change)
+            if new_status == MilestoneStatus.COMPLETE and not cp_data.milestones[ms_id].actual_end:
+                cp_data.milestones[ms_id].actual_end = date.today().isoformat()
+                changes_made = True
 
     # --- Power / Interconnection ---
     best_study_status = "Not Started"
@@ -595,7 +599,7 @@ def create_gantt_chart(data: CriticalPathData, group_by: str = "owner", show_det
 def show_critical_path_page():
     """Main Critical Path page with MS Project-style Gantt chart."""
     
-    st.header("⚡ Critical Path to Energization (v1.1)")
+    st.header("⚡ Critical Path to Energization (v1.3 - Schedule Fix Applied)")
     
     if 'db' not in st.session_state:
         st.warning("No database loaded")
