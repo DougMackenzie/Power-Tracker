@@ -18,4 +18,4 @@ duckduckgo-search
 beautifulsoup4
 requests
 graphviz
-# Force Rebuild v2.5
+# Force Rebuild v3.0 - Agentic Chat
