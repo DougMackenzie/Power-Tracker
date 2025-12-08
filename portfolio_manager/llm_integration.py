@@ -380,6 +380,7 @@ class PortfolioChat:
         
         for _ in range(max_turns):
             # Check for function calls
+            tool_executed = False
             if hasattr(current_response, 'parts'):
                 for part in current_response.parts:
                     if fn := part.function_call:
@@ -398,34 +399,41 @@ class PortfolioChat:
                             result = f"Error: Tool {tool_name} not found."
                             
                         # Send result back to model
-                        # Gemini expects a specific format for function response
-                        from google.ai.generativelanguage import Content, Part, FunctionResponse
-                        
-                        # Construct response part
-                        # Note: The google-generativeai library handles this via chat.send_message
-                        # We pass the function response object
+                        from google.ai.generativelanguage import Part, FunctionResponse
                         
                         current_response = self.client.chat.send_message(
                             Part(function_response=FunctionResponse(name=tool_name, response={'result': result}))
                         )
                         
-                        # Continue loop to see if model has more to say or do
-                        continue
+                        tool_executed = True
+                        break # Break inner loop to process new response
             
-            # If we get here, it's a text response (or we handled the tool and got a new text response)
-            if hasattr(current_response, 'text'):
+            if tool_executed:
+                continue # Continue outer loop to check new response
+            
+            # If we get here, it should be a text response
+            try:
                 text_response = current_response.text
                 
                 # Update history
-                # Note: We should probably track the full conversation including tool calls
-                # But for now, just tracking the final user/assistant exchange
                 if self.messages and self.messages[-1]['role'] == 'user':
                      self.messages.append({"role": "assistant", "content": text_response})
                 else:
-                    # If this was a multi-turn tool execution, the user message is already there
                     self.messages.append({"role": "assistant", "content": text_response})
                     
                 return text_response
+            except ValueError:
+                # This happens if response is not text (e.g. function call that we missed or mixed content)
+                # Fallback: try to extract text from parts
+                if hasattr(current_response, 'parts'):
+                    texts = []
+                    for part in current_response.parts:
+                        if part.text:
+                            texts.append(part.text)
+                    if texts:
+                        return "\n".join(texts)
+                
+                return "Error: Received response with no text content."
                 
         return "Error: Maximum tool execution turns reached."
 
