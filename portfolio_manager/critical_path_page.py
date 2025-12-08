@@ -799,6 +799,11 @@ def show_critical_path_page():
         # Extract target energization from phases or schedule
         target_energization = None
         
+        # DEBUG: Check data
+        st.write("DEBUG DATA:", site.get('name'))
+        st.write("Phases:", site.get('phases'))
+        st.write("Schedule:", site.get('schedule'))
+        
         # 1. Try Phases (Most accurate)
         if site.get('phases'):
             dates = []
@@ -831,6 +836,8 @@ def show_critical_path_page():
                     if mw > 0:
                         target_energization = f"Q4 {year}"  # Assume Q4 if only year is known
                         break
+        
+        st.write("Calculated Target:", target_energization)
         
         # Extract Voltage from phases (max voltage)
         voltage_display = site.get('voltage_kv', 'N/A')
