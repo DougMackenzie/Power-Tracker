@@ -828,6 +828,7 @@ def run():
          "🏆 Rankings", "📊 Program Tracker", "⚡ Critical Path", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "🧩 Network Operations Center (NOC)", "⚙️ Settings"],
         key="page"
     )
+    st.sidebar.caption("v2.5 - Zoning Fix Applied")
     
     # Route and Log Activity
     if page == "📊 Dashboard": 
