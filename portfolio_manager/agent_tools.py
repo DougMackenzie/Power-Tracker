@@ -43,16 +43,54 @@ def update_site_field(site_name: str, field: str, value: str):
     
     site = st.session_state.db['sites'][site_id]
     
-    # Handle nested fields (e.g., non_power.zoning_status)
-    if field in ['zoning_status', 'water_source', 'fiber_status']:
+    # Handle nested fields and special logic
+    
+    # 1. Voltage / Interconnection
+    if field in ['voltage', 'voltage_kv', 'interconnection_voltage', 'interconnection voltage']:
+        # Update top level
+        site['voltage_kv'] = value
+        # Update all phases if they exist
+        if 'phases' in site and isinstance(site['phases'], list):
+            for phase in site['phases']:
+                if isinstance(phase, dict):
+                    phase['voltage'] = value
+                    phase['voltage_kv'] = value
+        # Update phases_json if it exists (legacy)
+        if 'phases_json' in site and isinstance(site['phases_json'], list):
+             for phase in site['phases_json']:
+                if isinstance(phase, dict):
+                    phase['voltage'] = value
+                    phase['voltage_kv'] = value
+                    
+    # 2. Environmental / ESA Status
+    elif field in ['environmental_status', 'esa_status', 'phase_1_esa_status', 'phase 1 esa status']:
+        site['environmental_status'] = value
+        # Update boolean flag based on string value
+        if 'complete' in str(value).lower():
+            site['environmental_complete'] = True
+        elif 'progress' in str(value).lower() or 'started' in str(value).lower():
+            site['environmental_complete'] = False
+            
+    # 3. Zoning Status
+    elif field in ['zoning_status', 'zoning']:
+        if 'non_power' not in site: site['non_power'] = {}
+        site['non_power']['zoning_status'] = value
+        # Map to zoning_stage int if possible
+        val_lower = str(value).lower()
+        if 'approved' in val_lower:
+            site['zoning_stage'] = 3
+        elif 'progress' in val_lower or 'submitted' in val_lower:
+            site['zoning_stage'] = 2
+        else:
+            site['zoning_stage'] = 1
+            
+    # 4. Non-Power Infrastructure (Water, Fiber, Gas)
+    elif field in ['water_source', 'water_provider', 'fiber_status', 'fiber_provider', 'gas_provider']:
         if 'non_power' not in site: site['non_power'] = {}
         site['non_power'][field] = value
-    elif field in ['ic_capacity', 'voltage']:
-        # For simplicity, update first phase or main infra
-        # This is a simplification for the agent
-        pass 
+        
+    # 5. Default Top Level
     else:
-        # Top level fields
         site[field] = value
         
     # Save
