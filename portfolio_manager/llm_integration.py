@@ -361,6 +361,11 @@ class PortfolioChat:
         # 1. Send user message
         response = self.client.send_message(user_message)
         
+        # DEBUG
+        if HAS_STREAMLIT:
+            st.write(f"DEBUG: Provider = {self.provider}")
+            st.write(f"DEBUG: Response Type = {type(response)}")
+        
         # 2. Handle Function Calls (Gemini only for now)
         if self.provider == "gemini":
             return self._handle_gemini_response(response)
