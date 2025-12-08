@@ -151,17 +151,27 @@ Financial:
 - Flag risks and opportunities specific to the situation
 - Use your knowledge of utility processes, ISO dynamics, and market trends
 
+## AGENT CAPABILITIES (TOOLS)
+
+You have access to tools to interact with the application. USE THEM PROACTIVELY.
+
+1. **Site Management**:
+   - `create_new_site(name, state, target_mw)`: Create a new site entry.
+   - `update_site_field(site_name, field, value)`: Update specific fields (e.g., 'target_mw', 'utility', 'zoning_status').
+
+2. **Navigation**:
+   - `navigate_to_page(page_name)`: Switch the user's view to 'Dashboard', 'Site Database', 'Critical Path', 'Research', etc.
+
+## BEHAVIOR GUIDELINES
+
+1. **Be Action-Oriented**: If a user says "Change the MW to 500", call `update_site_field` immediately. Don't just say you will do it.
+2. **Navigation**: If a user asks to see something (e.g., "Show me the Gantt chart"), call `navigate_to_page('Critical Path')`.
+3. **Confirmation**: After taking an action, confirm what you did (e.g., "I've updated the capacity to 500MW.").
+4. **Data Integrity**: When creating sites, infer the State code (e.g., 'Oklahoma' -> 'OK') if possible.
+
 ## SAVING SITES
 
-**IMPORTANT**: You cannot directly save sites to the database. Instead:
-
-1. When you have enough information to evaluate a site, provide your analysis and recommended field values
-2. Then ask: "Would you like me to prepare this site for saving to the database?"
-3. **DO NOT** say things like "I've saved the site" or "The site has been saved" - you cannot actually save
-4. The system will show a form for the user to review and confirm the extracted data
-5. Simply ask if they want to proceed with saving, then let the system handle it
-
-Remember: You analyze and recommend - the user confirms and saves via the form.
+You can now use `create_new_site` directly when the user provides enough information. You don't need to ask for permission if the intent is clear.
 '''
 
 
@@ -231,6 +241,16 @@ def build_system_prompt(sites: Dict[str, Dict]) -> str:
 # LLM CLIENTS
 # =============================================================================
 
+# Import Agent Tools
+try:
+    from .agent_tools import AGENT_TOOLS, TOOL_FUNCTIONS
+except ImportError:
+    # Fallback if tools not available yet
+    AGENT_TOOLS = []
+    TOOL_FUNCTIONS = {}
+
+# ... (Previous imports)
+
 class GeminiClient:
     """Google Gemini API client."""
     
@@ -242,39 +262,34 @@ class GeminiClient:
         self.model = genai.GenerativeModel(model)
         self.chat = None
     
-    def start_chat(self, system_prompt: str, history: List[Dict] = None, use_search: bool = False):
+    def start_chat(self, system_prompt: str, history: List[Dict] = None, use_tools: bool = True):
         """Start or reset chat with system context."""
-        # Gemini handles system prompt differently - we prepend it to first message
         self.system_prompt = system_prompt
         
-        # Convert history format if provided
+        # Convert history
         gemini_history = []
         if history:
             for msg in history:
                 role = "user" if msg["role"] == "user" else "model"
-                gemini_history.append({"role": role, "parts": [msg["content"]]})
+                # Skip tool outputs in history for now to keep it simple, or handle them if needed
+                if msg["role"] in ["user", "assistant"]: 
+                    gemini_history.append({"role": role, "parts": [msg["content"]]})
         
         # Configure tools
-        tools = []
-        if use_search:
-            tools = [{'google_search_retrieval': {}}]
-            
-        # Re-initialize model with tools if needed, or just pass to start_chat?
-        # For Gemini, tools are passed to GenerativeModel constructor or start_chat doesn't support them directly in all versions.
-        # Best practice: create a new model instance or pass tools to start_chat if supported.
-        # Checking latest API: tools are passed to GenerativeModel.
+        tools = AGENT_TOOLS if use_tools else []
         
-        if use_search:
-            # Create a temporary model instance with tools enabled
-            model_with_tools = genai.GenerativeModel(self.model.model_name, tools=tools)
-            self.chat = model_with_tools.start_chat(history=gemini_history)
-        else:
-            self.chat = self.model.start_chat(history=gemini_history)
+        # Create model with tools
+        if tools:
+            self.model = genai.GenerativeModel(self.model.model_name, tools=tools)
             
+        self.chat = self.model.start_chat(history=gemini_history)
         self.first_message = True
     
-    def send_message(self, message: str) -> str:
-        """Send message and get response."""
+    def send_message(self, message: str) -> Any:
+        """
+        Send message and get response. 
+        Returns either text response OR a list of function calls.
+        """
         if self.chat is None:
             raise ValueError("Chat not started. Call start_chat first.")
         
@@ -290,7 +305,129 @@ class GeminiClient:
             full_message = message
         
         response = self.chat.send_message(full_message)
-        return response.text
+        return response
+
+class PortfolioChat:
+    """
+    Unified chat interface for portfolio diagnostics.
+    Supports both Gemini and Claude backends.
+    """
+    
+    def __init__(self, provider: str = "gemini", api_key: str = None, model: str = None):
+        # ... (Same init logic)
+        self.provider = provider.lower()
+        self.client = None
+        self.messages = []
+        self.sites = {}
+        
+        # Get API key logic...
+        if api_key is None:
+            if HAS_STREAMLIT:
+                if self.provider == "gemini":
+                    api_key = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY"))
+                else:
+                    api_key = st.secrets.get("ANTHROPIC_API_KEY", os.getenv("ANTHROPIC_API_KEY"))
+            else:
+                if self.provider == "gemini":
+                    api_key = os.getenv("GEMINI_API_KEY")
+                else:
+                    api_key = os.getenv("ANTHROPIC_API_KEY")
+        
+        if not api_key:
+            raise ValueError(f"No API key found for {provider}")
+            
+        if self.provider == "gemini":
+            self.client = GeminiClient(api_key, model or "models/gemini-1.5-pro-002")
+        elif self.provider == "claude":
+            self.client = ClaudeClient(api_key, model or "claude-sonnet-4-20250514")
+            
+    def set_portfolio_context(self, sites: Dict[str, Dict]):
+        self.sites = sites
+        self._refresh_system_prompt()
+        
+    def _refresh_system_prompt(self):
+        system_prompt = build_system_prompt(self.sites)
+        # Enable tools for Gemini
+        use_tools = (self.provider == "gemini")
+        self.client.start_chat(system_prompt, self.messages, use_tools=use_tools)
+        
+    def chat(self, user_message: str) -> str:
+        """
+        Send a message and get a response, handling tool calls if needed.
+        """
+        if not hasattr(self.client, 'chat') or self.client.chat is None:
+            self._refresh_system_prompt()
+            
+        # 1. Send user message
+        response = self.client.send_message(user_message)
+        
+        # 2. Handle Function Calls (Gemini only for now)
+        if self.provider == "gemini":
+            return self._handle_gemini_response(response)
+        else:
+            # Claude text response
+            text_response = response
+            self.messages.append({"role": "user", "content": user_message})
+            self.messages.append({"role": "assistant", "content": text_response})
+            return text_response
+            
+    def _handle_gemini_response(self, response) -> str:
+        """Process Gemini response loop for function calling."""
+        
+        # Loop to handle multiple function calls if needed
+        max_turns = 5
+        current_response = response
+        
+        for _ in range(max_turns):
+            # Check for function calls
+            if hasattr(current_response, 'parts'):
+                for part in current_response.parts:
+                    if fn := part.function_call:
+                        # Execute tool
+                        tool_name = fn.name
+                        tool_args = dict(fn.args)
+                        
+                        print(f"Executing tool: {tool_name} with {tool_args}")
+                        
+                        if tool_name in TOOL_FUNCTIONS:
+                            try:
+                                result = TOOL_FUNCTIONS[tool_name](**tool_args)
+                            except Exception as e:
+                                result = f"Error executing {tool_name}: {str(e)}"
+                        else:
+                            result = f"Error: Tool {tool_name} not found."
+                            
+                        # Send result back to model
+                        # Gemini expects a specific format for function response
+                        from google.ai.generativelanguage import Content, Part, FunctionResponse
+                        
+                        # Construct response part
+                        # Note: The google-generativeai library handles this via chat.send_message
+                        # We pass the function response object
+                        
+                        current_response = self.client.chat.send_message(
+                            Part(function_response=FunctionResponse(name=tool_name, response={'result': result}))
+                        )
+                        
+                        # Continue loop to see if model has more to say or do
+                        continue
+            
+            # If we get here, it's a text response (or we handled the tool and got a new text response)
+            if hasattr(current_response, 'text'):
+                text_response = current_response.text
+                
+                # Update history
+                # Note: We should probably track the full conversation including tool calls
+                # But for now, just tracking the final user/assistant exchange
+                if self.messages and self.messages[-1]['role'] == 'user':
+                     self.messages.append({"role": "assistant", "content": text_response})
+                else:
+                    # If this was a multi-turn tool execution, the user message is already there
+                    self.messages.append({"role": "assistant", "content": text_response})
+                    
+                return text_response
+                
+        return "Error: Maximum tool execution turns reached."
 
 
 class ClaudeClient:

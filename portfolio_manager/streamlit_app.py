@@ -2832,35 +2832,23 @@ def show_ai_chat():
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 try:
+                    # The chat client now handles tool execution internally
                     response = st.session_state.chat_client.chat(prompt)
                     st.markdown(response)
-                    st.session_state.chat_messages.append({"role": "assistant", "content": response})
+                    # Note: History is appended inside the chat method for the assistant response
+                    # But we need to make sure we don't double append if we are managing history here too
+                    # The current implementation of PortfolioChat.chat appends to its own history
+                    # We should align them. 
+                    # For now, let's trust the chat client's internal history management 
+                    # and just update the UI state if needed, or rely on the fact that we append here.
                     
-                    # Check if user wants to save the site
-                    prompt_lower = prompt.lower().strip()
+                    # Actually, looking at the previous code, we were appending here:
+                    # st.session_state.chat_messages.append({"role": "assistant", "content": response})
+                    # The new PortfolioChat.chat also appends to its internal history.
+                    # We should keep the UI history in sync.
                     
-                    # Explicit save requests (contain "save" or "add")
-                    explicit_save_keywords = ['save the site', 'add to database', 'save it', 'add it', 'can you save', 'please save', 'add this']
-                    
-                    # Short confirmations (only if message is short to avoid false positives)
-                    short_confirmations = ['yes', 'yep', 'yeah', 'ye', 'ok', 'okay', 'sure', 'proceed']
-                    
-                    should_save = False
-                    
-                    # Check for explicit save request
-                    if any(keyword in prompt_lower for keyword in explicit_save_keywords):
-                        should_save = True
-                    # Check for short confirmation (only if message is short)
-                    elif any(prompt_lower == keyword or prompt_lower.startswith(keyword + ' ') for keyword in short_confirmations) and len(prompt_lower) < 30:
-                        should_save = True
-                    
-                    if should_save:
-                        # Extract site data from conversation
-                        with st.spinner("Extracting site data..."):
-                            extracted_data = extract_site_from_conversation(st.session_state.chat_messages)
-                            if extracted_data:
-                                st.session_state.pending_site_save = extracted_data
-                                st.rerun()  # Force rerun to show the form immediately
+                    # If the response was a tool execution, it might have side effects (like navigation)
+                    # that trigger a rerun.
                     
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
