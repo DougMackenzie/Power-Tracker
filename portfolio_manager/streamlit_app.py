@@ -3704,7 +3704,7 @@ def show_add_edit_site():
             np = site.get('non_power', {})
             col1, col2 = st.columns(2)
             with col1:
-                # Safe zoning status
+                # Safe zoning status (Force Rebuild)
                 zoning_options = ['Not Started', 'Pre-App', 'Submitted', 'Approved']
                 current_zoning = str(np.get('zoning_status', 'Not Started'))
                 if current_zoning not in zoning_options:
