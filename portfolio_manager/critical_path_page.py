@@ -799,10 +799,6 @@ def show_critical_path_page():
         # Extract target energization from phases or schedule
         target_energization = None
         
-        # DEBUG: Check data
-        st.write("DEBUG DATA:", site.get('name'))
-        st.write("Phases:", site.get('phases'))
-        st.write("Schedule:", site.get('schedule'))
         
         if st.button("🔄 Load Local site_database.json"):
             import json
