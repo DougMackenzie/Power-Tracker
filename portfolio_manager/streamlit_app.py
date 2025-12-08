@@ -2776,7 +2776,7 @@ def show_ai_chat():
     # Initialize chat client with Gemini
     try:
         # Force re-init if version mismatch or missing
-        current_version = "3.0-agentic"
+        current_version = "3.1-agentic"
         if 'chat_client' not in st.session_state or st.session_state.get('chat_version') != current_version:
             # Get API key from secrets
             api_key = st.secrets.get("GEMINI_API_KEY")
