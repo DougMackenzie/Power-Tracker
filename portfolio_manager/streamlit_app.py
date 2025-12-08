@@ -2773,7 +2773,7 @@ def show_ai_chat():
     # Initialize chat client with Gemini
     try:
         # Force re-init if version mismatch or missing
-        current_version = "3.3-agentic"
+        current_version = "3.4-agentic"
         if 'chat_client' not in st.session_state or st.session_state.get('chat_version') != current_version:
             # Get API key from secrets
             api_key = st.secrets.get("GEMINI_API_KEY")
@@ -2828,19 +2828,30 @@ def show_ai_chat():
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
     
+    # File Uploader
+    with st.expander("📎 Attach Files", expanded=False):
+        uploaded_files = st.file_uploader(
+            "Upload images or PDFs", 
+            type=['png', 'jpg', 'jpeg', 'pdf', 'txt', 'csv'], 
+            accept_multiple_files=True,
+            key="chat_file_uploader"
+        )
+    
     # Chat input
     if prompt := st.chat_input("Describe a site or ask a question..."):
         # Add user message
         st.session_state.chat_messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
+            if uploaded_files:
+                st.info(f"Attached {len(uploaded_files)} file(s)")
         
         # Get AI response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 try:
                     # The chat client now handles tool execution internally
-                    response = st.session_state.chat_client.chat(prompt)
+                    response = st.session_state.chat_client.chat(prompt, files=uploaded_files)
                     st.markdown(response)
                     # Note: History is appended inside the chat method for the assistant response
                     # But we need to make sure we don't double append if we are managing history here too

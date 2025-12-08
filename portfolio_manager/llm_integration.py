@@ -285,7 +285,7 @@ class GeminiClient:
         self.chat = self.model.start_chat(history=gemini_history)
         self.first_message = True
     
-    def send_message(self, message: str) -> Any:
+    def send_message(self, message: str, files: List = None) -> Any:
         """
         Send message and get response. 
         Returns either text response OR a list of function calls.
@@ -293,18 +293,51 @@ class GeminiClient:
         if self.chat is None:
             raise ValueError("Chat not started. Call start_chat first.")
         
+        parts = [message]
+        
         # Prepend system prompt to first user message
         if self.first_message:
-            full_message = f"""[SYSTEM CONTEXT]
+            parts[0] = f"""[SYSTEM CONTEXT]
 {self.system_prompt}
 
 [USER MESSAGE]
 {message}"""
             self.first_message = False
-        else:
-            full_message = message
-        
-        response = self.chat.send_message(full_message)
+            
+        # Handle file attachments
+        if files:
+            import tempfile
+            import PIL.Image
+            import os
+            
+            for file in files:
+                try:
+                    # Images
+                    if file.type.startswith('image/'):
+                        img = PIL.Image.open(file)
+                        parts.append(img)
+                        
+                    # PDFs and Text
+                    elif file.type == 'application/pdf' or file.type.startswith('text/'):
+                        # Save to temp file for upload
+                        suffix = f".{file.name.split('.')[-1]}" if '.' in file.name else ''
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                            tmp.write(file.getvalue())
+                            tmp_path = tmp.name
+                        
+                        try:
+                            # Upload to Gemini
+                            uploaded_file = genai.upload_file(tmp_path)
+                            parts.append(uploaded_file)
+                        finally:
+                            # Clean up local temp file
+                            if os.path.exists(tmp_path):
+                                os.unlink(tmp_path)
+                except Exception as e:
+                    print(f"Error processing file {file.name}: {e}")
+                    parts.append(f"[Error uploading file {file.name}: {str(e)}]")
+
+        response = self.chat.send_message(parts)
         return response
 
 
@@ -325,8 +358,13 @@ class ClaudeClient:
         self.system_prompt = system_prompt
         self.messages = history if history else []
     
-    def send_message(self, message: str) -> str:
+    def send_message(self, message: str, files: List = None) -> str:
         """Send message and get response."""
+        # Note: Claude file handling is different (base64 encoded blocks)
+        # For now, we'll just append text message
+        if files:
+             message += f"\n[Attached {len(files)} files - File support for Claude not yet implemented]"
+             
         self.messages.append({"role": "user", "content": message})
         
         response = self.client.messages.create(
@@ -402,7 +440,7 @@ class AgenticPortfolioChat:
         use_tools = (self.provider == "gemini")
         self.client.start_chat(system_prompt, self.messages, use_tools=use_tools)
     
-    def chat(self, user_message: str) -> str:
+    def chat(self, user_message: str, files: List = None) -> str:
         """
         Send a message and get a response, handling tool calls if needed.
         """
@@ -410,7 +448,7 @@ class AgenticPortfolioChat:
             self._refresh_system_prompt()
             
         # 1. Send user message
-        response = self.client.send_message(user_message)
+        response = self.client.send_message(user_message, files=files)
         
         # 2. Handle Function Calls (Gemini only for now)
         if self.provider == "gemini":
