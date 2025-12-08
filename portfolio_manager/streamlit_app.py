@@ -2756,7 +2756,7 @@ def show_ai_chat():
         import importlib
         import portfolio_manager.llm_integration as llm_integration
         importlib.reload(llm_integration)
-        from portfolio_manager.llm_integration import PortfolioChat
+        from portfolio_manager.llm_integration import AgenticPortfolioChat
     except ImportError as e:
         st.error(f"LLM integration not available. Error: {str(e)}")
         st.code("pip install google-generativeai", language="bash")
@@ -2773,7 +2773,7 @@ def show_ai_chat():
     # Initialize chat client with Gemini
     try:
         # Force re-init if version mismatch or missing
-        current_version = "2.1-agentic"
+        current_version = "3.0-agentic"
         if 'chat_client' not in st.session_state or st.session_state.get('chat_version') != current_version:
             # Get API key from secrets
             api_key = st.secrets.get("GEMINI_API_KEY")
@@ -2787,7 +2787,7 @@ def show_ai_chat():
                 """)
                 return
             
-            st.session_state.chat_client = PortfolioChat(provider="gemini", api_key=api_key)
+            st.session_state.chat_client = AgenticPortfolioChat(provider="gemini", api_key=api_key)
             st.session_state.chat_version = current_version
             
             # Load portfolio context

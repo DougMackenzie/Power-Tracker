@@ -481,7 +481,7 @@ class ClaudeClient:
 # UNIFIED CHAT INTERFACE
 # =============================================================================
 
-class PortfolioChat:
+class AgenticPortfolioChat:
     """
     Unified chat interface for portfolio diagnostics.
     Supports both Gemini and Claude backends.
@@ -603,7 +603,7 @@ class PortfolioChat:
 # STREAMLIT INTEGRATION HELPERS
 # =============================================================================
 
-def get_chat_client() -> Optional[PortfolioChat]:
+def get_chat_client() -> Optional[AgenticPortfolioChat]:
     """Get or create chat client from Streamlit session state."""
     if not HAS_STREAMLIT:
         return None
@@ -614,7 +614,7 @@ def get_chat_client() -> Optional[PortfolioChat]:
             provider = st.secrets.get("LLM_PROVIDER", "gemini").lower()
             
             # Create client
-            st.session_state.portfolio_chat = PortfolioChat(provider=provider)
+            st.session_state.portfolio_chat = AgenticPortfolioChat(provider=provider)
             
         except Exception as e:
             st.error(f"Failed to initialize chat: {str(e)}")
