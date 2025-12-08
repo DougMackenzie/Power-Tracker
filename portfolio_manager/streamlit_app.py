@@ -2757,6 +2757,9 @@ def show_ai_chat():
         import portfolio_manager.llm_integration as llm_integration
         importlib.reload(llm_integration)
         from portfolio_manager.llm_integration import AgenticPortfolioChat
+        
+        st.write(f"DEBUG: Module Path: {llm_integration.__file__}")
+        st.write(f"DEBUG: Class Methods: {[m for m in dir(AgenticPortfolioChat) if not m.startswith('__')]}")
     except ImportError as e:
         st.error(f"LLM integration not available. Error: {str(e)}")
         st.code("pip install google-generativeai", language="bash")
