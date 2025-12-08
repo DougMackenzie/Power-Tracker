@@ -2769,7 +2769,9 @@ def show_ai_chat():
     
     # Initialize chat client with Gemini
     try:
-        if 'chat_client' not in st.session_state:
+        # Force re-init if version mismatch or missing
+        current_version = "2.1-agentic"
+        if 'chat_client' not in st.session_state or st.session_state.get('chat_version') != current_version:
             # Get API key from secrets
             api_key = st.secrets.get("GEMINI_API_KEY")
             if not api_key:
@@ -2783,6 +2785,8 @@ def show_ai_chat():
                 return
             
             st.session_state.chat_client = PortfolioChat(provider="gemini", api_key=api_key)
+            st.session_state.chat_version = current_version
+            
             # Load portfolio context
             sites = st.session_state.db['sites']
             st.session_state.chat_client.set_portfolio_context(sites)
