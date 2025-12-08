@@ -3704,8 +3704,15 @@ def show_add_edit_site():
             np = site.get('non_power', {})
             col1, col2 = st.columns(2)
             with col1:
-                zoning = st.selectbox("Zoning Status", options=['Not Started', 'Pre-App', 'Submitted', 'Approved'],
-                                    index=['Not Started', 'Pre-App', 'Submitted', 'Approved'].index(np.get('zoning_status', 'Not Started')))
+                # Safe zoning status
+                zoning_options = ['Not Started', 'Pre-App', 'Submitted', 'Approved']
+                current_zoning = str(np.get('zoning_status', 'Not Started'))
+                if current_zoning not in zoning_options:
+                    current_zoning = 'Not Started'
+                
+                zoning = st.selectbox("Zoning Status", options=zoning_options,
+                                    index=zoning_options.index(current_zoning))
+                                    
                 water_src = st.text_input("Water Source", value=np.get('water_source', ''))
                 # Safe water capacity conversion
                 raw_water_cap = np.get('water_cap', 0)
@@ -3716,8 +3723,14 @@ def show_add_edit_site():
                     safe_water_cap = 0
                 water_cap = st.number_input("Water Capacity (GPD)", value=safe_water_cap, min_value=0, max_value=1000000)
             with col2:
-                fiber_stat = st.selectbox("Fiber Status", options=['Unknown', 'Nearby', 'At Site', 'Lit Building'],
-                                        index=['Unknown', 'Nearby', 'At Site', 'Lit Building'].index(np.get('fiber_status', 'Unknown')))
+                # Safe fiber status
+                fiber_options = ['Unknown', 'Nearby', 'At Site', 'Lit Building']
+                current_fiber = str(np.get('fiber_status', 'Unknown'))
+                if current_fiber not in fiber_options:
+                    current_fiber = 'Unknown'
+                    
+                fiber_stat = st.selectbox("Fiber Status", options=fiber_options,
+                                        index=fiber_options.index(current_fiber))
                 fiber_prov = st.text_input("Fiber Provider", value=np.get('fiber_provider', ''))
                 env_issues = st.text_area("Environmental Issues", value=np.get('env_issues', ''))
             
