@@ -533,30 +533,100 @@ class AgenticPortfolioChat:
     def _refresh_system_prompt(self):
         """Refresh system prompt with current portfolio context."""
         system_prompt = build_system_prompt(self.sites)
-        self.client.start_chat(system_prompt, self.messages)
+        # Enable tools for Gemini
+        use_tools = (self.provider == "gemini")
+        self.client.start_chat(system_prompt, self.messages, use_tools=use_tools)
     
     def chat(self, user_message: str) -> str:
         """
-        Send a message and get a response.
-        
-        Args:
-            user_message: The user's message
-            
-        Returns:
-            The assistant's response
+        Send a message and get a response, handling tool calls if needed.
         """
-        # Ensure system prompt is current
         if not hasattr(self.client, 'chat') or self.client.chat is None:
             self._refresh_system_prompt()
-        
-        # Get response
+            
+        # 1. Send user message
         response = self.client.send_message(user_message)
         
-        # Track history
-        self.messages.append({"role": "user", "content": user_message})
-        self.messages.append({"role": "assistant", "content": response})
+        # DEBUG
+        if HAS_STREAMLIT:
+            st.write(f"DEBUG: Provider = {self.provider}")
+            st.write(f"DEBUG: Response Type = {type(response)}")
         
-        return response
+        # 2. Handle Function Calls (Gemini only for now)
+        if self.provider == "gemini":
+            return self._handle_gemini_response(response)
+        else:
+            # Claude text response
+            text_response = response
+            self.messages.append({"role": "user", "content": user_message})
+            self.messages.append({"role": "assistant", "content": text_response})
+            return text_response
+            
+    def _handle_gemini_response(self, response) -> str:
+        """Process Gemini response loop for function calling."""
+        
+        # Loop to handle multiple function calls if needed
+        max_turns = 5
+        current_response = response
+        
+        for _ in range(max_turns):
+            # Check for function calls
+            tool_executed = False
+            if hasattr(current_response, 'parts'):
+                for part in current_response.parts:
+                    if fn := part.function_call:
+                        # Execute tool
+                        tool_name = fn.name
+                        tool_args = dict(fn.args)
+                        
+                        print(f"Executing tool: {tool_name} with {tool_args}")
+                        
+                        if tool_name in TOOL_FUNCTIONS:
+                            try:
+                                result = TOOL_FUNCTIONS[tool_name](**tool_args)
+                            except Exception as e:
+                                result = f"Error executing {tool_name}: {str(e)}"
+                        else:
+                            result = f"Error: Tool {tool_name} not found."
+                            
+                        # Send result back to model
+                        from google.ai.generativelanguage import Part, FunctionResponse
+                        
+                        current_response = self.client.chat.send_message(
+                            Part(function_response=FunctionResponse(name=tool_name, response={'result': result}))
+                        )
+                        
+                        tool_executed = True
+                        break # Break inner loop to process new response
+            
+            if tool_executed:
+                continue # Continue outer loop to check new response
+            
+            # If we get here, it should be a text response
+            try:
+                text_response = current_response.text
+                
+                # Update history
+                if self.messages and self.messages[-1]['role'] == 'user':
+                     self.messages.append({"role": "assistant", "content": text_response})
+                else:
+                    self.messages.append({"role": "assistant", "content": text_response})
+                    
+                return text_response
+            except ValueError:
+                # This happens if response is not text (e.g. function call that we missed or mixed content)
+                # Fallback: try to extract text from parts
+                if hasattr(current_response, 'parts'):
+                    texts = []
+                    for part in current_response.parts:
+                        if part.text:
+                            texts.append(part.text)
+                    if texts:
+                        return "\n".join(texts)
+                
+                return "Error: Received response with no text content."
+                
+        return "Error: Maximum tool execution turns reached."
     
     def clear_history(self):
         """Clear conversation history."""
