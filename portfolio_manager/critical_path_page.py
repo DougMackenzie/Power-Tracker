@@ -804,6 +804,17 @@ def show_critical_path_page():
         st.write("Phases:", site.get('phases'))
         st.write("Schedule:", site.get('schedule'))
         
+        if st.button("🔄 Load Local site_database.json"):
+            import json
+            try:
+                with open('portfolio_manager/site_database.json') as f:
+                    local_db = json.load(f)
+                    st.session_state.db = local_db
+                    st.success("Loaded local database!")
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Failed to load local DB: {e}")
+        
         # 1. Try Phases (Most accurate)
         if site.get('phases'):
             dates = []
