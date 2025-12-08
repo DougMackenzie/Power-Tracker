@@ -162,51 +162,32 @@ def navigate_to_page(page_name: str):
     else:
         return f"Page '{page_name}' not found. Available: {', '.join(page_map.keys())}"
 
-# --- Tool Registry ---
+def select_site(site_name: str):
+    """
+    Selects a specific site in the application context.
+    
+    Args:
+        site_name: The name of the site to select (must match exactly or be a close match).
+    """
+    if 'sites' not in st.session_state:
+        return "Error: Site database not loaded."
+    
+    sites = st.session_state.sites
+    
+    # Try exact match
+    if site_name in sites:
+        st.session_state.selected_site = site_name
+        return f"Successfully selected site: {site_name}"
+    
+    # Try case-insensitive match
+    for name in sites.keys():
+        if name.lower() == site_name.lower():
+            st.session_state.selected_site = name
+            return f"Successfully selected site: {name}"
+            
+    return f"Error: Site '{site_name}' not found."
 
-AGENT_TOOLS = [
-    {
-        "function_declarations": [
-            {
-                "name": "update_site_field",
-                "description": "Update a specific field for a site in the database.",
-                "parameters": {
-                    "type": "OBJECT",
-                    "properties": {
-                        "site_name": {"type": "STRING", "description": "Name of the site"},
-                        "field": {"type": "STRING", "description": "Field to update (e.g., target_mw, utility, state, zoning_status)"},
-                        "value": {"type": "STRING", "description": "New value for the field"}
-                    },
-                    "required": ["site_name", "field", "value"]
-                }
-            },
-            {
-                "name": "create_new_site",
-                "description": "Create a new site in the database.",
-                "parameters": {
-                    "type": "OBJECT",
-                    "properties": {
-                        "name": {"type": "STRING", "description": "Name of the new site"},
-                        "state": {"type": "STRING", "description": "State code (e.g., OK, TX)"},
-                        "target_mw": {"type": "INTEGER", "description": "Target capacity in MW"}
-                    },
-                    "required": ["name", "state", "target_mw"]
-                }
-            },
-            {
-                "name": "navigate_to_page",
-                "description": "Navigate the user to a specific page in the application.",
-                "parameters": {
-                    "type": "OBJECT",
-                    "properties": {
-                        "page_name": {"type": "STRING", "description": "Page to navigate to (dashboard, database, critical path, research, noc)"}
-                    },
-                    "required": ["page_name"]
-                }
-            }
-        ]
-    }
-]
+# --- Tool Registry ---
 
 # Function map for execution
 TOOL_FUNCTIONS = {
