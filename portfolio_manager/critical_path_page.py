@@ -796,15 +796,41 @@ def show_critical_path_page():
         # PROFESSIONAL HEADER & METRICS
         # ====================================================================
         
-        # Extract target energization from capacity trajectory
-        # Extract target energization from capacity trajectory
+        # Extract target energization from phases or schedule
         target_energization = None
-        if site.get('capacity_trajectory'):
-            for year in sorted(site['capacity_trajectory'].keys()):
-                mw = site['capacity_trajectory'][year]
-                if mw and mw > 0:
-                    target_energization = f"Q4 {year}"  # Simplified - assume Q4
-                    break
+        
+        # 1. Try Phases (Most accurate)
+        if site.get('phases'):
+            dates = []
+            for p in site['phases']:
+                if p.get('target_date'):
+                    try:
+                        d = date.fromisoformat(p['target_date'])
+                        dates.append(d)
+                    except ValueError:
+                        pass
+            
+            if dates:
+                earliest = min(dates)
+                q = (earliest.month - 1) // 3 + 1
+                target_energization = f"Q{q} {earliest.year}"
+
+        # 2. Fallback to Schedule/Capacity Trajectory
+        if not target_energization:
+            traj = site.get('capacity_trajectory') or site.get('schedule')
+            if traj:
+                for year in sorted(traj.keys()):
+                    # Handle both simple int and dict structure
+                    val = traj[year]
+                    mw = 0
+                    if isinstance(val, dict):
+                        mw = val.get('ic_mw', 0) + val.get('gen_mw', 0)
+                    else:
+                        mw = val
+                        
+                    if mw > 0:
+                        target_energization = f"Q4 {year}"  # Assume Q4 if only year is known
+                        break
         
         # Extract Voltage from phases (max voltage)
         voltage_display = site.get('voltage_kv', 'N/A')
