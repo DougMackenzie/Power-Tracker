@@ -368,16 +368,11 @@ def load_database() -> Dict:
                 time.sleep(2 ** attempt)
                 continue
             else:
-                # Return empty database as fallback
-                return {
-                    'sites': {},
-                    'utilities': {},
-                    'metadata': {
-                        'created': datetime.now().isoformat(),
-                        'last_updated': datetime.now().isoformat(),
-                        'version': '1.0'
-                    }
-                }
+                # CRITICAL: Do NOT return empty database as fallback.
+                # If we return empty dict, a subsequent save will WIPE the Google Sheet.
+                # It is better to crash/stop than to destroy data.
+                st.error("CRITICAL ERROR: Could not load database from Google Sheets. Saving is disabled to protect data.")
+                raise e
 
 def save_database(db: Dict):
     """Save site database to Google Sheets."""
@@ -2777,7 +2772,7 @@ def show_ai_chat():
     # Initialize chat client with Gemini
     try:
         # Force re-init if version mismatch or missing
-        current_version = "3.5-agentic"
+        current_version = "3.6-agentic"
         if 'chat_client' not in st.session_state or st.session_state.get('chat_version') != current_version:
             # Get API key from secrets
             api_key = st.secrets.get("GEMINI_API_KEY")
