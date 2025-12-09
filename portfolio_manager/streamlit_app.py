@@ -480,6 +480,10 @@ def save_database(db: Dict):
     except Exception as e:
         st.error(f"Error saving to Google Sheets: {e}")
 
+# Expose save function to session state for agent tools
+if 'save_database_func' not in st.session_state:
+    st.session_state.save_database_func = save_database
+
 def add_site(db: Dict, site_id: str, site_data: Dict):
     """Add or update a site in the database."""
     site_data['last_updated'] = datetime.now().isoformat()
@@ -2773,7 +2777,7 @@ def show_ai_chat():
     # Initialize chat client with Gemini
     try:
         # Force re-init if version mismatch or missing
-        current_version = "3.4-agentic"
+        current_version = "3.5-agentic"
         if 'chat_client' not in st.session_state or st.session_state.get('chat_version') != current_version:
             # Get API key from secrets
             api_key = st.secrets.get("GEMINI_API_KEY")

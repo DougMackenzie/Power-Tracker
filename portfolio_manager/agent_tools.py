@@ -93,8 +93,16 @@ def update_site_field(site_name: str, field: str, value: str):
     else:
         site[field] = value
         
-    # Save
+    # Save to session state
     st.session_state.db['sites'][site_id] = site
+    
+    # Trigger persistence to Google Sheets
+    if 'save_database_func' in st.session_state:
+        try:
+            st.session_state.save_database_func(st.session_state.db)
+        except Exception as e:
+            return f"Updated in memory, but failed to save to Sheets: {e}"
+            
     return f"Successfully updated {field} to '{value}' for {site.get('name')}"
 
 def create_new_site(name: str, state: str, target_mw: int):
@@ -116,13 +124,22 @@ def create_new_site(name: str, state: str, target_mw: int):
         'utility': 'TBD',
         'last_updated': datetime.now().strftime("%Y-%m-%d"),
         'phases': [],
-        'schedule': {}
+        'schedule': {},
+        'profile_json': {} # Initialize empty profile
     }
     
     if 'sites' not in st.session_state.db:
         st.session_state.db['sites'] = {}
         
     st.session_state.db['sites'][new_id] = new_site
+    
+    # Trigger persistence
+    if 'save_database_func' in st.session_state:
+        try:
+            st.session_state.save_database_func(st.session_state.db)
+        except Exception as e:
+            return f"Created in memory, but failed to save to Sheets: {e}"
+            
     return f"Created new site '{name}' in {state} with {target_mw}MW"
 
 # --- Critical Path Tools ---
