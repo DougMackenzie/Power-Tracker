@@ -105,7 +105,7 @@ def update_site_field(site_name: str, field: str, value: str):
             
     return f"Successfully updated {field} to '{value}' for {site.get('name')}"
 
-def create_new_site(name: str, state: str, target_mw: int):
+def create_new_site(name: str, state: str, target_mw: int, acres: int = 0, voltage_kv: int = 0, latitude: float = 0.0, longitude: float = 0.0, status: str = "Prospect", schedule_json: str = "{}"):
     """
     Create a new site in the database.
     
@@ -113,19 +113,40 @@ def create_new_site(name: str, state: str, target_mw: int):
         name: Name of the new site
         state: State code (e.g., 'OK', 'TX')
         target_mw: Target capacity in MW
+        acres: Total acreage (optional)
+        voltage_kv: Interconnection voltage in kV (optional)
+        latitude: Latitude coordinate (optional)
+        longitude: Longitude coordinate (optional)
+        status: Project status (optional)
+        schedule_json: JSON string of schedule dict {year: mw} (optional)
     """
     import uuid
     new_id = str(uuid.uuid4())
     
+    # Parse schedule if provided
+    try:
+        schedule = json.loads(schedule_json) if schedule_json else {}
+    except:
+        schedule = {}
+
     new_site = {
         'name': name,
         'state': state,
         'target_mw': target_mw,
+        'acreage': acres,
+        'voltage_kv': voltage_kv,
+        'latitude': latitude,
+        'longitude': longitude,
+        'land_status': status,
         'utility': 'TBD',
         'last_updated': datetime.now().strftime("%Y-%m-%d"),
         'phases': [],
-        'schedule': {},
-        'profile_json': {} # Initialize empty profile
+        'schedule': schedule,
+        'profile_json': {
+            'voltage_kv': voltage_kv,
+            'interconnection_voltage': voltage_kv,
+            'land_status': status
+        }
     }
     
     if 'sites' not in st.session_state.db:
@@ -184,6 +205,12 @@ def add_milestone(site_name: str, task_name: str, start_date: str, end_date: str
         site['custom_milestones'] = []
         
     site['custom_milestones'].append(milestone)
+    
+    # Save
+    st.session_state.db['sites'][site_id] = site
+    if 'save_database_func' in st.session_state:
+        st.session_state.save_database_func(st.session_state.db)
+        
     return f"Added milestone '{task_name}' to {site_name}"
 
 # --- Navigation Tools ---
@@ -227,7 +254,7 @@ def select_site(site_name: str):
     if 'sites' not in st.session_state:
         return "Error: Site database not loaded."
     
-    sites = st.session_state.sites
+    sites = st.session_state.db.get('sites', {})
     
     # Try exact match
     if site_name in sites:
@@ -240,6 +267,12 @@ def select_site(site_name: str):
             st.session_state.selected_site = name
             return f"Successfully selected site: {name}"
             
+    # Try by name field
+    for site_id, site in sites.items():
+        if site.get('name', '').lower() == site_name.lower():
+            st.session_state.selected_site = site_id # Use ID
+            return f"Successfully selected site: {site.get('name')}"
+
     return f"Error: Site '{site_name}' not found."
 
 # --- Tool Registry ---
@@ -248,5 +281,84 @@ def select_site(site_name: str):
 TOOL_FUNCTIONS = {
     "update_site_field": update_site_field,
     "create_new_site": create_new_site,
-    "navigate_to_page": navigate_to_page
+    "navigate_to_page": navigate_to_page,
+    "select_site": select_site,
+    "add_milestone": add_milestone
 }
+
+# Tool Definitions for Gemini
+AGENT_TOOLS = [
+    {
+        "function_declarations": [
+            {
+                "name": "update_site_field",
+                "description": "Update a specific field for a site in the database.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "site_name": {"type": "STRING", "description": "Name of the site to update"},
+                        "field": {"type": "STRING", "description": "Field to update (e.g., 'target_mw', 'utility', 'state', 'zoning_status')"},
+                        "value": {"type": "STRING", "description": "New value for the field"}
+                    },
+                    "required": ["site_name", "field", "value"]
+                }
+            },
+            {
+                "name": "create_new_site",
+                "description": "Create a new site in the database.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "name": {"type": "STRING", "description": "Name of the new site"},
+                        "state": {"type": "STRING", "description": "State code (e.g., 'OK', 'TX')"},
+                        "target_mw": {"type": "INTEGER", "description": "Target capacity in MW"},
+                        "acres": {"type": "INTEGER", "description": "Total acreage (optional)"},
+                        "voltage_kv": {"type": "INTEGER", "description": "Interconnection voltage in kV (optional)"},
+                        "latitude": {"type": "NUMBER", "description": "Latitude coordinate (optional)"},
+                        "longitude": {"type": "NUMBER", "description": "Longitude coordinate (optional)"},
+                        "status": {"type": "STRING", "description": "Project status (optional)"},
+                        "schedule_json": {"type": "STRING", "description": "JSON string of schedule dict {year: mw} (optional)"}
+                    },
+                    "required": ["name", "state", "target_mw"]
+                }
+            },
+            {
+                "name": "navigate_to_page",
+                "description": "Navigate the user to a specific page.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "page_name": {"type": "STRING", "description": "Name of the page (Dashboard, Site Database, Critical Path, Research)"}
+                    },
+                    "required": ["page_name"]
+                }
+            },
+            {
+                "name": "select_site",
+                "description": "Select a site to view details.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "site_name": {"type": "STRING", "description": "Name of the site to select"}
+                    },
+                    "required": ["site_name"]
+                }
+            },
+            {
+                "name": "add_milestone",
+                "description": "Add a critical path milestone.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "site_name": {"type": "STRING", "description": "Name of the site"},
+                        "task_name": {"type": "STRING", "description": "Name of the task"},
+                        "start_date": {"type": "STRING", "description": "Start date (YYYY-MM-DD)"},
+                        "end_date": {"type": "STRING", "description": "End date (YYYY-MM-DD)"},
+                        "status": {"type": "STRING", "description": "Status (Not Started, In Progress, Complete)"}
+                    },
+                    "required": ["site_name", "task_name", "start_date", "end_date"]
+                }
+            }
+        ]
+    }
+]
