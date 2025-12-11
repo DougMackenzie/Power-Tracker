@@ -229,18 +229,44 @@ def create_new_site(name: str, state: str, target_mw: int, acres: int = 0, volta
 
     # Format schedule to ensure it has ic_mw and gen_mw
     schedule = {}
+    # First pass: Parse provided values
+    parsed_schedule = {}
     for year, val in raw_schedule.items():
-        if isinstance(val, dict):
-            schedule[str(year)] = val
-        else:
-            try:
+        try:
+            y_int = int(year)
+            if isinstance(val, dict):
+                parsed_schedule[y_int] = val
+            else:
                 mw_val = int(val)
-                schedule[str(year)] = {
-                    'ic_mw': mw_val,
-                    'gen_mw': mw_val
+                parsed_schedule[y_int] = {'ic_mw': mw_val, 'gen_mw': mw_val}
+        except:
+            pass
+
+    # Second pass: Fill forward and extrapolate up to 2035
+    if parsed_schedule:
+        min_year = min(parsed_schedule.keys())
+        max_year = 2035
+        last_vals = {'ic_mw': 0, 'gen_mw': 0}
+        
+        for y in range(min_year, max_year + 1):
+            if y in parsed_schedule:
+                # Update last known values
+                last_vals = {
+                    'ic_mw': parsed_schedule[y].get('ic_mw', last_vals['ic_mw']),
+                    'gen_mw': parsed_schedule[y].get('gen_mw', last_vals['gen_mw'])
                 }
-            except:
-                pass
+                schedule[str(y)] = parsed_schedule[y]
+            else:
+                # Use last known values (carry forward)
+                schedule[str(y)] = last_vals.copy()
+                
+        # Ensure target_mw is reached if we are at the end and it's close?
+        # The user wants "keep the capacity at the full value". 
+        # The fill forward logic handles this naturally if the last provided year was the full value.
+    else:
+        # If no schedule provided, maybe create a default ramp? 
+        # For now, leave empty if not provided.
+        pass
 
     new_site = {
         'name': name,
