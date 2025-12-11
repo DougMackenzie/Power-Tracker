@@ -156,7 +156,7 @@ Financial:
 You have access to tools to interact with the application. USE THEM PROACTIVELY.
 
 1. **Site Management**:
-   - `create_new_site(name, state, target_mw, acres=0, voltage_kv=0, latitude=0.0, longitude=0.0, status="Prospect", schedule_json="{{}}")`: Create a new site. `schedule_json` should be a JSON string mapping year to MW (e.g., '{{ "2028": 100 }}') OR detailed object (e.g. '{{ "2028": {{ "ic_mw": 1000, "gen_mw": 250 }} }}').
+   - `create_new_site(name, state, target_mw, acres=0, voltage_kv=0, latitude=0.0, longitude=0.0, status="Prospect", schedule_json="{{}}", interconnection_mw=0)`: Create a new site. `schedule_json` maps year to MW (e.g., '{{ "2028": 100 }}'). Use `interconnection_mw` if full interconnection capacity is available immediately (e.g. 1000) while generation ramps up.
    - `update_site_field(site_name, field, value)`: Update specific fields (e.g., 'target_mw', 'utility', 'zoning_status', 'latitude', 'longitude').
 
 2. **Navigation**:

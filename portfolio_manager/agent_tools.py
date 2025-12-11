@@ -194,7 +194,7 @@ def update_site_field(site_name: str, field: str, value: str):
         st.error(f"Tool Logic Error: {error_details}")
         return f"Error executing tool: {str(e)}. Details: {error_details}"
 
-def create_new_site(name: str, state: str, target_mw: int, acres: int = 0, voltage_kv: int = 0, latitude: float = 0.0, longitude: float = 0.0, status: str = "Prospect", schedule_json: str = "{}"):
+def create_new_site(name: str, state: str, target_mw: int, acres: int = 0, voltage_kv: int = 0, latitude: float = 0.0, longitude: float = 0.0, status: str = "Prospect", schedule_json: str = "{}", interconnection_mw: int = 0):
     """
     Create a new site in the database.
     
@@ -210,6 +210,7 @@ def create_new_site(name: str, state: str, target_mw: int, acres: int = 0, volta
         schedule_json: JSON string of schedule dict. 
                        SIMPLE: '{"2028": 100}' (applies to both). 
                        DETAILED: '{"2028": {"ic_mw": 1000, "gen_mw": 100}}' (use this if interconnection differs from generation).
+        interconnection_mw: Full interconnection capacity if different from generation ramp (optional).
     """
     import uuid
     new_id = str(uuid.uuid4())
@@ -261,10 +262,15 @@ def create_new_site(name: str, state: str, target_mw: int, acres: int = 0, volta
             else:
                 # Use last known values (carry forward)
                 schedule[str(y)] = last_vals.copy()
-                
-        # Ensure target_mw is reached if we are at the end and it's close?
-        # The user wants "keep the capacity at the full value". 
-        # The fill forward logic handles this naturally if the last provided year was the full value.
+    
+    # Override interconnection if specified (Day 1 Full Capacity)
+    if interconnection_mw > 0:
+        for y in schedule:
+            schedule[y]['ic_mw'] = max(schedule[y].get('ic_mw', 0), interconnection_mw)
+            
+    # Ensure target_mw is reached if we are at the end and it's close?
+    # The user wants "keep the capacity at the full value". 
+    # The fill forward logic handles this naturally if the last provided year was the full value.
     else:
         # If no schedule provided, maybe create a default ramp? 
         # For now, leave empty if not provided.
