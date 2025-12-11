@@ -18,4 +18,4 @@ duckduckgo-search
 beautifulsoup4
 requests
 graphviz
-# Force Rebuild v3.13 - Add st.toast for Tool Feedback
+# Force Rebuild v3.14 - Comprehensive Tool Debugging

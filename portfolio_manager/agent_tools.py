@@ -46,109 +46,134 @@ def update_site_field(site_name: str, field: str, value: str):
         field: Field to update (e.g., 'target_mw', 'utility', 'state', 'zoning_status')
         value: New value for the field
     """
-    site_id = get_site_id_by_name(site_name)
-    if not site_id:
-        return f"Error: Could not find site named '{site_name}'"
-    
-    site = st.session_state.db['sites'][site_id]
-    
-    # Normalize field name
-    field_key = field.lower().replace(' ', '_')
-    
-    # Define top-level fields
-    TOP_LEVEL_FIELDS = {
-        'name', 'state', 'utility', 'target_mw', 'acreage', 'iso', 'county', 
-        'developer', 'land_status', 'community_support', 'political_support',
-        'dev_experience', 'capital_status', 'financial_status', 'last_updated',
-        'client', 'total_fee_potential', 'contract_status',
-        'site_control_stage', 'power_stage', 'marketing_stage', 'buyer_stage',
-        'zoning_stage', 'water_stage', 'incentives_stage',
-        'probability', 'weighted_fee', 'tracker_notes',
-        'latitude', 'longitude', 'voltage_kv'
-    }
+    try:
+        st.write(f"DEBUG: update_site_field called for {site_name}, field={field}, value={value}")
+        
+        # Find site
+        site_id = get_site_id_by_name(site_name)
+        if not site_id:
+            return f"Site '{site_name}' not found. Available sites: {list(st.session_state.db['sites'].keys())}"
+        
+        site = st.session_state.db['sites'][site_id]
+        st.write(f"DEBUG: Found site {site.get('name')} (ID: {site_id})")
+        
+        # Normalize field name
+        field_key = field.lower().replace(' ', '_')
+        
+        # Define top-level fields
+        TOP_LEVEL_FIELDS = {
+            'name', 'state', 'utility', 'target_mw', 'acreage', 'iso', 'county', 
+            'developer', 'land_status', 'community_support', 'political_support',
+            'dev_experience', 'capital_status', 'financial_status', 'last_updated',
+            'client', 'total_fee_potential', 'contract_status',
+            'site_control_stage', 'power_stage', 'marketing_stage', 'buyer_stage',
+            'zoning_stage', 'water_stage', 'incentives_stage',
+            'probability', 'weighted_fee', 'tracker_notes',
+            'latitude', 'longitude', 'voltage_kv'
+        }
 
-    # Handle nested fields and special logic
-    
-    # 1. Voltage / Interconnection
-    if field_key in ['voltage', 'voltage_kv', 'interconnection_voltage']:
-        # Update top level
-        site['voltage_kv'] = value
-        # Update all phases if they exist
-        if 'phases' in site and isinstance(site['phases'], list):
-            for phase in site['phases']:
-                if isinstance(phase, dict):
-                    phase['voltage'] = value
-                    phase['voltage_kv'] = value
+        # Handle nested fields and special logic
         
-        # Also update profile_json
-        if 'profile_json' not in site: site['profile_json'] = {}
-        site['profile_json']['voltage_kv'] = value
-        site['profile_json']['interconnection_voltage'] = value
-                    
-    # 2. Environmental / ESA Status
-    elif field_key in ['environmental_status', 'esa_status', 'phase_1_esa_status']:
-        site['environmental_status'] = value
-        # Update boolean flag based on string value
-        if 'complete' in str(value).lower():
-            site['environmental_complete'] = True
-        elif 'progress' in str(value).lower() or 'started' in str(value).lower():
-            site['environmental_complete'] = False
+        # 1. Voltage / Interconnection
+        if field_key in ['voltage', 'voltage_kv', 'interconnection_voltage']:
+            # Update top level
+            site['voltage_kv'] = value
+            # Update all phases if they exist
+            if 'phases' in site and isinstance(site['phases'], list):
+                for phase in site['phases']:
+                    if isinstance(phase, dict):
+                        phase['voltage'] = value
+                        phase['voltage_kv'] = value
             
-        # Also update profile_json
-        if 'profile_json' not in site: site['profile_json'] = {}
-        site['profile_json']['environmental_status'] = value
+            # Also update profile_json
+            if 'profile_json' not in site: site['profile_json'] = {}
+            if isinstance(site['profile_json'], str): site['profile_json'] = {} # Safety check
+            site['profile_json']['voltage_kv'] = value
+            site['profile_json']['interconnection_voltage'] = value
+                        
+        # 2. Environmental / ESA Status
+        elif field_key in ['environmental_status', 'esa_status', 'phase_1_esa_status']:
+            site['environmental_status'] = value
+            # Update boolean flag based on string value
+            if 'complete' in str(value).lower():
+                site['environmental_complete'] = True
+            elif 'progress' in str(value).lower() or 'started' in str(value).lower():
+                site['environmental_complete'] = False
+                
+            # Also update profile_json
+            if 'profile_json' not in site: site['profile_json'] = {}
+            if isinstance(site['profile_json'], str): site['profile_json'] = {} # Safety check
+            site['profile_json']['environmental_status'] = value
+                
+        # 3. Zoning Status
+        elif field_key in ['zoning_status', 'zoning']:
+            if 'non_power' not in site: site['non_power'] = {}
+            site['non_power']['zoning_status'] = value
+            # Map to zoning_stage int if possible
+            val_lower = str(value).lower()
+            if 'approved' in val_lower:
+                site['zoning_stage'] = 3
+            elif 'progress' in val_lower or 'submitted' in val_lower:
+                site['zoning_stage'] = 2
+            else:
+                site['zoning_stage'] = 1
+                
+            # Also update profile_json
+            if 'profile_json' not in site: site['profile_json'] = {}
+            if isinstance(site['profile_json'], str): site['profile_json'] = {} # Safety check
+            site['profile_json']['current_zoning'] = value
+                
+        # 4. Non-Power Infrastructure (Water, Fiber, Gas)
+        elif field_key in ['water_source', 'water_provider', 'fiber_status', 'fiber_provider', 'gas_provider']:
+            if 'non_power' not in site: site['non_power'] = {}
+            site['non_power'][field_key] = value
             
-    # 3. Zoning Status
-    elif field_key in ['zoning_status', 'zoning']:
-        if 'non_power' not in site: site['non_power'] = {}
-        site['non_power']['zoning_status'] = value
-        # Map to zoning_stage int if possible
-        val_lower = str(value).lower()
-        if 'approved' in val_lower:
-            site['zoning_stage'] = 3
-        elif 'progress' in val_lower or 'submitted' in val_lower:
-            site['zoning_stage'] = 2
+            # Also update profile_json
+            if 'profile_json' not in site: site['profile_json'] = {}
+            if isinstance(site['profile_json'], str): site['profile_json'] = {} # Safety check
+            site['profile_json'][field_key] = value
+            
+        # 5. Top Level Fields
+        elif field_key in TOP_LEVEL_FIELDS:
+            site[field_key] = value
+            
+        # 6. Fallback: Update profile_json (for Willing to Sell, Asking Price, etc.)
         else:
-            site['zoning_stage'] = 1
+            if 'profile_json' not in site: site['profile_json'] = {}
+            if isinstance(site['profile_json'], str): 
+                st.write(f"DEBUG: profile_json was string, resetting to dict. Content: {site['profile_json']}")
+                site['profile_json'] = {} # Reset if corrupted
             
-        # Also update profile_json
-        if 'profile_json' not in site: site['profile_json'] = {}
-        site['profile_json']['current_zoning'] = value
+            site['profile_json'][field_key] = value
+            st.write(f"DEBUG: Updated profile_json[{field_key}] = {value}")
             
-    # 4. Non-Power Infrastructure (Water, Fiber, Gas)
-    elif field_key in ['water_source', 'water_provider', 'fiber_status', 'fiber_provider', 'gas_provider']:
-        if 'non_power' not in site: site['non_power'] = {}
-        site['non_power'][field_key] = value
+        # Save to session state
+        st.session_state.db['sites'][site_id] = site
         
-        # Also update profile_json
-        if 'profile_json' not in site: site['profile_json'] = {}
-        site['profile_json'][field_key] = value
-        
-    # 5. Top Level Fields
-    elif field_key in TOP_LEVEL_FIELDS:
-        site[field_key] = value
-        
-    # 6. Fallback: Update profile_json (for Willing to Sell, Asking Price, etc.)
-    else:
-        if 'profile_json' not in site: site['profile_json'] = {}
-        site['profile_json'][field_key] = value
-        
-    # Save to session state
-    st.session_state.db['sites'][site_id] = site
-    
-    # Trigger persistence to Google Sheets
-    if 'save_database_func' in st.session_state:
-        try:
-            st.session_state.save_database_func(st.session_state.db)
-            st.toast(f"✅ Updated {site.get('name')}: {field} -> {value}", icon="💾")
-        except Exception as e:
-            import traceback
-            error_details = traceback.format_exc()
-            st.error(f"Save Error: {error_details}")
-            st.toast(f"❌ Failed to save to Sheets: {str(e)}", icon="⚠️")
-            return f"Updated in memory, but failed to save to Sheets: {str(e)}. Details: {error_details}"
-            
-    return f"Successfully updated {field} to '{value}' for {site.get('name')}"
+        # Trigger persistence to Google Sheets
+        if 'save_database_func' in st.session_state:
+            try:
+                st.write("DEBUG: Calling save_database_func...")
+                st.session_state.save_database_func(st.session_state.db)
+                st.write("DEBUG: Save successful!")
+                st.toast(f"✅ Updated {site.get('name')}: {field} -> {value}", icon="💾")
+            except Exception as e:
+                import traceback
+                error_details = traceback.format_exc()
+                st.error(f"Save Error: {error_details}")
+                st.toast(f"❌ Failed to save to Sheets: {str(e)}", icon="⚠️")
+                return f"Updated in memory, but failed to save to Sheets: {str(e)}. Details: {error_details}"
+        else:
+            st.error("Save Error: save_database_func not found in session_state")
+            return "Updated in memory, but save function is missing. Please reload the app."
+                
+        return f"Successfully updated {field} to '{value}' for {site.get('name')}"
+
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        st.error(f"Tool Logic Error: {error_details}")
+        return f"Error executing tool: {str(e)}. Details: {error_details}"
 
 def create_new_site(name: str, state: str, target_mw: int, acres: int = 0, voltage_kv: int = 0, latitude: float = 0.0, longitude: float = 0.0, status: str = "Prospect", schedule_json: str = "{}"):
     """
