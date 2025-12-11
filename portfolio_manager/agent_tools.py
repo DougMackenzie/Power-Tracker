@@ -326,13 +326,13 @@ AGENT_TOOLS = [
         "function_declarations": [
             {
                 "name": "update_site_field",
-                "description": "Update a specific field for a site in the database.",
+                "description": "Update a specific field for a site. Use this for attributes like 'Willing to Sell', 'Asking Price', 'Zoning', 'Utility', etc.",
                 "parameters": {
                     "type": "OBJECT",
                     "properties": {
                         "site_name": {"type": "STRING", "description": "Name of the site to update"},
-                        "field": {"type": "STRING", "description": "Field to update (e.g., 'target_mw', 'utility', 'state', 'zoning_status')"},
-                        "value": {"type": "STRING", "description": "New value for the field"}
+                        "field": {"type": "STRING", "description": "Field to update (e.g., 'willing_to_sell', 'asking_price', 'zoning_status')"},
+                        "value": {"type": "STRING", "description": "New value for the field (accepts any text, e.g., 'In Negotiation', 'Yes', '$10M')"}
                     },
                     "required": ["site_name", "field", "value"]
                 }
