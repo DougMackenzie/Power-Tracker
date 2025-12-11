@@ -43,10 +43,25 @@ def update_site_field(site_name: str, field: str, value: str):
     
     site = st.session_state.db['sites'][site_id]
     
+    # Normalize field name
+    field_key = field.lower().replace(' ', '_')
+    
+    # Define top-level fields
+    TOP_LEVEL_FIELDS = {
+        'name', 'state', 'utility', 'target_mw', 'acreage', 'iso', 'county', 
+        'developer', 'land_status', 'community_support', 'political_support',
+        'dev_experience', 'capital_status', 'financial_status', 'last_updated',
+        'client', 'total_fee_potential', 'contract_status',
+        'site_control_stage', 'power_stage', 'marketing_stage', 'buyer_stage',
+        'zoning_stage', 'water_stage', 'incentives_stage',
+        'probability', 'weighted_fee', 'tracker_notes',
+        'latitude', 'longitude', 'voltage_kv'
+    }
+
     # Handle nested fields and special logic
     
     # 1. Voltage / Interconnection
-    if field in ['voltage', 'voltage_kv', 'interconnection_voltage', 'interconnection voltage']:
+    if field_key in ['voltage', 'voltage_kv', 'interconnection_voltage']:
         # Update top level
         site['voltage_kv'] = value
         # Update all phases if they exist
@@ -55,15 +70,14 @@ def update_site_field(site_name: str, field: str, value: str):
                 if isinstance(phase, dict):
                     phase['voltage'] = value
                     phase['voltage_kv'] = value
-        # Update phases_json if it exists (legacy)
-        if 'phases_json' in site and isinstance(site['phases_json'], list):
-             for phase in site['phases_json']:
-                if isinstance(phase, dict):
-                    phase['voltage'] = value
-                    phase['voltage_kv'] = value
+        
+        # Also update profile_json
+        if 'profile_json' not in site: site['profile_json'] = {}
+        site['profile_json']['voltage_kv'] = value
+        site['profile_json']['interconnection_voltage'] = value
                     
     # 2. Environmental / ESA Status
-    elif field in ['environmental_status', 'esa_status', 'phase_1_esa_status', 'phase 1 esa status']:
+    elif field_key in ['environmental_status', 'esa_status', 'phase_1_esa_status']:
         site['environmental_status'] = value
         # Update boolean flag based on string value
         if 'complete' in str(value).lower():
@@ -71,8 +85,12 @@ def update_site_field(site_name: str, field: str, value: str):
         elif 'progress' in str(value).lower() or 'started' in str(value).lower():
             site['environmental_complete'] = False
             
+        # Also update profile_json
+        if 'profile_json' not in site: site['profile_json'] = {}
+        site['profile_json']['environmental_status'] = value
+            
     # 3. Zoning Status
-    elif field in ['zoning_status', 'zoning']:
+    elif field_key in ['zoning_status', 'zoning']:
         if 'non_power' not in site: site['non_power'] = {}
         site['non_power']['zoning_status'] = value
         # Map to zoning_stage int if possible
@@ -84,14 +102,27 @@ def update_site_field(site_name: str, field: str, value: str):
         else:
             site['zoning_stage'] = 1
             
+        # Also update profile_json
+        if 'profile_json' not in site: site['profile_json'] = {}
+        site['profile_json']['current_zoning'] = value
+            
     # 4. Non-Power Infrastructure (Water, Fiber, Gas)
-    elif field in ['water_source', 'water_provider', 'fiber_status', 'fiber_provider', 'gas_provider']:
+    elif field_key in ['water_source', 'water_provider', 'fiber_status', 'fiber_provider', 'gas_provider']:
         if 'non_power' not in site: site['non_power'] = {}
-        site['non_power'][field] = value
+        site['non_power'][field_key] = value
         
-    # 5. Default Top Level
+        # Also update profile_json
+        if 'profile_json' not in site: site['profile_json'] = {}
+        site['profile_json'][field_key] = value
+        
+    # 5. Top Level Fields
+    elif field_key in TOP_LEVEL_FIELDS:
+        site[field_key] = value
+        
+    # 6. Fallback: Update profile_json (for Willing to Sell, Asking Price, etc.)
     else:
-        site[field] = value
+        if 'profile_json' not in site: site['profile_json'] = {}
+        site['profile_json'][field_key] = value
         
     # Save to session state
     st.session_state.db['sites'][site_id] = site
