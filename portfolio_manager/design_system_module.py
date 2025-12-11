@@ -584,6 +584,15 @@ def render_design_system_page(st):
             with st.spinner(f"Analyzing {len(temp_paths)} files..."):
                 analyzer = DesignSystemAnalyzer(verbose=False)
                 ds = analyzer.analyze(temp_paths, org_name)
+                st.session_state['temp_design_system'] = ds
+            
+            # Cleanup
+            for p in temp_paths:
+                os.unlink(p)
+                
+        # Display results if we have a temp design system
+        if 'temp_design_system' in st.session_state:
+            ds = st.session_state['temp_design_system']
             
             st.success(f"✅ Analyzed {ds.files_analyzed} files, {ds.slides_analyzed} slides")
             
@@ -605,12 +614,10 @@ def render_design_system_page(st):
             if st.button("💾 Save Design System"):
                 save_path = f"design_system_{org_name.lower().replace(' ', '_')}.json"
                 ds.save(save_path)
-                st.success(f"Saved to {save_path}")
                 st.session_state['design_system'] = ds
-            
-            # Cleanup
-            for p in temp_paths:
-                os.unlink(p)
+                st.success(f"Saved to {save_path}")
+                # Force reload to update View tab
+                st.rerun()
     
     with tab2:
         st.subheader("Current Design System")

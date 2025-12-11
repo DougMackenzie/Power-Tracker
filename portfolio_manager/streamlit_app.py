@@ -828,7 +828,7 @@ def run():
          "🏆 Rankings", "📊 Program Tracker", "⚡ Critical Path", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "🧩 Network Operations Center (NOC)", "🎨 Design System", "⚙️ Settings"],
         key="page"
     )
-    st.sidebar.caption("v3.24 - Design System Added 🎨")
+    st.sidebar.caption("v3.25 - Design System Fix 🛠️")
     
     # Route and Log Activity
     if page == "📊 Dashboard": 
