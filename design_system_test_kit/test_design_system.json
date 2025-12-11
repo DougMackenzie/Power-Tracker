@@ -1,0 +1,113 @@
+{
+  "name": "Test Organization",
+  "version": "1.0.0",
+  "created": "2025-12-11T15:36:01.756972",
+  "colors": {
+    "primary": {
+      "hex": "#1A2B4A",
+      "usage": "primary"
+    },
+    "secondary": {
+      "hex": "#1F497D",
+      "usage": "secondary"
+    },
+    "accent": {
+      "hex": "#EEECE1",
+      "usage": "accent"
+    },
+    "text_primary": {
+      "hex": "#333333",
+      "usage": ""
+    },
+    "text_secondary": {
+      "hex": "#666666",
+      "usage": ""
+    },
+    "background": {
+      "hex": "#FFFFFF",
+      "usage": ""
+    },
+    "additional": {
+      "brand_1": {
+        "hex": "#4F81BD",
+        "usage": "brand_1"
+      },
+      "brand_2": {
+        "hex": "#C0504D",
+        "usage": "brand_2"
+      },
+      "brand_3": {
+        "hex": "#9BBB59",
+        "usage": "brand_3"
+      },
+      "brand_4": {
+        "hex": "#8064A2",
+        "usage": "brand_4"
+      },
+      "brand_5": {
+        "hex": "#4BACC6",
+        "usage": "brand_5"
+      }
+    }
+  },
+  "typography": {
+    "title": {
+      "font_name": "Arial",
+      "font_size": 28,
+      "bold": true,
+      "italic": false,
+      "color": "text_primary"
+    },
+    "h1": {
+      "font_name": "Arial",
+      "font_size": 22,
+      "bold": true,
+      "italic": false,
+      "color": "text_primary"
+    },
+    "h2": {
+      "font_name": "Arial",
+      "font_size": 16,
+      "bold": true,
+      "italic": false,
+      "color": "text_primary"
+    },
+    "body": {
+      "font_name": "Arial",
+      "font_size": 11,
+      "bold": false,
+      "italic": false,
+      "color": "text_primary"
+    },
+    "caption": {
+      "font_name": "Arial",
+      "font_size": 9,
+      "bold": false,
+      "italic": false,
+      "color": "text_primary"
+    },
+    "metric": {
+      "font_name": "Arial",
+      "font_size": 36,
+      "bold": true,
+      "italic": false,
+      "color": "text_primary"
+    }
+  },
+  "table": {
+    "header_bg": "primary",
+    "header_text": "#FFFFFF",
+    "alternate_rows": true
+  },
+  "spacing": {
+    "margin_left": 0.5,
+    "margin_right": 0.5,
+    "margin_top": 0.5,
+    "margin_bottom": 0.5,
+    "element_gap": 0.2
+  },
+  "analysis": {
+    "files_analyzed": 3,
+    "slides_analyzed": 15
+  }
+}

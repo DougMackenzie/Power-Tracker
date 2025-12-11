@@ -36,6 +36,7 @@ from .program_tracker import (
 from .program_management_page import show_program_tracker
 from .research_module import show_research_module
 from .system_flow import show_system_flow
+from .design_system_module import render_design_system_page
 
 # Import PPTX export module
 try:
@@ -824,10 +825,10 @@ def run():
     page = st.sidebar.radio(
         "Navigation",
         ["📊 Dashboard", "🏭 Site Database", "💬 AI Chat", "📁 VDR Upload", "➕ Add/Edit Site", 
-         "🏆 Rankings", "📊 Program Tracker", "⚡ Critical Path", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "🧩 Network Operations Center (NOC)", "⚙️ Settings"],
+         "🏆 Rankings", "📊 Program Tracker", "⚡ Critical Path", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "🧩 Network Operations Center (NOC)", "🎨 Design System", "⚙️ Settings"],
         key="page"
     )
-    st.sidebar.caption("v3.23 - Agentic Chat Active 🚀")
+    st.sidebar.caption("v3.24 - Design System Added 🎨")
     
     # Route and Log Activity
     if page == "📊 Dashboard": 
@@ -869,6 +870,8 @@ def run():
     elif page == "🧩 Network Operations Center (NOC)":
         # No log needed, we are viewing the logs
         show_system_flow()
+    elif page == "🎨 Design System":
+        render_design_system_page(st)
     elif page == "⚙️ Settings": 
         show_settings()
 
