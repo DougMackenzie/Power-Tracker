@@ -144,7 +144,26 @@ def update_site_field(site_name: str, field: str, value: str):
         elif field_key in TOP_LEVEL_FIELDS:
             site[field_key] = value
             
-        # 6. Fallback: Update profile_json (for Willing to Sell, Asking Price, etc.)
+        # 7. Schedule
+        elif field_key == 'schedule':
+            try:
+                new_schedule = json.loads(value)
+                # Ensure structure
+                formatted_schedule = {}
+                for y, v in new_schedule.items():
+                    if isinstance(v, dict):
+                        formatted_schedule[y] = v
+                    else:
+                        try:
+                            val = int(v)
+                            formatted_schedule[y] = {'ic_mw': val, 'gen_mw': val}
+                        except:
+                            pass
+                site['schedule'] = formatted_schedule
+            except:
+                return f"Error: Could not parse schedule JSON: {value}"
+
+        # 8. Fallback: Update profile_json (for Willing to Sell, Asking Price, etc.)
         else:
             profile = ensure_profile_dict(site)
             profile[field_key] = value
@@ -193,11 +212,35 @@ def create_new_site(name: str, state: str, target_mw: int, acres: int = 0, volta
     import uuid
     new_id = str(uuid.uuid4())
     
+    # Ensure unique name
+    if 'sites' in st.session_state.db:
+        existing_names = [s.get('name', '').lower() for s in st.session_state.db['sites'].values()]
+        base_name = name
+        counter = 1
+        while name.lower() in existing_names:
+            name = f"{base_name} #{counter}"
+            counter += 1
+    
     # Parse schedule if provided
     try:
-        schedule = json.loads(schedule_json) if schedule_json else {}
+        raw_schedule = json.loads(schedule_json) if schedule_json else {}
     except:
-        schedule = {}
+        raw_schedule = {}
+
+    # Format schedule to ensure it has ic_mw and gen_mw
+    schedule = {}
+    for year, val in raw_schedule.items():
+        if isinstance(val, dict):
+            schedule[str(year)] = val
+        else:
+            try:
+                mw_val = int(val)
+                schedule[str(year)] = {
+                    'ic_mw': mw_val,
+                    'gen_mw': mw_val
+                }
+            except:
+                pass
 
     new_site = {
         'name': name,
@@ -228,7 +271,7 @@ def create_new_site(name: str, state: str, target_mw: int, acres: int = 0, volta
     if 'save_database_func' in st.session_state:
         try:
             st.session_state.save_database_func(st.session_state.db)
-            st.toast(f"✅ Created Site: {name} ({target_mw}MW)", icon="✨")
+            st.toast(f"✅ Created Site: {name} ({target_mw}MW) - Checked against {len(st.session_state.db.get('sites', {}))} existing sites", icon="✨")
         except Exception as e:
             st.toast(f"❌ Failed to save new site: {str(e)}", icon="⚠️")
             return f"Created in memory, but failed to save to Sheets: {e}"

@@ -827,7 +827,7 @@ def run():
          "🏆 Rankings", "📊 Program Tracker", "⚡ Critical Path", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "🧩 Network Operations Center (NOC)", "⚙️ Settings"],
         key="page"
     )
-    st.sidebar.caption("v3.17 - Agentic Chat Active 🚀")
+    st.sidebar.caption("v3.18 - Agentic Chat Active 🚀")
     
     # Route and Log Activity
     if page == "📊 Dashboard": 
@@ -1171,8 +1171,17 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
         pdf.set_font("Helvetica", size=8)
         for y in years:
             yd = schedule.get(str(y), {})
-            ic_mw = yd.get('ic_mw', 0)
-            gen_mw = yd.get('gen_mw', 0)
+            if isinstance(yd, dict):
+                ic_mw = yd.get('ic_mw', 0)
+                gen_mw = yd.get('gen_mw', 0)
+            else:
+                try:
+                    v = int(yd)
+                    ic_mw = v
+                    gen_mw = v
+                except:
+                    ic_mw = 0
+                    gen_mw = 0
             pdf.cell(30, 5, str(y), border=1)
             pdf.cell(60, 5, str(ic_mw), border=1)
             pdf.cell(60, 5, str(gen_mw), border=1)
@@ -2786,7 +2795,7 @@ def show_ai_chat():
     # Initialize chat client with Gemini
     try:
         # Force re-init if version mismatch or missing
-        current_version = "3.17-agentic"
+        current_version = "3.18-agentic"
         if 'chat_client' not in st.session_state or st.session_state.get('chat_version') != current_version:
             # Get API key from secrets
             api_key = st.secrets.get("GEMINI_API_KEY")
