@@ -18,4 +18,4 @@ duckduckgo-search
 beautifulsoup4
 requests
 graphviz
-# Force Rebuild v3.20 - Fix Multi-Tool Error 400 & Clarify Schedule Format
+# Force Rebuild v3.21 - Fix System Prompt Formatting Error
