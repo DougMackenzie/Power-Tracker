@@ -156,8 +156,8 @@ Financial:
 You have access to tools to interact with the application. USE THEM PROACTIVELY.
 
 1. **Site Management**:
-   - `create_new_site(name, state, target_mw)`: Create a new site entry.
-   - `update_site_field(site_name, field, value)`: Update specific fields (e.g., 'target_mw', 'utility', 'zoning_status').
+   - `create_new_site(name, state, target_mw, acres=0, voltage_kv=0, latitude=0.0, longitude=0.0, status="Prospect", schedule_json="{}")`: Create a new site. `schedule_json` should be a JSON string mapping year to MW (e.g., '{"2028": 100}') OR detailed object (e.g. '{"2028": {"ic_mw": 1000, "gen_mw": 250}}').
+   - `update_site_field(site_name, field, value)`: Update specific fields (e.g., 'target_mw', 'utility', 'zoning_status', 'latitude', 'longitude').
 
 2. **Navigation**:
    - `navigate_to_page(page_name)`: Switch the user's view to 'Dashboard', 'Site Database', 'Critical Path', 'Research', etc.
@@ -469,7 +469,7 @@ class AgenticPortfolioChat:
         
         for _ in range(max_turns):
             # Check for function calls
-            tool_executed = False
+            function_responses = []
             if hasattr(current_response, 'parts'):
                 for part in current_response.parts:
                     if fn := part.function_call:
@@ -477,7 +477,7 @@ class AgenticPortfolioChat:
                         tool_name = fn.name
                         tool_args = dict(fn.args)
                         
-                        print(f"Executing tool: {tool_name} with {tool_args}")
+                        # print(f"Executing tool: {tool_name} with {tool_args}")
                         
                         if tool_name in TOOL_FUNCTIONS:
                             try:
@@ -487,17 +487,15 @@ class AgenticPortfolioChat:
                         else:
                             result = f"Error: Tool {tool_name} not found."
                             
-                        # Send result back to model
+                        # Add result to list
                         from google.ai.generativelanguage import Part, FunctionResponse
-                        
-                        current_response = self.client.chat.send_message(
+                        function_responses.append(
                             Part(function_response=FunctionResponse(name=tool_name, response={'result': result}))
                         )
-                        
-                        tool_executed = True
-                        break # Break inner loop to process new response
             
-            if tool_executed:
+            if function_responses:
+                # Send all results back to model
+                current_response = self.client.chat.send_message(function_responses)
                 continue # Continue outer loop to check new response
             
             # If we get here, it should be a text response

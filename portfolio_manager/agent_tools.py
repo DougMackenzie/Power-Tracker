@@ -207,7 +207,9 @@ def create_new_site(name: str, state: str, target_mw: int, acres: int = 0, volta
         latitude: Latitude coordinate (optional)
         longitude: Longitude coordinate (optional)
         status: Project status (optional)
-        schedule_json: JSON string of schedule dict {year: mw} (optional)
+        schedule_json: JSON string of schedule dict. 
+                       SIMPLE: '{"2028": 100}' (applies to both). 
+                       DETAILED: '{"2028": {"ic_mw": 1000, "gen_mw": 100}}' (use this if interconnection differs from generation).
     """
     import uuid
     new_id = str(uuid.uuid4())
