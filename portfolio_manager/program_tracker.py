@@ -238,18 +238,33 @@ class ProgramTrackerData:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ProgramTrackerData':
         """Create from dictionary."""
+        def safe_float(val, default=0.0):
+            try:
+                if val is None or val == "": return default
+                if isinstance(val, str): val = val.replace(',', '').replace('$', '').strip()
+                return float(val)
+            except (ValueError, TypeError):
+                return default
+
+        def safe_int(val, default=1):
+            try:
+                if val is None or val == "": return default
+                return int(float(val)) # Handle "1.0" strings
+            except (ValueError, TypeError):
+                return default
+
         tracker = cls(
             site_id=data.get('site_id', ''),
             client=data.get('client', ''),
-            total_fee_potential=float(data.get('total_fee_potential', 0) or 0),
+            total_fee_potential=safe_float(data.get('total_fee_potential')),
             contract_status=data.get('contract_status', 'No') or 'No',
-            site_control_stage=int(data.get('site_control_stage', 1) or 1),
-            power_stage=int(data.get('power_stage', 1) or 1),
-            marketing_stage=int(data.get('marketing_stage', 1) or 1),
-            buyer_stage=int(data.get('buyer_stage', 1) or 1),
-            zoning_stage=int(data.get('zoning_stage', 1) or 1),
-            water_stage=int(data.get('water_stage', 1) or 1),
-            incentives_stage=int(data.get('incentives_stage', 1) or 1),
+            site_control_stage=safe_int(data.get('site_control_stage')),
+            power_stage=safe_int(data.get('power_stage')),
+            marketing_stage=safe_int(data.get('marketing_stage')),
+            buyer_stage=safe_int(data.get('buyer_stage')),
+            zoning_stage=safe_int(data.get('zoning_stage')),
+            water_stage=safe_int(data.get('water_stage')),
+            incentives_stage=safe_int(data.get('incentives_stage')),
             tracker_notes=data.get('tracker_notes', ''),
         )
         tracker.update_calculations()

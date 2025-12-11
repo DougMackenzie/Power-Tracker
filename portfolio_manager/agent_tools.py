@@ -132,7 +132,10 @@ def update_site_field(site_name: str, field: str, value: str):
         try:
             st.session_state.save_database_func(st.session_state.db)
         except Exception as e:
-            return f"Updated in memory, but failed to save to Sheets: {e}"
+            import traceback
+            error_details = traceback.format_exc()
+            st.error(f"Tool Error: {error_details}")
+            return f"Updated in memory, but failed to save to Sheets: {str(e)}. Details: {error_details}"
             
     return f"Successfully updated {field} to '{value}' for {site.get('name')}"
 
