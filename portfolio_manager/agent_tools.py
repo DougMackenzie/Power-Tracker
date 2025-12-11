@@ -19,11 +19,20 @@ def get_site_id_by_name(name: str) -> str:
         if site.get('name', '').lower() == name_lower:
             return site_id
             
-    # Fuzzy match
+    # Fuzzy match (substring)
     for site_id, site in sites.items():
-        if name_lower in site.get('name', '').lower():
+        site_name_lower = site.get('name', '').lower()
+        if name_lower in site_name_lower:
             return site_id
             
+    # Token-based match (all words in search term must be in site name)
+    search_tokens = name_lower.split()
+    if search_tokens:
+        for site_id, site in sites.items():
+            site_name_lower = site.get('name', '').lower()
+            if all(token in site_name_lower for token in search_tokens):
+                return site_id
+    
     return None
 
 # --- Site Management Tools ---
