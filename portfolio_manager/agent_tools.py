@@ -47,15 +47,12 @@ def update_site_field(site_name: str, field: str, value: str):
         value: New value for the field
     """
     try:
-        st.write(f"DEBUG: update_site_field called for {site_name}, field={field}, value={value}")
-        
         # Find site
         site_id = get_site_id_by_name(site_name)
         if not site_id:
             return f"Site '{site_name}' not found. Available sites: {list(st.session_state.db['sites'].keys())}"
         
         site = st.session_state.db['sites'][site_id]
-        st.write(f"DEBUG: Found site {site.get('name')} (ID: {site_id})")
         
         # Helper to ensure profile_json is a dict
         def ensure_profile_dict(site_obj):
@@ -64,10 +61,8 @@ def update_site_field(site_name: str, field: str, value: str):
             elif isinstance(site_obj['profile_json'], str):
                 try:
                     # Try to parse existing JSON string instead of wiping it
-                    st.write(f"DEBUG: Parsing profile_json string: {site_obj['profile_json'][:50]}...")
                     site_obj['profile_json'] = json.loads(site_obj['profile_json'])
                 except json.JSONDecodeError:
-                    st.write("DEBUG: Failed to parse profile_json, resetting to empty dict")
                     site_obj['profile_json'] = {}
             elif not isinstance(site_obj['profile_json'], dict):
                 site_obj['profile_json'] = {}
@@ -153,7 +148,6 @@ def update_site_field(site_name: str, field: str, value: str):
         else:
             profile = ensure_profile_dict(site)
             profile[field_key] = value
-            st.write(f"DEBUG: Updated profile_json[{field_key}] = {value}")
             
         # Save to session state
         st.session_state.db['sites'][site_id] = site
@@ -161,9 +155,7 @@ def update_site_field(site_name: str, field: str, value: str):
         # Trigger persistence to Google Sheets
         if 'save_database_func' in st.session_state:
             try:
-                st.write("DEBUG: Calling save_database_func...")
                 st.session_state.save_database_func(st.session_state.db)
-                st.write("DEBUG: Save successful!")
                 st.toast(f"✅ Updated {site.get('name')}: {field} -> {value}", icon="💾")
             except Exception as e:
                 import traceback
@@ -236,7 +228,9 @@ def create_new_site(name: str, state: str, target_mw: int, acres: int = 0, volta
     if 'save_database_func' in st.session_state:
         try:
             st.session_state.save_database_func(st.session_state.db)
+            st.toast(f"✅ Created Site: {name} ({target_mw}MW)", icon="✨")
         except Exception as e:
+            st.toast(f"❌ Failed to save new site: {str(e)}", icon="⚠️")
             return f"Created in memory, but failed to save to Sheets: {e}"
             
     return f"Created new site '{name}' in {state} with {target_mw}MW"
@@ -287,7 +281,12 @@ def add_milestone(site_name: str, task_name: str, start_date: str, end_date: str
     # Save
     st.session_state.db['sites'][site_id] = site
     if 'save_database_func' in st.session_state:
-        st.session_state.save_database_func(st.session_state.db)
+        try:
+            st.session_state.save_database_func(st.session_state.db)
+            st.toast(f"✅ Added Milestone: {task_name}", icon="📅")
+        except Exception as e:
+            st.toast(f"❌ Failed to save milestone: {str(e)}", icon="⚠️")
+            return f"Added in memory, but failed to save to Sheets: {e}"
         
     return f"Added milestone '{task_name}' to {site_name}"
 
