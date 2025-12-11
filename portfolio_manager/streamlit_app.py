@@ -827,7 +827,7 @@ def run():
          "🏆 Rankings", "📊 Program Tracker", "⚡ Critical Path", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "🧩 Network Operations Center (NOC)", "⚙️ Settings"],
         key="page"
     )
-    st.sidebar.caption("v3.16 - Agentic Chat Active 🚀")
+    st.sidebar.caption("v3.17 - Agentic Chat Active 🚀")
     
     # Route and Log Activity
     if page == "📊 Dashboard": 
@@ -1136,8 +1136,22 @@ def generate_site_report_pdf(site: Dict, scores: Dict, stage: str, state_context
     schedule = site.get('schedule', {})
     if schedule:
         years = list(range(2025, 2036))
-        ic_data = [schedule.get(str(y), {}).get('ic_mw', 0) for y in years]
-        gen_data = [schedule.get(str(y), {}).get('gen_mw', 0) for y in years]
+        ic_data = []
+        gen_data = []
+        for y in years:
+            val = schedule.get(str(y), {})
+            if isinstance(val, dict):
+                ic_data.append(val.get('ic_mw', 0))
+                gen_data.append(val.get('gen_mw', 0))
+            else:
+                # Handle legacy/malformed data (e.g. int)
+                try:
+                    v = int(val)
+                    ic_data.append(v)
+                    gen_data.append(v)
+                except:
+                    ic_data.append(0)
+                    gen_data.append(0)
         max_val = max(max(ic_data), max(gen_data)) if ic_data and gen_data else 100
         max_val = int(max_val * 1.1)  # Add 10% headroom
         
@@ -2772,7 +2786,7 @@ def show_ai_chat():
     # Initialize chat client with Gemini
     try:
         # Force re-init if version mismatch or missing
-        current_version = "3.16-agentic"
+        current_version = "3.17-agentic"
         if 'chat_client' not in st.session_state or st.session_state.get('chat_version') != current_version:
             # Get API key from secrets
             api_key = st.secrets.get("GEMINI_API_KEY")
