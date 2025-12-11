@@ -827,7 +827,7 @@ def run():
          "🏆 Rankings", "📊 Program Tracker", "⚡ Critical Path", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "🧩 Network Operations Center (NOC)", "⚙️ Settings"],
         key="page"
     )
-    st.sidebar.caption("v3.14 - Agentic Chat Active 🚀")
+    st.sidebar.caption("v3.15 - Agentic Chat Active 🚀")
     
     # Route and Log Activity
     if page == "📊 Dashboard": 
@@ -2772,7 +2772,7 @@ def show_ai_chat():
     # Initialize chat client with Gemini
     try:
         # Force re-init if version mismatch or missing
-        current_version = "3.14-agentic"
+        current_version = "3.15-agentic"
         if 'chat_client' not in st.session_state or st.session_state.get('chat_version') != current_version:
             # Get API key from secrets
             api_key = st.secrets.get("GEMINI_API_KEY")

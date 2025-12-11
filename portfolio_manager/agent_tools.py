@@ -57,6 +57,22 @@ def update_site_field(site_name: str, field: str, value: str):
         site = st.session_state.db['sites'][site_id]
         st.write(f"DEBUG: Found site {site.get('name')} (ID: {site_id})")
         
+        # Helper to ensure profile_json is a dict
+        def ensure_profile_dict(site_obj):
+            if 'profile_json' not in site_obj:
+                site_obj['profile_json'] = {}
+            elif isinstance(site_obj['profile_json'], str):
+                try:
+                    # Try to parse existing JSON string instead of wiping it
+                    st.write(f"DEBUG: Parsing profile_json string: {site_obj['profile_json'][:50]}...")
+                    site_obj['profile_json'] = json.loads(site_obj['profile_json'])
+                except json.JSONDecodeError:
+                    st.write("DEBUG: Failed to parse profile_json, resetting to empty dict")
+                    site_obj['profile_json'] = {}
+            elif not isinstance(site_obj['profile_json'], dict):
+                site_obj['profile_json'] = {}
+            return site_obj['profile_json']
+        
         # Normalize field name
         field_key = field.lower().replace(' ', '_')
         
@@ -86,10 +102,9 @@ def update_site_field(site_name: str, field: str, value: str):
                         phase['voltage_kv'] = value
             
             # Also update profile_json
-            if 'profile_json' not in site: site['profile_json'] = {}
-            if isinstance(site['profile_json'], str): site['profile_json'] = {} # Safety check
-            site['profile_json']['voltage_kv'] = value
-            site['profile_json']['interconnection_voltage'] = value
+            profile = ensure_profile_dict(site)
+            profile['voltage_kv'] = value
+            profile['interconnection_voltage'] = value
                         
         # 2. Environmental / ESA Status
         elif field_key in ['environmental_status', 'esa_status', 'phase_1_esa_status']:
@@ -101,9 +116,8 @@ def update_site_field(site_name: str, field: str, value: str):
                 site['environmental_complete'] = False
                 
             # Also update profile_json
-            if 'profile_json' not in site: site['profile_json'] = {}
-            if isinstance(site['profile_json'], str): site['profile_json'] = {} # Safety check
-            site['profile_json']['environmental_status'] = value
+            profile = ensure_profile_dict(site)
+            profile['environmental_status'] = value
                 
         # 3. Zoning Status
         elif field_key in ['zoning_status', 'zoning']:
@@ -119,9 +133,8 @@ def update_site_field(site_name: str, field: str, value: str):
                 site['zoning_stage'] = 1
                 
             # Also update profile_json
-            if 'profile_json' not in site: site['profile_json'] = {}
-            if isinstance(site['profile_json'], str): site['profile_json'] = {} # Safety check
-            site['profile_json']['current_zoning'] = value
+            profile = ensure_profile_dict(site)
+            profile['current_zoning'] = value
                 
         # 4. Non-Power Infrastructure (Water, Fiber, Gas)
         elif field_key in ['water_source', 'water_provider', 'fiber_status', 'fiber_provider', 'gas_provider']:
@@ -129,9 +142,8 @@ def update_site_field(site_name: str, field: str, value: str):
             site['non_power'][field_key] = value
             
             # Also update profile_json
-            if 'profile_json' not in site: site['profile_json'] = {}
-            if isinstance(site['profile_json'], str): site['profile_json'] = {} # Safety check
-            site['profile_json'][field_key] = value
+            profile = ensure_profile_dict(site)
+            profile[field_key] = value
             
         # 5. Top Level Fields
         elif field_key in TOP_LEVEL_FIELDS:
@@ -139,12 +151,8 @@ def update_site_field(site_name: str, field: str, value: str):
             
         # 6. Fallback: Update profile_json (for Willing to Sell, Asking Price, etc.)
         else:
-            if 'profile_json' not in site: site['profile_json'] = {}
-            if isinstance(site['profile_json'], str): 
-                st.write(f"DEBUG: profile_json was string, resetting to dict. Content: {site['profile_json']}")
-                site['profile_json'] = {} # Reset if corrupted
-            
-            site['profile_json'][field_key] = value
+            profile = ensure_profile_dict(site)
+            profile[field_key] = value
             st.write(f"DEBUG: Updated profile_json[{field_key}] = {value}")
             
         # Save to session state
