@@ -140,10 +140,12 @@ def update_site_field(site_name: str, field: str, value: str):
     if 'save_database_func' in st.session_state:
         try:
             st.session_state.save_database_func(st.session_state.db)
+            st.toast(f"✅ Updated {site.get('name')}: {field} -> {value}", icon="💾")
         except Exception as e:
             import traceback
             error_details = traceback.format_exc()
-            st.error(f"Tool Error: {error_details}")
+            st.error(f"Save Error: {error_details}")
+            st.toast(f"❌ Failed to save to Sheets: {str(e)}", icon="⚠️")
             return f"Updated in memory, but failed to save to Sheets: {str(e)}. Details: {error_details}"
             
     return f"Successfully updated {field} to '{value}' for {site.get('name')}"
