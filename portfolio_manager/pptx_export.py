@@ -1220,7 +1220,10 @@ def populate_site_profile_table(table, profile_data) -> bool:
 
 def build_replacements(site_data: Dict, config: ExportConfig) -> Dict[str, str]:
     """Build replacement dictionary."""
-    target_mw = site_data.get('target_mw', 0)
+    try:
+        target_mw = float(site_data.get('target_mw', 0))
+    except (ValueError, TypeError):
+        target_mw = 0.0
     mw_display = f"{target_mw/1000:.1f}GW" if target_mw >= 1000 else f"{target_mw:.0f}MW"
     
     # Get profile if available

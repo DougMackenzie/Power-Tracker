@@ -230,6 +230,24 @@ def create_new_site(name: str, state: str, target_mw: int, acres: int = 0, volta
     except:
         raw_schedule = {}
 
+    # Ensure numeric types
+    try:
+        target_mw = int(target_mw)
+    except:
+        target_mw = 0
+    try:
+        acres = int(acres)
+    except:
+        acres = 0
+    try:
+        voltage_kv = int(voltage_kv)
+    except:
+        voltage_kv = 0
+    try:
+        interconnection_mw = int(interconnection_mw)
+    except:
+        interconnection_mw = 0
+
     # Format schedule to ensure it has ic_mw and gen_mw
     schedule = {}
     # First pass: Parse provided values
