@@ -49,6 +49,13 @@ try:
 except ImportError:
     PANDAS_AVAILABLE = False
 
+# Import Triage Module
+try:
+    from .triage import add_all_intelligence_slides
+    TRIAGE_AVAILABLE = True
+except ImportError:
+    TRIAGE_AVAILABLE = False
+
 
 # =============================================================================
 # CONFIGURATION
@@ -2019,6 +2026,14 @@ def export_site_to_pptx(
             slide_id = slides[slide_index]
             prs.slides._sldIdLst.remove(slide_id)
             prs.slides._sldIdLst.append(slide_id)
+
+    # Add Intelligence Slides
+    if TRIAGE_AVAILABLE and config.include_market_analysis:
+        try:
+            print("[DEBUG] Adding intelligence slides...")
+            add_all_intelligence_slides(prs, site_data)
+        except Exception as e:
+            print(f"[WARNING] Failed to add intelligence slides: {e}")
 
     move_slide_to_end(prs, 4)  # Original Thank You position
 

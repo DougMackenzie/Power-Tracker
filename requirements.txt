@@ -19,3 +19,5 @@ beautifulsoup4
 requests
 graphviz
 # Force Rebuild v3.23 - Fix PPTX Export Type Error
+pydantic>=2.0.0
+google-auth>=2.0.0

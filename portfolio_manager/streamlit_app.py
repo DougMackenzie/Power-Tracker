@@ -38,6 +38,36 @@ from .research_module import show_research_module
 from .system_flow import show_system_flow
 from .design_system_module import render_design_system_page
 
+# Import Triage Module
+try:
+    from .triage import (
+        show_quick_triage,
+        show_triage_log,
+    )
+    from .triage.diagnosis_page import show_full_diagnosis, show_site_intelligence
+    from .triage.intelligence_page import show_intelligence_center
+    from .triage.tracker_integration import render_intelligence_summary, show_intel_summary_widget
+    from .triage.storage import ensure_triage_columns_exist, ensure_triage_log_sheet_exists
+    TRIAGE_AVAILABLE = True
+except ImportError as e:
+    TRIAGE_AVAILABLE = False
+    print(f"Triage module not available: {e}")
+
+# Import Triage Module
+try:
+    from .triage import (
+        show_quick_triage,
+        show_triage_log,
+    )
+    from .triage.diagnosis_page import show_full_diagnosis, show_site_intelligence
+    from .triage.intelligence_page import show_intelligence_center
+    from .triage.tracker_integration import render_intelligence_summary, show_intel_summary_widget
+    from .triage.storage import ensure_triage_columns_exist, ensure_triage_log_sheet_exists
+    TRIAGE_AVAILABLE = True
+except ImportError as e:
+    TRIAGE_AVAILABLE = False
+    print(f"Triage module not available: {e}")
+
 # Import PPTX export module
 try:
     from .pptx_export import (
@@ -822,58 +852,126 @@ def run():
         st.session_state.node_updates = {}
         
     # Use session state for navigation
-    page = st.sidebar.radio(
+    # Define pages
+    pages = {
+        "📊 Dashboard": "dashboard",
+        "🏭 Site Database": "sites",
+        "💬 AI Chat": "chat",
+        "📁 VDR Upload": "vdr",
+        "➕ Add/Edit Site": "add_edit",
+        "🏆 Rankings": "rankings",
+        "📊 Program Tracker": "tracker",
+        "⚡ Critical Path": "critical_path",
+        "🗺️ State Analysis": "state_analysis",
+        "🔬 Research Framework": "research",
+        "🔍 Utility Research": "utility_research",
+        "🧩 Network Operations Center (NOC)": "noc",
+        "🎨 Design System": "design_system",
+        "⚙️ Settings": "settings"
+    }
+    
+    # Add Triage Navigation if available
+    if TRIAGE_AVAILABLE:
+        # Insert separator and new pages
+        pages["---"] = None
+        pages["🚦 Quick Triage"] = "triage"
+        pages["🔬 Full Diagnosis"] = "diagnosis"
+        pages["🔍 Intelligence Center"] = "intelligence"
+        pages["📋 Triage Log"] = "triage_log"
+
+    # Sidebar selection
+    selected_label = st.sidebar.radio(
         "Navigation",
-        ["📊 Dashboard", "🏭 Site Database", "💬 AI Chat", "📁 VDR Upload", "➕ Add/Edit Site", 
-         "🏆 Rankings", "📊 Program Tracker", "⚡ Critical Path", "🗺️ State Analysis", "🔬 Research Framework", "🔍 Utility Research", "🧩 Network Operations Center (NOC)", "🎨 Design System", "⚙️ Settings"],
-        key="page"
+        options=list(pages.keys()),
+        key="page_selection"
     )
+    
+    # Handle separator selection (shouldn't happen with radio but just in case)
+    if selected_label == "---":
+        selected_label = "📊 Dashboard"
+        
+    page = pages.get(selected_label, "dashboard")
     st.sidebar.caption("v3.25 - Design System Fix 🛠️")
     
+    # Show Intelligence Summary Widget if available
+    if TRIAGE_AVAILABLE and 'db' in st.session_state:
+        st.sidebar.markdown("---")
+        show_intel_summary_widget(st.session_state.db.get('sites', {}))
+        
+    # Schema Migration Button (Hidden by default, can be enabled for admin)
+    if TRIAGE_AVAILABLE:
+        with st.sidebar.expander("Admin Tools"):
+            if st.button("Update Database Schema"):
+                with st.spinner("Updating schema..."):
+                    if ensure_triage_columns_exist() and ensure_triage_log_sheet_exists():
+                        st.success("Schema updated!")
+                    else:
+                        st.error("Schema update failed.")
+
     # Route and Log Activity
-    if page == "📊 Dashboard": 
+    if page == "dashboard": 
         log_activity('Dash')
         show_dashboard()
-    elif page == "🏭 Site Database": 
+    elif page == "sites": 
         log_activity('Session') # Viewing data
         show_site_database()
-    elif page == "💬 AI Chat": 
+    elif page == "chat": 
         log_activity('Chat')
         show_ai_chat()
-    elif page == "📁 VDR Upload": 
+    elif page == "vdr": 
         log_activity('VDR') # User is interacting with VDR module
         show_vdr_upload()
-    elif page == "➕ Add/Edit Site": 
+    elif page == "add_edit": 
         log_activity('Human') # Manual input form
         show_add_edit_site()
-    elif page == "🏆 Rankings": 
+    elif page == "rankings": 
         log_activity('Scorer') # Viewing scores
         show_rankings()
-    elif page == "📊 Program Tracker": 
+    elif page == "tracker": 
         log_activity('Tracker')
         show_program_tracker()
-    elif page == "🗺️ State Analysis": 
+    elif page == "state_analysis": 
         log_activity('SupplyDemand') # Viewing macro analysis
         show_state_analysis()
-    elif page == "🔬 Research Framework": 
+    elif page == "research": 
         log_activity('DeepResearch') # Viewing research
         show_research_module()
-    elif page == "🔍 Utility Research": 
+    elif page == "utility_research": 
         log_activity('UtilAgent')
         show_utility_research()
-    elif page == "⚡ Critical Path":
+    elif page == "critical_path":
         log_activity('CriticalPath')
         if CRITICAL_PATH_AVAILABLE:
             show_critical_path_page()
         else:
             st.error("Critical Path module not available")
-    elif page == "🧩 Network Operations Center (NOC)":
+    elif page == "noc":
         # No log needed, we are viewing the logs
         show_system_flow()
-    elif page == "🎨 Design System":
+    elif page == "design_system":
         render_design_system_page(st)
-    elif page == "⚙️ Settings": 
+    elif page == "settings": 
         show_settings()
+    elif page == "triage":
+        if TRIAGE_AVAILABLE:
+            show_quick_triage()
+        else:
+            st.error("Triage module not loaded.")
+    elif page == "diagnosis":
+        if TRIAGE_AVAILABLE:
+            show_full_diagnosis()
+        else:
+            st.error("Diagnosis module not loaded.")
+    elif page == "intelligence":
+        if TRIAGE_AVAILABLE:
+            show_intelligence_center()
+        else:
+            st.error("Intelligence module not loaded.")
+    elif page == "triage_log":
+        if TRIAGE_AVAILABLE:
+            show_triage_log()
+        else:
+            st.error("Triage log module not loaded.")
 
 
 # ... (skipping unchanged functions) ...
@@ -3164,9 +3262,10 @@ def show_site_details(site_id: str):
 
     # --- Detailed Data View ---
     st.markdown("---")
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab_intel, tab7 = st.tabs([
         "⚡ Power Pathway", "🏗️ Infrastructure", "📅 Schedule", 
-        "🌍 Non-Power", "🗺️ State Context", "📋 Site Profile", "🤖 AI Research"
+        "🌍 Non-Power", "🗺️ State Context", "📋 Site Profile", 
+        "📊 Intelligence", "🤖 AI Research"
     ])
     
     with tab1:
@@ -3305,8 +3404,14 @@ def show_site_details(site_id: str):
         else:
             st.info("No detailed site profile data available.")
 
+    with tab_intel:
+        if TRIAGE_AVAILABLE:
+            show_site_intelligence(site_id, site)
+        else:
+            st.info("Intelligence module not available.")
+
     with tab7:
-        st.subheader("AI Research Results")
+        st.subheader("🤖 AI Research Results")
         # Display AI fields that are stored in profile_json
         if profile_json:
             ai_fields = [

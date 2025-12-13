@@ -32,6 +32,13 @@ from .program_tracker import (
     extend_site_with_tracker,
 )
 
+# Import Triage Module
+try:
+    from .triage import render_intelligence_summary
+    TRIAGE_AVAILABLE = True
+except ImportError:
+    TRIAGE_AVAILABLE = False
+
 
 # =============================================================================
 # PROGRAM TRACKER PAGE
@@ -170,7 +177,13 @@ def show_portfolio_summary(sites: Dict):
                 hole=0.4,
             )
             fig.update_layout(height=300)
+            fig.update_layout(height=300)
             st.plotly_chart(fig, use_container_width=True)
+    
+    # Intelligence Summary
+    if TRIAGE_AVAILABLE:
+        st.markdown("---")
+        render_intelligence_summary(sites)
     
     # Detailed Site Table
     st.subheader("Site Details")
