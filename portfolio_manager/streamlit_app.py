@@ -433,7 +433,12 @@ def save_database(db: Dict):
             # Site profile builder columns
             "profile_json", "latitude", "longitude",
             # Critical path column
-            "critical_path_json"
+            "critical_path_json",
+            # Triage & Diagnosis columns
+            "phase", "triage_date", "triage_verdict", "triage_red_flags_json",
+            "diagnosis_date", "diagnosis_json", "validated_timeline", "timeline_risk",
+            "claim_validation_json", "diagnosis_recommendation", "diagnosis_top_risks",
+            "diagnosis_follow_ups", "research_summary"
         ]
         sites_ws.append_row(headers)
         
@@ -486,7 +491,21 @@ def save_database(db: Dict):
                 site.get('latitude', ''),
                 site.get('longitude', ''),
                 # Critical path column
-                site.get('critical_path_json', '')
+                site.get('critical_path_json', ''),
+                # Triage & Diagnosis columns
+                site.get('phase', ''),
+                site.get('triage_date', ''),
+                site.get('triage_verdict', ''),
+                site.get('triage_red_flags_json', ''),
+                site.get('diagnosis_date', ''),
+                site.get('diagnosis_json', ''),
+                site.get('validated_timeline', ''),
+                site.get('timeline_risk', ''),
+                site.get('claim_validation_json', ''),
+                site.get('diagnosis_recommendation', ''),
+                site.get('diagnosis_top_risks', ''),
+                site.get('diagnosis_follow_ups', ''),
+                site.get('research_summary', '')
             ]
             sites_ws.append_row(row)
         
@@ -864,16 +883,15 @@ def run():
         "⚡ Critical Path": "critical_path",
         "🗺️ State Analysis": "state_analysis",
         "🔬 Research Framework": "research",
-        "🔍 Utility Research": "utility_research",
+        # "🔍 Utility Research": "utility_research", # Archived
         "🧩 Network Operations Center (NOC)": "noc",
-        "🎨 Design System": "design_system",
+        # "🎨 Design System": "design_system", # Archived
         "⚙️ Settings": "settings"
     }
     
     # Add Triage Navigation if available
     if TRIAGE_AVAILABLE:
-        # Insert separator and new pages
-        pages["---"] = None
+        # Insert new pages
         pages["🚦 Quick Triage"] = "triage"
         pages["🔬 Full Diagnosis"] = "diagnosis"
         pages["🔍 Intelligence Center"] = "intelligence"
